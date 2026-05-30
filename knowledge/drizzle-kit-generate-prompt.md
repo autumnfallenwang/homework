@@ -1,5 +1,5 @@
 ---
-name: drizzle-kit-generate-stdin
+name: drizzle-kit-generate-prompt
 description: Run `drizzle-kit generate` with stdin closed (`< /dev/null`) — its interactive rename prompt loops non-interactively and drops self-referencing tables.
 metadata:
   type: feedback

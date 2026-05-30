@@ -11,7 +11,7 @@ import { seedSettings } from "./seed-settings.js";
 // Excluded from test:fast so CI without a DB stays green.
 const url = process.env.DATABASE_URL;
 const client = postgres(url ?? "postgres://invalid");
-const db = drizzle(client, { schema });
+const db = drizzle(client, { schema, casing: "snake_case" });
 
 describe.skipIf(!url)("schema integration (live DB)", () => {
   beforeAll(async () => {

@@ -1,5 +1,5 @@
 {
-  "id": "4120602b-16f2-4f1e-84be-a31ae911edbe",
+  "id": "d90b8ca4-049e-41a2-9ab2-b7f01d14b489",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -15,32 +15,32 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "fetchRunId": {
-          "name": "fetchRunId",
+        "fetch_run_id": {
+          "name": "fetch_run_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "classId": {
-          "name": "classId",
+        "class_id": {
+          "name": "class_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "className": {
-          "name": "className",
+        "class_name": {
+          "name": "class_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "assignmentName": {
-          "name": "assignmentName",
+        "assignment_name": {
+          "name": "assignment_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "teAssignmentId": {
-          "name": "teAssignmentId",
+        "te_assignment_id": {
+          "name": "te_assignment_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -57,20 +57,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "scoreNumeric": {
-          "name": "scoreNumeric",
+        "score_numeric": {
+          "name": "score_numeric",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "scoreLetter": {
-          "name": "scoreLetter",
+        "score_letter": {
+          "name": "score_letter",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "maxScore": {
-          "name": "maxScore",
+        "max_score": {
+          "name": "max_score",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -81,8 +81,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "dueDate": {
-          "name": "dueDate",
+        "due_date": {
+          "name": "due_date",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -93,8 +93,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "isMissing": {
-          "name": "isMissing",
+        "is_missing": {
+          "name": "is_missing",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -112,7 +112,7 @@
           "name": "assignments_fetch_run_idx",
           "columns": [
             {
-              "expression": "fetchRunId",
+              "expression": "fetch_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -125,12 +125,12 @@
         }
       },
       "foreignKeys": {
-        "assignments_fetchRunId_fetch_runs_id_fk": {
-          "name": "assignments_fetchRunId_fetch_runs_id_fk",
+        "assignments_fetch_run_id_fetch_runs_id_fk": {
+          "name": "assignments_fetch_run_id_fetch_runs_id_fk",
           "tableFrom": "assignments",
           "tableTo": "fetch_runs",
           "columnsFrom": [
-            "fetchRunId"
+            "fetch_run_id"
           ],
           "columnsTo": [
             "id"
@@ -138,17 +138,17 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "assignments_classId_classes_id_fk": {
-          "name": "assignments_classId_classes_id_fk",
+        "assignments_class_id_classes_id_fk": {
+          "name": "assignments_class_id_classes_id_fk",
           "tableFrom": "assignments",
           "tableTo": "classes",
           "columnsFrom": [
-            "classId"
+            "class_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -169,21 +169,21 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "displayName": {
-          "name": "displayName",
+        "display_name": {
+          "name": "display_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "portalType": {
-          "name": "portalType",
+        "portal_type": {
+          "name": "portal_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "default": "'teacherease'"
         },
-        "baseUrl": {
-          "name": "baseUrl",
+        "base_url": {
+          "name": "base_url",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -194,8 +194,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "portalPassword": {
-          "name": "portalPassword",
+        "portal_password": {
+          "name": "portal_password",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -212,14 +212,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "homeworkUrl": {
-          "name": "homeworkUrl",
+        "homework_url": {
+          "name": "homework_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -245,20 +245,20 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "childId": {
-          "name": "childId",
+        "child_id": {
+          "name": "child_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "teClassId": {
-          "name": "teClassId",
+        "te_class_id": {
+          "name": "te_class_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "teCgpid": {
-          "name": "teCgpid",
+        "te_cgpid": {
+          "name": "te_cgpid",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -275,14 +275,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "gradingScale": {
-          "name": "gradingScale",
+        "grading_scale": {
+          "name": "grading_scale",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -294,7 +294,7 @@
           "name": "classes_child_idx",
           "columns": [
             {
-              "expression": "childId",
+              "expression": "child_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -307,12 +307,12 @@
         }
       },
       "foreignKeys": {
-        "classes_childId_children_id_fk": {
-          "name": "classes_childId_children_id_fk",
+        "classes_child_id_children_id_fk": {
+          "name": "classes_child_id_children_id_fk",
           "tableFrom": "classes",
           "tableTo": "children",
           "columnsFrom": [
-            "childId"
+            "child_id"
           ],
           "columnsTo": [
             "id"
@@ -327,8 +327,8 @@
           "name": "classes_child_te_class_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "childId",
-            "teClassId"
+            "child_id",
+            "te_class_id"
           ]
         }
       },
@@ -347,14 +347,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "childId": {
-          "name": "childId",
+        "child_id": {
+          "name": "child_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "runAt": {
-          "name": "runAt",
+        "run_at": {
+          "name": "run_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -366,14 +366,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "durationMs": {
-          "name": "durationMs",
+        "duration_ms": {
+          "name": "duration_ms",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "errorMessage": {
-          "name": "errorMessage",
+        "error_message": {
+          "name": "error_message",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -391,13 +391,13 @@
           "name": "fetch_runs_child_run_idx",
           "columns": [
             {
-              "expression": "childId",
+              "expression": "child_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "runAt",
+              "expression": "run_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -412,7 +412,7 @@
           "name": "fetch_runs_child_source_run_idx",
           "columns": [
             {
-              "expression": "childId",
+              "expression": "child_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -424,7 +424,7 @@
               "nulls": "last"
             },
             {
-              "expression": "runAt",
+              "expression": "run_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -437,12 +437,12 @@
         }
       },
       "foreignKeys": {
-        "fetch_runs_childId_children_id_fk": {
-          "name": "fetch_runs_childId_children_id_fk",
+        "fetch_runs_child_id_children_id_fk": {
+          "name": "fetch_runs_child_id_children_id_fk",
           "tableFrom": "fetch_runs",
           "tableTo": "children",
           "columnsFrom": [
-            "childId"
+            "child_id"
           ],
           "columnsTo": [
             "id"
@@ -468,26 +468,26 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "fetchRunId": {
-          "name": "fetchRunId",
+        "fetch_run_id": {
+          "name": "fetch_run_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "classId": {
-          "name": "classId",
+        "class_id": {
+          "name": "class_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "className": {
-          "name": "className",
+        "class_name": {
+          "name": "class_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "currentGrade": {
-          "name": "currentGrade",
+        "current_grade": {
+          "name": "current_grade",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -498,27 +498,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "needsAttention": {
-          "name": "needsAttention",
+        "needs_attention": {
+          "name": "needs_attention",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "targetsMeeting": {
-          "name": "targetsMeeting",
+        "targets_meeting": {
+          "name": "targets_meeting",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "targetsNotMeeting": {
-          "name": "targetsNotMeeting",
+        "targets_not_meeting": {
+          "name": "targets_not_meeting",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "targetsNotAssessed": {
-          "name": "targetsNotAssessed",
+        "targets_not_assessed": {
+          "name": "targets_not_assessed",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -529,7 +529,7 @@
           "name": "grades_fetch_run_idx",
           "columns": [
             {
-              "expression": "fetchRunId",
+              "expression": "fetch_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -542,12 +542,12 @@
         }
       },
       "foreignKeys": {
-        "grades_fetchRunId_fetch_runs_id_fk": {
-          "name": "grades_fetchRunId_fetch_runs_id_fk",
+        "grades_fetch_run_id_fetch_runs_id_fk": {
+          "name": "grades_fetch_run_id_fetch_runs_id_fk",
           "tableFrom": "grades",
           "tableTo": "fetch_runs",
           "columnsFrom": [
-            "fetchRunId"
+            "fetch_run_id"
           ],
           "columnsTo": [
             "id"
@@ -555,17 +555,17 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "grades_classId_classes_id_fk": {
-          "name": "grades_classId_classes_id_fk",
+        "grades_class_id_classes_id_fk": {
+          "name": "grades_class_id_classes_id_fk",
           "tableFrom": "grades",
           "tableTo": "classes",
           "columnsFrom": [
-            "classId"
+            "class_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -586,14 +586,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "childId": {
-          "name": "childId",
+        "child_id": {
+          "name": "child_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "hwDate": {
-          "name": "hwDate",
+        "hw_date": {
+          "name": "hw_date",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -610,21 +610,21 @@
           "primaryKey": false,
           "notNull": true
         },
-        "dueDate": {
-          "name": "dueDate",
+        "due_date": {
+          "name": "due_date",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "dueDateInferred": {
-          "name": "dueDateInferred",
+        "due_date_inferred": {
+          "name": "due_date_inferred",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "scrapedAt": {
-          "name": "scrapedAt",
+        "scraped_at": {
+          "name": "scraped_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -636,13 +636,13 @@
           "name": "homework_child_date_idx",
           "columns": [
             {
-              "expression": "childId",
+              "expression": "child_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "hwDate",
+              "expression": "hw_date",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -655,12 +655,12 @@
         }
       },
       "foreignKeys": {
-        "homework_childId_children_id_fk": {
-          "name": "homework_childId_children_id_fk",
+        "homework_child_id_children_id_fk": {
+          "name": "homework_child_id_children_id_fk",
           "tableFrom": "homework",
           "tableTo": "children",
           "columnsFrom": [
-            "childId"
+            "child_id"
           ],
           "columnsTo": [
             "id"
@@ -675,8 +675,8 @@
           "name": "homework_child_date_subject_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "childId",
-            "hwDate",
+            "child_id",
+            "hw_date",
             "subject"
           ]
         }
@@ -689,8 +689,8 @@
       "name": "raw_payloads",
       "schema": "",
       "columns": {
-        "fetchRunId": {
-          "name": "fetchRunId",
+        "fetch_run_id": {
+          "name": "fetch_run_id",
           "type": "uuid",
           "primaryKey": true,
           "notNull": true
@@ -704,12 +704,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "raw_payloads_fetchRunId_fetch_runs_id_fk": {
-          "name": "raw_payloads_fetchRunId_fetch_runs_id_fk",
+        "raw_payloads_fetch_run_id_fetch_runs_id_fk": {
+          "name": "raw_payloads_fetch_run_id_fetch_runs_id_fk",
           "tableFrom": "raw_payloads",
           "tableTo": "fetch_runs",
           "columnsFrom": [
-            "fetchRunId"
+            "fetch_run_id"
           ],
           "columnsTo": [
             "id"
@@ -740,8 +740,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -767,20 +767,20 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "fetchRunId": {
-          "name": "fetchRunId",
+        "fetch_run_id": {
+          "name": "fetch_run_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "classId": {
-          "name": "classId",
+        "class_id": {
+          "name": "class_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "parentId": {
-          "name": "parentId",
+        "parent_id": {
+          "name": "parent_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -791,20 +791,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "scoreNumeric": {
-          "name": "scoreNumeric",
+        "score_numeric": {
+          "name": "score_numeric",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "scoreLetter": {
-          "name": "scoreLetter",
+        "score_letter": {
+          "name": "score_letter",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "isMeeting": {
-          "name": "isMeeting",
+        "is_meeting": {
+          "name": "is_meeting",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
@@ -815,7 +815,7 @@
           "name": "standards_fetch_run_idx",
           "columns": [
             {
-              "expression": "fetchRunId",
+              "expression": "fetch_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -830,13 +830,13 @@
           "name": "standards_class_fetch_run_idx",
           "columns": [
             {
-              "expression": "classId",
+              "expression": "class_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "fetchRunId",
+              "expression": "fetch_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -849,12 +849,12 @@
         }
       },
       "foreignKeys": {
-        "standards_fetchRunId_fetch_runs_id_fk": {
-          "name": "standards_fetchRunId_fetch_runs_id_fk",
+        "standards_fetch_run_id_fetch_runs_id_fk": {
+          "name": "standards_fetch_run_id_fetch_runs_id_fk",
           "tableFrom": "standards",
           "tableTo": "fetch_runs",
           "columnsFrom": [
-            "fetchRunId"
+            "fetch_run_id"
           ],
           "columnsTo": [
             "id"
@@ -862,30 +862,30 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "standards_classId_classes_id_fk": {
-          "name": "standards_classId_classes_id_fk",
+        "standards_class_id_classes_id_fk": {
+          "name": "standards_class_id_classes_id_fk",
           "tableFrom": "standards",
           "tableTo": "classes",
           "columnsFrom": [
-            "classId"
+            "class_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "standards_parentId_standards_id_fk": {
-          "name": "standards_parentId_standards_id_fk",
+        "standards_parent_id_standards_id_fk": {
+          "name": "standards_parent_id_standards_id_fk",
           "tableFrom": "standards",
           "tableTo": "standards",
           "columnsFrom": [
-            "parentId"
+            "parent_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

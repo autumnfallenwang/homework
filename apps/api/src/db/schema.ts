@@ -99,9 +99,9 @@ export const standards = pgTable(
     fetchRunId: uuid()
       .notNull()
       .references(() => fetchRuns.id, { onDelete: "cascade" }),
-    classId: uuid().references(() => classes.id),
+    classId: uuid().references(() => classes.id, { onDelete: "set null" }),
     // Self-reference for the hierarchical standards tree.
-    parentId: uuid().references((): AnyPgColumn => standards.id),
+    parentId: uuid().references((): AnyPgColumn => standards.id, { onDelete: "cascade" }),
     name: text().notNull(),
     scoreNumeric: doublePrecision(),
     scoreLetter: text(),
@@ -120,7 +120,7 @@ export const grades = pgTable(
     fetchRunId: uuid()
       .notNull()
       .references(() => fetchRuns.id, { onDelete: "cascade" }),
-    classId: uuid().references(() => classes.id),
+    classId: uuid().references(() => classes.id, { onDelete: "set null" }),
     className: text().notNull(),
     currentGrade: text(),
     status: text(),
@@ -139,7 +139,7 @@ export const assignments = pgTable(
     fetchRunId: uuid()
       .notNull()
       .references(() => fetchRuns.id, { onDelete: "cascade" }),
-    classId: uuid().references(() => classes.id),
+    classId: uuid().references(() => classes.id, { onDelete: "set null" }),
     className: text().notNull(),
     assignmentName: text().notNull(),
     teAssignmentId: integer(),

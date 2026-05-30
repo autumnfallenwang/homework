@@ -45,4 +45,5 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [project-profile](project-profile.md) — what this project is + stack at a glance
 - [biome-tailwind-css](biome-tailwind-css.md) — biome.json needs `tailwindDirectives` + `$schema` pinned to the installed CLI version
 - [schema-uuid-jsonb](schema-uuid-jsonb.md) — DB uses uuid string PKs + jsonb payload (not the source's int ids / text blob)
-- [drizzle-kit-generate-stdin](drizzle-kit-generate-stdin.md) — run `drizzle-kit generate` with `< /dev/null --name` to avoid the rename-prompt loop
+- [drizzle-kit-generate-prompt](drizzle-kit-generate-prompt.md) — run `drizzle-kit generate` with `< /dev/null --name` to avoid the rename-prompt loop
+- [drizzle-casing-onconflict](drizzle-casing-onconflict.md) — set `casing: "snake_case"` in both drizzle configs or upserts throw duplicate-key

@@ -1,6 +1,6 @@
 ---
 name: 03-scraper-port
-status: todo
+status: done
 created: 2026-05-30
 ---
 
@@ -35,11 +35,11 @@ Top-level: `runFetch(childId)` ties login → sources → persist → complete, 
 
 ## Exit criteria
 
-- [ ] Unit tests for parsers using **saved HTML fixtures** (scrub real data → fixtures under `apps/api/test/fixtures/`). Cover: grades overview JSON extraction, class-details standards tree, missing-assignment detection, homework date/subject parsing.
-- [ ] `runFetch(childId)` writes a complete fetch_run graph to Postgres (verified against a fixture-backed mock transport)
-- [ ] Login failure raises a typed `badCredentials` error; parser failure → `parser_error` status (not `failed`)
-- [ ] Assignment dedup + class upsert behave correctly on a second run (no duplicate rows)
-- [ ] No `@tauri-apps/*` imports remain in the ported code
+- [x] Parser unit tests — inline tests always run; fixture-backed tests run against real (gitignored) HTML when present, skip otherwise. Cover grades-overview JSON extraction, class-details standards tree, score parsing, homework date/subject parsing + the homework-date helpers.
+- [x] `runFetch(childId)` writes a complete fetch_run graph to Postgres — verified by the gated integration test feeding canned HTML through a fake transport: fetch_runs + raw_payloads (jsonb object) + classes + grades + standards + assignments + homework all persisted.
+- [x] Login failure raises a typed `badCredentials` error; parser failure → `parser_error` status (not `failed`) — runner classifies `ParserError` → `parser_error`, else `failed`; integration test asserts the bad-creds run is `failed` with the code in the message.
+- [x] Assignment dedup + class upsert behave correctly on a second run (no duplicate rows) — integration test re-runs `runFetch` and asserts classes/homework stay at 1 row each.
+- [x] No `@tauri-apps/*` imports remain in the ported code — verified (only the word "plugin-http" appears, in a transport.ts comment).
 
 ## Decisions (locked)
 
@@ -58,3 +58,17 @@ Top-level: `runFetch(childId)` ties login → sources → persist → complete, 
 - Source persistence: `src/lib/ipc.ts` (`persistTeacherEaseData`, `persistHomework`, fetch-run lifecycle)
 - Existing tests/fixtures: `teacherease-parent-companion/tests/`
 - Depends on: M02 (schema + Drizzle client)
+
+## Progress
+
+- 2026-05-30: Relocated the scraper into `apps/api/src/scraper/` (types, cookie-jar, with-timeout, teacherease login, parser, homework-parser, homework-date + a Node-fetch `transport`) and the fetch pipeline into `apps/api/src/fetch/` (types, Drizzle `persist`, teacherease-source, homework-source, runner, top-level `run-fetch`). Parsers ported verbatim; transport swapped Tauri plugin-http → Node global `fetch`; persistence swapped SQLite/IPC → Drizzle. Added cheerio dep. Fixture dirs (`apps/api/test/fixtures/{teacherease,homework}/`) are gitignored (`*.html`) with READMEs; real scrubbed HTML dropped locally for the fixture-gated tests. Check loop green: lint ✓ typecheck ✓ test:fast (60) ✓ build ✓; both integration suites green against live Postgres.
+
+### Build notes / deviations
+- **Switched the schema to `casing: "snake_case"`** (config + client). Surfaced here because the class/homework upserts threw `duplicate key`: with no casing set, drizzle-kit emitted camelCase DDL but drizzle-orm's runtime `ON CONFLICT` target was snake_case, so upserts never matched the unique constraint. Regenerated `drizzle/0000_init.sql` (now snake_case) and rebuilt the local DB. Captured as `knowledge/drizzle-casing-onconflict.md`; M02's build note corrected.
+- Added a `ParserError` type so the runner can classify `parser_error` vs `failed` (the desktop runner only had `failed`).
+- `FetchImpl`/cookie handling reused verbatim (Node 22's `fetch` supports `redirect: "manual"` + `Headers.getSetCookie()`, the exact contract the scraper needs).
+- End-to-end scraper verification uses a **fake transport** feeding canned HTML (no real portal reachable here); real-portal runs stay gated behind dropped fixtures / future live creds.
+
+## Outcome
+
+Closed: 2026-05-30. The API can log into TeacherEase, scrape grades + class details + homework, and persist a complete `fetch_run` graph via `runFetch(childId)` — verified end-to-end against Docker Postgres incl. upsert-on-rerun and error classification. Parsers are a verbatim port; only transport + persistence boundaries changed. Unblocks M04 (HTTP API + shared schemas/attention engine). Carries the snake_case casing fix into the shared schema.

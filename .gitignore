@@ -24,6 +24,9 @@ cluster-secrets.env
 *.secret.yaml
 sealed-secret-*.json
 
+# Test fixtures — real portal HTML, never commit (harvested locally per child/school)
+apps/api/test/fixtures/**/*.html
+
 # Logs
 *.log
 npm-debug.log*

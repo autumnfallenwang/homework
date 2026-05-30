@@ -1,120 +1,120 @@
 CREATE TABLE "assignments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"fetchRunId" uuid NOT NULL,
-	"classId" uuid,
-	"className" text NOT NULL,
-	"assignmentName" text NOT NULL,
-	"teAssignmentId" integer,
+	"fetch_run_id" uuid NOT NULL,
+	"class_id" uuid,
+	"class_name" text NOT NULL,
+	"assignment_name" text NOT NULL,
+	"te_assignment_id" integer,
 	"name" text,
 	"score" text,
-	"scoreNumeric" double precision,
-	"scoreLetter" text,
-	"maxScore" text,
+	"score_numeric" double precision,
+	"score_letter" text,
+	"max_score" text,
 	"status" text,
-	"dueDate" text,
+	"due_date" text,
 	"weight" integer,
-	"isMissing" boolean DEFAULT false NOT NULL,
+	"is_missing" boolean DEFAULT false NOT NULL,
 	"feedback" text
 );
 --> statement-breakpoint
 CREATE TABLE "children" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"displayName" text NOT NULL,
-	"portalType" text DEFAULT 'teacherease' NOT NULL,
-	"baseUrl" text NOT NULL,
+	"display_name" text NOT NULL,
+	"portal_type" text DEFAULT 'teacherease' NOT NULL,
+	"base_url" text NOT NULL,
 	"username" text NOT NULL,
-	"portalPassword" text,
+	"portal_password" text,
 	"grade" text,
 	"school" text,
-	"homeworkUrl" text,
-	"createdAt" timestamp with time zone DEFAULT now() NOT NULL
+	"homework_url" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "classes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"childId" uuid NOT NULL,
-	"teClassId" integer NOT NULL,
-	"teCgpid" integer NOT NULL,
+	"child_id" uuid NOT NULL,
+	"te_class_id" integer NOT NULL,
+	"te_cgpid" integer NOT NULL,
 	"name" text NOT NULL,
 	"instructor" text,
-	"gradingScale" text,
-	"updatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "classes_child_te_class_unique" UNIQUE("childId","teClassId")
+	"grading_scale" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "classes_child_te_class_unique" UNIQUE("child_id","te_class_id")
 );
 --> statement-breakpoint
 CREATE TABLE "fetch_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"childId" uuid NOT NULL,
-	"runAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"child_id" uuid NOT NULL,
+	"run_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"status" text NOT NULL,
-	"durationMs" integer,
-	"errorMessage" text,
+	"duration_ms" integer,
+	"error_message" text,
 	"source" text DEFAULT 'teacherease' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "grades" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"fetchRunId" uuid NOT NULL,
-	"classId" uuid,
-	"className" text NOT NULL,
-	"currentGrade" text,
+	"fetch_run_id" uuid NOT NULL,
+	"class_id" uuid,
+	"class_name" text NOT NULL,
+	"current_grade" text,
 	"status" text,
-	"needsAttention" boolean DEFAULT false NOT NULL,
-	"targetsMeeting" integer,
-	"targetsNotMeeting" integer,
-	"targetsNotAssessed" integer
+	"needs_attention" boolean DEFAULT false NOT NULL,
+	"targets_meeting" integer,
+	"targets_not_meeting" integer,
+	"targets_not_assessed" integer
 );
 --> statement-breakpoint
 CREATE TABLE "homework" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"childId" uuid NOT NULL,
-	"hwDate" text NOT NULL,
+	"child_id" uuid NOT NULL,
+	"hw_date" text NOT NULL,
 	"subject" text NOT NULL,
 	"content" text NOT NULL,
-	"dueDate" text,
-	"dueDateInferred" boolean DEFAULT false NOT NULL,
-	"scrapedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "homework_child_date_subject_unique" UNIQUE("childId","hwDate","subject")
+	"due_date" text,
+	"due_date_inferred" boolean DEFAULT false NOT NULL,
+	"scraped_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "homework_child_date_subject_unique" UNIQUE("child_id","hw_date","subject")
 );
 --> statement-breakpoint
 CREATE TABLE "raw_payloads" (
-	"fetchRunId" uuid PRIMARY KEY NOT NULL,
+	"fetch_run_id" uuid PRIMARY KEY NOT NULL,
 	"payload" jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "settings" (
 	"key" text PRIMARY KEY NOT NULL,
 	"value" text NOT NULL,
-	"updatedAt" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "standards" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"fetchRunId" uuid NOT NULL,
-	"classId" uuid,
-	"parentId" uuid,
+	"fetch_run_id" uuid NOT NULL,
+	"class_id" uuid,
+	"parent_id" uuid,
 	"name" text NOT NULL,
-	"scoreNumeric" double precision,
-	"scoreLetter" text,
-	"isMeeting" boolean
+	"score_numeric" double precision,
+	"score_letter" text,
+	"is_meeting" boolean
 );
 --> statement-breakpoint
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_fetchRunId_fetch_runs_id_fk" FOREIGN KEY ("fetchRunId") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_classId_classes_id_fk" FOREIGN KEY ("classId") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "classes" ADD CONSTRAINT "classes_childId_children_id_fk" FOREIGN KEY ("childId") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "fetch_runs" ADD CONSTRAINT "fetch_runs_childId_children_id_fk" FOREIGN KEY ("childId") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "grades" ADD CONSTRAINT "grades_fetchRunId_fetch_runs_id_fk" FOREIGN KEY ("fetchRunId") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "grades" ADD CONSTRAINT "grades_classId_classes_id_fk" FOREIGN KEY ("classId") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "homework" ADD CONSTRAINT "homework_childId_children_id_fk" FOREIGN KEY ("childId") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "raw_payloads" ADD CONSTRAINT "raw_payloads_fetchRunId_fetch_runs_id_fk" FOREIGN KEY ("fetchRunId") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "standards" ADD CONSTRAINT "standards_fetchRunId_fetch_runs_id_fk" FOREIGN KEY ("fetchRunId") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "standards" ADD CONSTRAINT "standards_classId_classes_id_fk" FOREIGN KEY ("classId") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "standards" ADD CONSTRAINT "standards_parentId_standards_id_fk" FOREIGN KEY ("parentId") REFERENCES "public"."standards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "assignments_fetch_run_idx" ON "assignments" USING btree ("fetchRunId");--> statement-breakpoint
-CREATE INDEX "classes_child_idx" ON "classes" USING btree ("childId");--> statement-breakpoint
-CREATE INDEX "fetch_runs_child_run_idx" ON "fetch_runs" USING btree ("childId","runAt");--> statement-breakpoint
-CREATE INDEX "fetch_runs_child_source_run_idx" ON "fetch_runs" USING btree ("childId","source","runAt");--> statement-breakpoint
-CREATE INDEX "grades_fetch_run_idx" ON "grades" USING btree ("fetchRunId");--> statement-breakpoint
-CREATE INDEX "homework_child_date_idx" ON "homework" USING btree ("childId","hwDate");--> statement-breakpoint
-CREATE INDEX "standards_fetch_run_idx" ON "standards" USING btree ("fetchRunId");--> statement-breakpoint
-CREATE INDEX "standards_class_fetch_run_idx" ON "standards" USING btree ("classId","fetchRunId");
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_fetch_run_id_fetch_runs_id_fk" FOREIGN KEY ("fetch_run_id") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_class_id_classes_id_fk" FOREIGN KEY ("class_id") REFERENCES "public"."classes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "classes" ADD CONSTRAINT "classes_child_id_children_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fetch_runs" ADD CONSTRAINT "fetch_runs_child_id_children_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "grades" ADD CONSTRAINT "grades_fetch_run_id_fetch_runs_id_fk" FOREIGN KEY ("fetch_run_id") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "grades" ADD CONSTRAINT "grades_class_id_classes_id_fk" FOREIGN KEY ("class_id") REFERENCES "public"."classes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "homework" ADD CONSTRAINT "homework_child_id_children_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "raw_payloads" ADD CONSTRAINT "raw_payloads_fetch_run_id_fetch_runs_id_fk" FOREIGN KEY ("fetch_run_id") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "standards" ADD CONSTRAINT "standards_fetch_run_id_fetch_runs_id_fk" FOREIGN KEY ("fetch_run_id") REFERENCES "public"."fetch_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "standards" ADD CONSTRAINT "standards_class_id_classes_id_fk" FOREIGN KEY ("class_id") REFERENCES "public"."classes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "standards" ADD CONSTRAINT "standards_parent_id_standards_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."standards"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "assignments_fetch_run_idx" ON "assignments" USING btree ("fetch_run_id");--> statement-breakpoint
+CREATE INDEX "classes_child_idx" ON "classes" USING btree ("child_id");--> statement-breakpoint
+CREATE INDEX "fetch_runs_child_run_idx" ON "fetch_runs" USING btree ("child_id","run_at");--> statement-breakpoint
+CREATE INDEX "fetch_runs_child_source_run_idx" ON "fetch_runs" USING btree ("child_id","source","run_at");--> statement-breakpoint
+CREATE INDEX "grades_fetch_run_idx" ON "grades" USING btree ("fetch_run_id");--> statement-breakpoint
+CREATE INDEX "homework_child_date_idx" ON "homework" USING btree ("child_id","hw_date");--> statement-breakpoint
+CREATE INDEX "standards_fetch_run_idx" ON "standards" USING btree ("fetch_run_id");--> statement-breakpoint
+CREATE INDEX "standards_class_fetch_run_idx" ON "standards" USING btree ("class_id","fetch_run_id");
