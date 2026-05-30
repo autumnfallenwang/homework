@@ -1,10 +1,12 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { config } from "./config.js";
+import { db } from "./db/index.js";
+import { seedSettings } from "./db/seed-settings.js";
 
 const app = createApp();
 
-serve({ fetch: app.fetch, port: config.apiPort }, (info) => {
+serve({ fetch: app.fetch, port: config.apiPort }, async (info) => {
   console.info(
     JSON.stringify({
       level: "info",
@@ -13,4 +15,6 @@ serve({ fetch: app.fetch, port: config.apiPort }, (info) => {
       ts: new Date().toISOString(),
     }),
   );
+  // Ensure default settings exist on boot (idempotent).
+  await seedSettings(db);
 });

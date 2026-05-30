@@ -16,7 +16,8 @@
       "!**/drizzle",
       "!**/*.gen.ts",
       "!**/components/ui",
-      "!**/.devkit"
+      "!**/.devkit",
+      "!**/settings.local.json"
     ]
   },
   "css": {

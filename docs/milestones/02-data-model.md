@@ -1,6 +1,6 @@
 ---
 name: 02-data-model
-status: todo
+status: done
 created: 2026-05-30
 ---
 
@@ -61,3 +61,17 @@ Translate SQLite types → Postgres (INTEGER PK → `serial`/`identity`, TEXT ti
 - Source schema: `teacherease-parent-companion/src-tauri/src/migrations.rs` (v1–v7)
 - Drizzle setup blueprint: `homecal/apps/api/src/db/`, `homecal/deploy/chart/templates/job-migrate.yaml`
 - Depends on: M01 (db client, local Postgres)
+
+## Progress
+
+- 2026-05-30: Ported all 9 tables to `apps/api/src/db/schema.ts` (Drizzle) with relations; added `db/index.ts` client, `drizzle.config.ts`, `seed-settings.ts` (idempotent, also auto-runs at API boot), and `db:{generate,migrate,studio,seed:settings}` scripts. Generated + applied `drizzle/0000_init.sql` to the live Docker Postgres. Verified end-to-end: 9 tables, composite uniques on classes+homework, 7 cascade FKs, 17 seeded settings (idempotent across two runs), integration test (insert/read + cascade delete) green. Check loop green: lint ✓ typecheck ✓ test:fast (9) ✓ build ✓.
+
+### Build notes / deviations
+- **UUID PKs + jsonb payload** (per user decision) — diverges from the source's integer ids and text blob. Ripples into M03/M04/M06: ids are uuid strings, `rawPayloads.payload` is a JS object. The column was renamed `json` → `payload` (jsonb).
+- **Column names are camelCase** in the generated SQL/DB (`"childId"`, `"hwDate"`) — drizzle uses the JS property name verbatim when no explicit name is passed, same as homecal. Table names are snake_case (passed explicitly to `pgTable`). The schema unit test asserts the camelCase column names accordingly.
+- **`drizzle-kit generate` must be run with stdin closed** (`< /dev/null`) — the first run hit its interactive rename prompt, dropped the self-referencing `standards` table, and spammed 24 empty migrations. `--name init < /dev/null` produced one clean migration with all 9 tables. (Captured as a knowledge entry.)
+- `fetch_runs.status` is a plain `text` column (no DB CHECK); the `success|failed|parser_error` constraint moves to Zod in M04, matching homecal's no-DB-enums convention.
+
+## Outcome
+
+Closed: 2026-05-30. Shipped the full Drizzle/Postgres data model (9 tables, relations, migration, idempotent settings seed) and verified it end-to-end against Docker Postgres. Unblocks M03 (scraper persistence) and M04 (API). Key deviation to carry forward: UUID string ids + jsonb payload instead of the source's integer ids + text blob.
