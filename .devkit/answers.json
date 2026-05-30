@@ -1,0 +1,22 @@
+{
+  "project_name": "homework",
+  "project_tagline": "Migration of the TeacherEase Parent Companion desktop app to a self-hosted, k3s-deployed full-stack web app (with room to grow).",
+  "primary_language": "typescript",
+  "package_manager": "pnpm",
+  "today": "2026-05-30",
+  "languages": ["typescript"],
+  "lint": {"typescript": "biome"},
+  "test": {"typescript": "vitest"},
+  "typecheck": {"typescript": "tsc"},
+  "architecture_sketch": "homework ports the TeacherEase Parent Companion desktop app (a Next.js UI wrapped in a Tauri/Rust shell that scraped a child's TeacherEase portal, stored per-child grades/homework in SQLite, ran a scheduler, and emailed daily SMTP digests) into a self-hosted full-stack web app that runs on the home k3s cluster. It follows the exact house pattern of the sibling projects homenews and homecal: a Turborepo + pnpm monorepo with a Hono + Zod backend API (apps/api/, dev port 3001), a Next.js App Router web frontend (apps/web/, dev port 3000), PostgreSQL + Drizzle for the database/ORM, and Vitest + Biome for testing and linting. Shared Zod schemas and types live in packages/shared/. The desktop app's three data views (Today / Classes / History) plus Settings are reproduced in the web frontend; the TeacherEase scraping logic (cheerio), the fetch scheduler, and the SMTP email-digest logic that previously lived in the Tauri/Rust shell move server-side into the Hono API. The web frontend talks to the API over HTTP. Deployment follows the arch-infra GitOps model: pushing to main triggers GitHub Actions to build and push images to GHCR, bump the image tags in the arch-infra repo, after which Argo CD reconciles the home k3s cluster from the Helm chart at deploy/chart/. Centralized logs flow to Loki/Grafana like the sibling apps.",
+  "constraints": "LAN-only: runs exclusively on the home k3s cluster behind *.arch.local ingress with no public-internet exposure (matching homenews/homecal). Scope for now is a 1:1 functional port of the desktop app onto the deployed full-stack stack; multi-user accounts, authentication, and other extras are explicitly future work, not part of the initial migration. The desktop/Tauri build is being retired in favor of the web app.",
+  "frontend": true,
+  "enabled_plugins": {
+    "context7@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true
+  },
+  "plugins_missing_install": []
+}
