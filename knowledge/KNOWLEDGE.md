@@ -42,4 +42,5 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 
 ## Index
 
-*(No entries yet. The first entry will land here after `/devkit-init` seeds `project-profile.md`.)*
+- [project-profile](project-profile.md) — what this project is + stack at a glance
+- [biome-tailwind-css](biome-tailwind-css.md) — biome.json needs `tailwindDirectives` + `$schema` pinned to the installed CLI version
