@@ -6,6 +6,7 @@
 import { eq } from "drizzle-orm";
 import { type Database, db as defaultDb } from "../db/index.js";
 import { children } from "../db/schema.js";
+import { log } from "../lib/logger.js";
 import { createNodeFetch } from "../scraper/transport.js";
 import type { ChildRecord, FetchImpl } from "../scraper/types.js";
 import { HomeworkSource } from "./homework-source.js";
@@ -60,8 +61,8 @@ export async function runFetch(
   const deps: FetchRunnerDeps = {
     startFetchRun: (cid, source) => startFetchRun(db, cid, source),
     completeFetchRun: (id, result) => completeFetchRun(db, id, result),
-    log: (msg) => console.info(JSON.stringify({ level: "info", event: "fetch", msg })),
-    logErr: (msg) => console.error(JSON.stringify({ level: "error", event: "fetch", msg })),
+    log: (msg) => log.info({ event: "fetch" }, msg),
+    logErr: (msg) => log.error({ event: "fetch" }, msg),
   };
 
   const runner = new FetchRunner(sources, deps);

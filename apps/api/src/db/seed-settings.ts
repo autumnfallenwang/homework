@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { log } from "../lib/logger.js";
 import type { Database } from "./index.js";
 import { settings } from "./schema.js";
 
@@ -36,12 +37,9 @@ export async function seedSettings(db: Database): Promise<void> {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const { db } = await import("./index.js");
   await seedSettings(db);
-  console.info(
-    JSON.stringify({
-      level: "info",
-      event: "seed.settings.done",
-      count: Object.keys(DEFAULT_SETTINGS).length,
-    }),
+  log.info(
+    { event: "seed.settings.done", count: Object.keys(DEFAULT_SETTINGS).length },
+    "default settings seeded",
   );
   process.exit(0);
 }

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Context, Next } from "hono";
+import { log } from "../lib/logger.js";
 
-/** Structured JSON request logging with a per-request id. */
+/** Structured request logging with a per-request id (correlates via req_id). */
 export async function requestLogger(c: Context, next: Next) {
   const reqId = randomUUID();
   const start = Date.now();
@@ -10,17 +11,15 @@ export async function requestLogger(c: Context, next: Next) {
 
   await next();
 
-  const duration = Date.now() - start;
-  console.info(
-    JSON.stringify({
-      level: "info",
+  log.info(
+    {
       event: "http.request",
       req_id: reqId,
       method: c.req.method,
       path: c.req.path,
       status: c.res.status,
-      duration_ms: duration,
-      ts: new Date().toISOString(),
-    }),
+      latency_ms: Date.now() - start,
+    },
+    "request handled",
   );
 }

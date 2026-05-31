@@ -13,7 +13,10 @@ The system follows the established house pattern of the sibling projects `homene
 - **`packages/shared`** — shared Zod schemas and TypeScript types used by both API and web.
 - **PostgreSQL (Drizzle)** — per-child grades, homework, and settings; replaces the desktop app's local SQLite.
 - **`deploy/chart` (Helm)** — managed by `arch-infra` + Argo CD, which own the k3s lifecycle.
-- **Loki / Grafana / Alloy** — centralized logs, consistent with the sibling apps.
+- **Loki / Grafana / Alloy** — centralized logs, consistent with the sibling apps. Both `apps/api`
+  and `apps/web` log structured JSON to stdout via **pino** (`service`/`version`/`time`/`level`/`msg`
+  + `event`/`req_id`/`latency_ms`); an Alloy DaemonSet tails stdout and labels by pod, Loki parses
+  JSON at query time. See [ADR 0002](adr/0002-structured-logging-pino-loki.md).
 
 ## Constraints and non-goals
 

@@ -10,6 +10,7 @@ import { config } from "../config.js";
 import type { Database } from "../db/index.js";
 import { getChildren, getSetting } from "../db/queries.js";
 import { runFetch } from "../fetch/run-fetch.js";
+import { log as logger } from "../lib/logger.js";
 import { buildDigestFromDb, renderDigestEmail } from "./digest.js";
 import { type EmailContent, loadSmtpConfig, type SmtpConfig, sendEmail } from "./email.js";
 
@@ -17,11 +18,11 @@ import { type EmailContent, loadSmtpConfig, type SmtpConfig, sendEmail } from ".
 let tasks: ScheduledTask[] = [];
 
 function log(event: string, extra: Record<string, unknown> = {}): void {
-  console.info(JSON.stringify({ level: "info", event, ...extra }));
+  logger.info({ event, ...extra });
 }
 
 function logErr(event: string, extra: Record<string, unknown> = {}): void {
-  console.error(JSON.stringify({ level: "error", event, ...extra }));
+  logger.error({ event, ...extra });
 }
 
 // --- Cycles (exported for the /digest routes + tests) ---------------------

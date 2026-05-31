@@ -52,3 +52,4 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [scheduler-nodecron-slots](scheduler-nodecron-slots.md) — node-cron singleton: one task per shared computeSlots→slotToCron slot, timezone:config.tz, skipped under NODE_ENV=test
 - [smtp-tls-port-rule](smtp-tls-port-rule.md) — nodemailer secure:true only on port 465; SMTP config from settings table, English-only digest
 - [next-extensionalias-workspace](next-extensionalias-workspace.md) — web next.config needs transpilePackages + webpack extensionAlias (.js→.ts) or the build fails on shared/.js imports (typecheck stays green)
+- [logging-pino-loki](logging-pino-loki.md) — both apps log pino JSON to stdout (service/version/event/req_id/latency_ms); Alloy tails stdout into Loki, no app-side wiring; ADR 0002
