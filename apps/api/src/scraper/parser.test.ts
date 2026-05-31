@@ -74,16 +74,19 @@ describe("parseClassDetails (inline)", () => {
   });
 });
 
+// NOTE: read the fixture lazily INSIDE the test bodies. `describe.skipIf` skips
+// the tests, but the describe callback still executes at collection time — a
+// top-level `readFileSync` here would throw on a clean checkout (CI), where the
+// gitignored fixture is absent, before skipIf can take effect.
 describe.skipIf(!hasGrades)("parseGradesOverview (real fixture)", () => {
-  const html = readFileSync(GRADES_FIXTURE, "utf8");
-  const overview = parseGradesOverview(html);
-
   it("extracts a non-trivial set of classes", () => {
+    const overview = parseGradesOverview(readFileSync(GRADES_FIXTURE, "utf8"));
     expect(overview.classes.length).toBeGreaterThan(0);
     expect(overview.summary.totalClasses).toBe(overview.classes.length);
   });
 
   it("gives every class a positive classId and cgpId", () => {
+    const overview = parseGradesOverview(readFileSync(GRADES_FIXTURE, "utf8"));
     for (const cls of overview.classes) {
       expect(cls.classId).toBeGreaterThan(0);
       expect(cls.cgpId).toBeGreaterThan(0);
@@ -92,14 +95,13 @@ describe.skipIf(!hasGrades)("parseGradesOverview (real fixture)", () => {
 });
 
 describe.skipIf(!hasClass)("parseClassDetails (real fixture)", () => {
-  const html = readFileSync(CLASS_FIXTURE, "utf8");
-  const result = parseClassDetails(html, "Sample Class");
-
   it("extracts at least one standard", () => {
+    const result = parseClassDetails(readFileSync(CLASS_FIXTURE, "utf8"), "Sample Class");
     expect(result.standards.length).toBeGreaterThan(0);
   });
 
   it("parses scores in N.NN=L format on the first scored standard", () => {
+    const result = parseClassDetails(readFileSync(CLASS_FIXTURE, "utf8"), "Sample Class");
     const scored = result.standards.find((s) => s.score.includes("="));
     if (scored) {
       expect(scored.score).toMatch(/^\d+(\.\d+)?=[A-Z]$/);
