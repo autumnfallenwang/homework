@@ -22,7 +22,7 @@ export function EmptyState() {
           className="text-2xl font-medium tracking-tight"
           style={{ fontFamily: "var(--font-heading)" }}
         >
-          Welcome to Parent Companion
+          Welcome to Homework
         </h2>
         <p className="mx-auto max-w-[320px] text-[14px] leading-relaxed text-muted-foreground">
           No children are set up yet. Add your first child and we'll keep track of grades and

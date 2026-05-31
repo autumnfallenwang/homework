@@ -86,14 +86,14 @@ export function Sidebar() {
                 className="text-sm font-semibold text-primary"
                 style={{ fontFamily: "var(--font-heading)" }}
               >
-                T
+                H
               </span>
             </div>
             <span
               className="text-[13px] font-semibold tracking-tight"
               style={{ fontFamily: "var(--font-heading)" }}
             >
-              Companion
+              Homework
             </span>
           </div>
         )}

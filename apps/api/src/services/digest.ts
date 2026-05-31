@@ -390,7 +390,7 @@ function renderHtml(d: RefreshDigest): string {
     <div style="margin-top:16px;">
       ${detailSections}
     </div>
-    <p style="margin:24px 0 0;color:#9ca3af;font-size:11px;">TeacherEase Parent Companion · generated at ${escapeHtml(generated)}</p>
+    <p style="margin:24px 0 0;color:#9ca3af;font-size:11px;">Homework · generated at ${escapeHtml(generated)}</p>
   </div>
 </body>
 </html>`;
@@ -450,11 +450,7 @@ function renderHeroRowText(c: ChildDigest): string[] {
 
 function renderText(d: RefreshDigest): string {
   const generated = formatHHmm(new Date(d.generatedAt));
-  const parts: string[] = [
-    `TeacherEase Parent Companion: ${buildHeroLine(d)}`,
-    `Checked at ${generated}`,
-    "",
-  ];
+  const parts: string[] = [`Homework: ${buildHeroLine(d)}`, `Checked at ${generated}`, ""];
   for (const c of d.children) {
     parts.push(...renderHeroRowText(c));
     parts.push("");
@@ -467,7 +463,7 @@ function renderText(d: RefreshDigest): string {
 
 export function renderDigestEmail(d: RefreshDigest): RenderedEmail {
   return {
-    subject: `TeacherEase Parent Companion: ${buildHeroLine(d)}`,
+    subject: `Homework: ${buildHeroLine(d)}`,
     textBody: renderText(d),
     htmlBody: renderHtml(d),
   };

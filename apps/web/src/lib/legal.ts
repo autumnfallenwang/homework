@@ -2,8 +2,8 @@
 // app; the privacy notice is reworded for the self-hosted web deployment (data
 // lives in the home-cluster Postgres, not a local SQLite file).
 
-export const APP_NAME = "TeacherEase Parent Companion";
-export const REPO_URL = "https://github.com/autumnfallenwang/teacherease-parent-companion";
+export const APP_NAME = "Homework";
+export const REPO_URL = "https://github.com/autumnfallenwang/homework";
 
 export const DISCLAIMER_SHORT =
   "This app is not affiliated with TeacherEase or Common Goal Systems Inc. " +

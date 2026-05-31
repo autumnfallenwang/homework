@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#2f8364"/>
+  <!-- cap base (drawn first; the board overlaps its top edge) -->
+  <path d="M158 268 L158 338 C158 372 202 392 256 392 C310 392 354 372 354 338 L354 268 Z" fill="#c7e7d7"/>
+  <!-- mortarboard board -->
+  <path d="M256 140 L444 224 L256 308 L68 224 Z" fill="#f6f3ef"/>
+  <!-- center button -->
+  <circle cx="256" cy="224" r="15" fill="#2f8364"/>
+  <!-- tassel: cord along the board to the right corner, hanging down -->
+  <path d="M256 224 L432 224 L432 340" fill="none" stroke="#e8a23d" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="432" cy="356" r="17" fill="#e8a23d"/>
+</svg>

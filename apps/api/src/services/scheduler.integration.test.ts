@@ -81,6 +81,6 @@ describe.skipIf(!url)("scheduler cycles (live DB)", () => {
     });
     expect(result.sent).toBe(true);
     expect(sent).toHaveLength(1);
-    expect(sent[0]?.subject).toContain("TeacherEase Parent Companion");
+    expect(sent[0]?.subject).toContain("Homework");
   });
 });

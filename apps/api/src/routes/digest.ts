@@ -20,9 +20,9 @@ digestApp.post("/test", async (c) => {
   const cfg = await loadSmtpConfig(db);
   if (!cfg) return c.json({ error: "SMTP not configured" }, 400);
   await sendEmail(cfg, {
-    subject: "TeacherEase Parent Companion: test email",
-    text: "This is a test email from TeacherEase Parent Companion. SMTP is working.",
-    html: "<p>This is a test email from <strong>TeacherEase Parent Companion</strong>. SMTP is working.</p>",
+    subject: "Homework: test email",
+    text: "This is a test email from Homework. SMTP is working.",
+    html: "<p>This is a test email from <strong>Homework</strong>. SMTP is working.</p>",
   });
   return c.json({ ok: true });
 });

@@ -20,7 +20,7 @@ describe.skipIf(!live)("live SMTP send (real server)", () => {
       to: process.env.SMTP_TO ?? "",
     };
     await sendEmail(cfg, {
-      subject: "TeacherEase Parent Companion: M05 live smoke test",
+      subject: "Homework: M05 live smoke test",
       text: "M05 live-send smoke test (plaintext). If you see this, nodemailer SMTP works.",
       html: "<p>M05 live-send smoke test (HTML). If you see this, nodemailer SMTP works with multipart.</p>",
     });

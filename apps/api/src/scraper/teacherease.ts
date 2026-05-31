@@ -14,8 +14,7 @@ const LOGIN_PAGE_PATH = "/common/login.aspx";
 const LOGIN_POST_PATH = "/app/Login/Login";
 
 // Identifiable User-Agent so TeacherEase can contact us if needed.
-export const USER_AGENT =
-  "TeacherEaseParentCompanion/0.1.0 (+https://github.com/autumnfallenwang/teacherease-parent-companion)";
+export const USER_AGENT = "Homework/0.1.0 (+https://github.com/autumnfallenwang/homework)";
 
 const FIELD_EMAIL = "email";
 const FIELD_PASSWORD = "password";
