@@ -9,7 +9,10 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:fast": "vitest run --exclude '**/*.integration.test.ts'",
     "lint": "biome check .",
     "lint:fix": "biome check --write ."
   },
@@ -17,6 +20,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

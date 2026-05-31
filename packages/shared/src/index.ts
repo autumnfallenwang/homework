@@ -1,5 +1,8 @@
-// Shared Zod schemas and inferred types for the API + web.
-// Entities (children, grades, homework, settings, attention engine, …) land in M04.
+// Shared Zod schemas, inferred types, and pure domain logic for the API + web.
+// Barrel — consumers import everything from "@homework/shared".
 
-/** Package identifier — placeholder export until M04 adds the real schemas. */
-export const SHARED_PACKAGE = "@homework/shared" as const;
+export * from "./attention-engine.js";
+export * from "./domain.js";
+export * from "./homework-date.js";
+export * from "./records.js";
+export * from "./trend.js";

@@ -4,6 +4,13 @@ import { config } from "./config.js";
 import { db } from "./db/index.js";
 import { seedSettings } from "./db/seed-settings.js";
 
+if (!process.env.DATABASE_URL) {
+  console.error(
+    JSON.stringify({ level: "error", event: "config.error", msg: "DATABASE_URL is required" }),
+  );
+  process.exit(1);
+}
+
 const app = createApp();
 
 serve({ fetch: app.fetch, port: config.apiPort }, async (info) => {

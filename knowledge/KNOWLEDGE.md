@@ -47,3 +47,5 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [schema-uuid-jsonb](schema-uuid-jsonb.md) — DB uses uuid string PKs + jsonb payload (not the source's int ids / text blob)
 - [drizzle-kit-generate-prompt](drizzle-kit-generate-prompt.md) — run `drizzle-kit generate` with `< /dev/null --name` to avoid the rename-prompt loop
 - [drizzle-casing-onconflict](drizzle-casing-onconflict.md) — set `casing: "snake_case"` in both drizzle configs or upserts throw duplicate-key
+- [drizzle-sql-select-alias](drizzle-sql-select-alias.md) — bare `sql` in a `.select({...})` projection needs `.as("alias")` or tsc TS2769
+- [hono-route-conventions](hono-route-conventions.md) — manual zod safeParse, flat `{error,details}`, `*App` mounted under `/api`, no auth

@@ -1,6 +1,20 @@
-// Shared types for the TeacherEase scraper. Pure module — no platform imports.
-// Ported verbatim from the desktop app (src/lib/scraper/types.ts), with one
-// change: ChildRecord.id is a uuid string (M02 schema), not a number.
+// Scraper types. The pure data *payload* shapes (ClassDetails, Standard,
+// Assignment, GradesOverview, ChildRecord, Homework*) now live in
+// @homework/shared so the API, the web, and the attention engine share one
+// definition; this module re-exports them for the scraper's existing imports.
+// The runtime error classes and the I/O contracts (Session, FetchImpl) stay
+// here — they are server-only and carry no value to the web bundle.
+
+export type {
+  Assignment,
+  ChildRecord,
+  ClassDetails,
+  ClassOverview,
+  GradesOverview,
+  HomeworkEntry,
+  HomeworkSubject,
+  Standard,
+} from "@homework/shared";
 
 export interface LoginCredentials {
   readonly username: string;
@@ -87,88 +101,4 @@ export class ParserError extends Error {
     super(message, options);
     this.name = "ParserError";
   }
-}
-
-// Child row shape the scraper needs. Subset of the DB row; id is a uuid string.
-export interface ChildRecord {
-  readonly id: string;
-  readonly displayName: string;
-  readonly portalType: string;
-  readonly baseUrl: string;
-  readonly username: string;
-  readonly grade: string | null;
-  readonly school: string | null;
-  readonly homeworkUrl: string | null;
-  readonly createdAt: string;
-}
-
-// Grades overview (the GradeViewAllWithProgress page).
-export interface ClassOverview {
-  readonly name: string;
-  readonly instructor: string;
-  readonly status: "meeting" | "needs_attention" | "not_assessed";
-  readonly statusCode: number;
-  readonly needsAttention: boolean;
-  readonly targetsMeeting: number;
-  readonly targetsNotMeeting: number;
-  readonly totalTargets: number;
-  readonly classId: number;
-  readonly cgpId: number;
-}
-
-export interface GradesOverview {
-  readonly classes: readonly ClassOverview[];
-  readonly summary: {
-    readonly totalClasses: number;
-    readonly meetingExpectations: number;
-    readonly needsAttention: number;
-    readonly notAssessed: number;
-    readonly totalTargetsMeeting: number;
-    readonly totalTargetsNotMeeting: number;
-  };
-}
-
-// Class detail (StudentProgressStandardsDetails page).
-export interface Assignment {
-  readonly testNameId: number;
-  readonly dueDate: string;
-  readonly name: string;
-  readonly weight: string;
-  readonly grade: string;
-  readonly gradeNumeric: number;
-  readonly gradeLetter: string;
-  readonly isMissing: boolean;
-  readonly feedback: string;
-}
-
-export interface Standard {
-  readonly name: string;
-  readonly score: string;
-  readonly scoreNumeric: number;
-  readonly scoreLetter: string;
-  readonly isMeeting: boolean;
-  readonly children: readonly Standard[];
-  readonly assignments: readonly Assignment[];
-  readonly missingCount: number;
-  readonly lowScoreCount: number;
-}
-
-export interface ClassDetails {
-  readonly className: string;
-  readonly standards: readonly Standard[];
-  readonly summary: {
-    readonly missingAssignments: number;
-  };
-}
-
-// Homework (Google Sites daily homework page).
-export interface HomeworkSubject {
-  readonly name: string;
-  readonly content: string;
-  readonly dueDate: string | null;
-}
-
-export interface HomeworkEntry {
-  readonly date: string;
-  readonly subjects: readonly HomeworkSubject[];
 }
