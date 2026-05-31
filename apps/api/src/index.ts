@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { config } from "./config.js";
 import { db } from "./db/index.js";
 import { seedSettings } from "./db/seed-settings.js";
+import { startScheduler } from "./services/scheduler.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(
@@ -24,4 +25,8 @@ serve({ fetch: app.fetch, port: config.apiPort }, async (info) => {
   );
   // Ensure default settings exist on boot (idempotent).
   await seedSettings(db);
+  // Arm the fetch + notify schedulers (skip under test so cron doesn't fire).
+  if (process.env.NODE_ENV !== "test") {
+    await startScheduler(db);
+  }
 });

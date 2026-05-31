@@ -348,6 +348,20 @@ export async function getHomeworkForDay(
   return rows.map(toHomeworkRecord);
 }
 
+/** Homework whose resolved due date falls on `iso` ("due today"). */
+export async function getHomeworkDueOnDay(
+  db: Database,
+  childId: string,
+  iso: string,
+): Promise<HomeworkRecord[]> {
+  const rows = await db
+    .select()
+    .from(homework)
+    .where(and(eq(homework.childId, childId), eq(homework.dueDate, iso)))
+    .orderBy(asc(homework.subject));
+  return rows.map(toHomeworkRecord);
+}
+
 export async function getHomeworkByMonth(
   db: Database,
   childId: string,

@@ -1,6 +1,6 @@
 ---
 name: 05-scheduler-email
-status: todo
+status: done
 created: 2026-05-30
 ---
 
@@ -58,3 +58,48 @@ Routes (extend M04): `POST /digest/send` (send now), `POST /digest/test` (test e
 - Cron blueprint: `homenews/apps/api/src/services/scheduler.ts`, `homecal/apps/api/src/services/reminder-scheduler.ts`
 - Email blueprint: `homecal/apps/api/src/services/email.ts`
 - Depends on: M03 (`runFetch`), M04 (attention engine in shared)
+
+## Progress
+
+- **`packages/shared/src/schedule.ts`** — pure slot math ported from the desktop
+  `schedule/{fetch,notify}-schedule.ts`: `computeSlots(runsPerDay, firstSlotAt)` (clamp 1–8, spread
+  `1440/n` from the anchor) + `slotToCron(minute, weekdaysOnly)`. Unit-tested (12 cases).
+- **`apps/api/src/services/email.ts`** — nodemailer transport replacing Rust `lettre`. TLS 1:1 with
+  source (`secure: port === 465`, else STARTTLS); `loadSmtpConfig(db)` reads `smtp.*` settings;
+  comma-separated recipients parsed/trimmed. Unit-tested via mocked nodemailer + an
+  `EMAIL_LIVE=1`-gated real-send test (`email.live.integration.test.ts`).
+- **`apps/api/src/services/digest.ts`** — `buildRefreshDigest` (pure, ported, uses shared
+  `computeChildAttention`/`sortItemsMissingFirst`), `buildDigestFromDb` (assembles per-child inputs
+  from queries), and `renderDigestEmail` (text+HTML, ported from `email-templates.ts` with English
+  strings inlined — i18n dropped server-side). Failures dropped per source D-18.
+- **`apps/api/src/services/scheduler.ts`** — node-cron singleton (homenews pattern). `runFetchCycle`
+  (runFetch per child) + `runNotifyCycle` (fetch-before-dispatch, build digest, send when
+  `notify.refreshDigest.email=1` and SMTP configured), both with injectable deps for tests.
+  `startScheduler` arms one cron task per fetch + notify slot with `timezone: config.tz`;
+  `stopScheduler` re-arm-safe.
+- **Routes** `apps/api/src/routes/digest.ts` (`POST /digest/send`, `POST /digest/test`) mounted at
+  `/api/digest`. **Wiring**: `config.tz` (`TZ` env, default `America/New_York`);
+  `startScheduler(db)` called from `index.ts` after seed (skipped under `NODE_ENV=test`);
+  `getHomeworkDueOnDay` added to queries. Deps added: `node-cron@^4`, `nodemailer@^8`,
+  `@types/nodemailer` (node-cron ships its own types).
+
+## Outcome
+
+Shipped the scheduler + email digest server-side. Decisions: **TZ = America/New_York** (via `TZ`
+env / `config.tz`, also passed to node-cron). DB timestamps stay **UTC**; TZ-aware display is a
+web/UI concern (M06). The M07 Deployment must set `TZ=America/New_York` on the pod so Node's local
+`Date` (used by the digest's "today") and node-cron agree. **Email rendered English-only** (i18n
+stays a web concern). Suspend/catch-up machinery and OS notifications dropped per locked decisions.
+
+Check loop **all green**: lint · typecheck · `test:fast` (shared 88 + api 62) · build, plus full
+live-Postgres suite (**16 files / 82 passed | 3 skipped** — skips are the `EMAIL_LIVE`-gated live
+sends). Live smoke confirmed: boot armed **5 cron tasks** (fetch 09:00/17:00/01:00, notify
+08:00/20:00, all America/New_York); `POST /api/digest/test` → 400 `{"error":"SMTP not configured"}`;
+`POST /api/digest/send` → `200 {"sent":false}` (email disabled). Scheduler integration test verified
+fetch-before-dispatch ordering and the enable/configure send gate with an injected transport.
+
+**Run the live email test:** set `SMTP_*` in `apps/api/.env`, then
+`EMAIL_LIVE=1 pnpm --filter @homework/api exec vitest run email.live`.
+
+> Note: the project's secrets hook blocks writing to `.env`, so for local scheduler verification
+> pass `TZ=America/New_York` inline on the dev command; `config.tz` defaults to it regardless.

@@ -18,16 +18,19 @@
     "db:seed:settings": "tsx --env-file=.env src/db/seed-settings.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
     "@homework/shared": "workspace:*",
+    "@hono/node-server": "^1.13.7",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.6.14",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.10",
     "postgres": "^3.4.8",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/nodemailer": "^8.0.0",
     "drizzle-kit": "^0.31.9",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

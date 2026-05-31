@@ -17,4 +17,10 @@ export const config = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+  /**
+   * IANA timezone for the scheduler's fire times and the digest's "today".
+   * Node reads `TZ` natively for local Date math; we also pass it to node-cron.
+   * Defaults to America/New_York (set TZ on the M07 Deployment).
+   */
+  tz: process.env.TZ ?? "America/New_York",
 } as const;

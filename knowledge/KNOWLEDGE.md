@@ -49,3 +49,5 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [drizzle-casing-onconflict](drizzle-casing-onconflict.md) — set `casing: "snake_case"` in both drizzle configs or upserts throw duplicate-key
 - [drizzle-sql-select-alias](drizzle-sql-select-alias.md) — bare `sql` in a `.select({...})` projection needs `.as("alias")` or tsc TS2769
 - [hono-route-conventions](hono-route-conventions.md) — manual zod safeParse, flat `{error,details}`, `*App` mounted under `/api`, no auth
+- [scheduler-nodecron-slots](scheduler-nodecron-slots.md) — node-cron singleton: one task per shared computeSlots→slotToCron slot, timezone:config.tz, skipped under NODE_ENV=test
+- [smtp-tls-port-rule](smtp-tls-port-rule.md) — nodemailer secure:true only on port 465; SMTP config from settings table, English-only digest

@@ -6,6 +6,7 @@ import * as q from "./db/queries.js";
 import { requestLogger } from "./middleware/logger.js";
 import { appMetaApp } from "./routes/app-meta.js";
 import { childrenApp } from "./routes/children.js";
+import { digestApp } from "./routes/digest.js";
 import { childFetchApp, fetchRunsApp } from "./routes/fetch-runs.js";
 import { gradesApp } from "./routes/grades.js";
 import { homeworkApp } from "./routes/homework.js";
@@ -44,6 +45,7 @@ export function createApp() {
   app.route("/api/settings", settingsApp);
   app.route("/api/scraper", scraperApp);
   app.route("/api/app", appMetaApp);
+  app.route("/api/digest", digestApp);
 
   return app;
 }
