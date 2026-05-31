@@ -53,3 +53,4 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [smtp-tls-port-rule](smtp-tls-port-rule.md) — nodemailer secure:true only on port 465; SMTP config from settings table, English-only digest
 - [next-extensionalias-workspace](next-extensionalias-workspace.md) — web next.config needs transpilePackages + webpack extensionAlias (.js→.ts) or the build fails on shared/.js imports (typecheck stays green)
 - [logging-pino-loki](logging-pino-loki.md) — both apps log pino JSON to stdout (service/version/event/req_id/latency_ms); Alloy tails stdout into Loki, no app-side wiring; ADR 0002
+- [deploy-helm-arch-infra](deploy-helm-arch-infra.md) — M07 deploy: homecal-pattern Dockerfiles + chart (api Recreate, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra; TZ/LOG_LEVEL; 2 secrets; web needs public/.gitkeep

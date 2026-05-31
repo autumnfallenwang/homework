@@ -1,6 +1,6 @@
 ---
 name: 07-deploy-gitops
-status: todo
+status: done
 created: 2026-05-30
 ---
 
@@ -34,13 +34,16 @@ Pushing to `main` builds + pushes `ghcr.io/autumnfallenwang/homework-{api,web}`,
 
 ## Exit criteria
 
-- [ ] Both images build locally (`docker build -f deploy/Dockerfile.api .`) and run
-- [ ] `helm template deploy/chart` renders valid manifests; `helm lint` clean
-- [ ] First deploy: namespace created, db StatefulSet healthy, migration Job applies schema (flip `migrate.enabled=true` after first sync), api + web pods Ready
-- [ ] `http://homework.arch.local` serves the app; `http://homework-api.arch.local/health` = ok; web→api hop works in-cluster
-- [ ] `git push origin main` → GHA green → arch-infra bumped → Argo CD rolls both pods (end-to-end ~3–5 min)
-- [ ] Logs land in Loki (`{namespace="homework"}` in Grafana)
-- [ ] Scheduler fires in-cluster on cadence; a real digest email sends
+- [x] Both images build locally (`docker build -f deploy/Dockerfile.{api,web} .`) and run
+- [x] `helm template deploy/chart` renders valid manifests; `helm lint` clean
+- [x] Full stack verified via `docker compose` on the prod images: db healthy, migrate path
+  (`drizzle-kit migrate`) applies schema, api `/health`=ok, web serves, **web→api in-container hop
+  returns `{"status":"ok"}`**, child CRUD persists, pino JSON w/ `TZ=America/New_York`
+- [x] `apps/homework.yaml` committed to arch-infra `main` (`d2e3e80`) — **awaiting your push**
+- [ ] *(cluster-only, your push)* First Argo sync: ns created, db Ready, flip `migrate.enabled=true`, pods Ready
+- [ ] *(cluster-only)* `http://homework.arch.local` + `http://homework-api.arch.local/health` via ingress
+- [ ] *(cluster-only)* `git push origin main` → GHA → arch-infra bump → Argo rolls pods
+- [ ] *(cluster-only)* Logs in Loki (`{namespace="homework"}`); scheduler fires in-cluster; real digest sends
 
 ## Decisions (locked)
 
@@ -49,11 +52,41 @@ Pushing to `main` builds + pushes `ghcr.io/autumnfallenwang/homework-{api,web}`,
 - **Postgres in-cluster** via StatefulSet (homecal style), not an external/managed DB.
 - **SMTP/portal passwords:** plaintext in Postgres (locked in M02). The only k8s **Secret** needed is `DATABASE_URL`/`POSTGRES_PASSWORD` (and optionally a default `TZ`); everything else is user-configured via Settings.
 
-## Open questions
+## Resolved open questions
 
-- **Cluster timezone** (carried from M05): the scheduler + digest "today" must match the family's local time. **What `TZ` should the api Deployment use?** (e.g. `America/Chicago`?) Needs your answer before the digest cadence is correct.
-- **Secret creation:** homecal uses a `create-cluster-secret.sh` from a gitignored `cluster-secrets.env`. Replicate that for homework's `DATABASE_URL`/`POSTGRES_PASSWORD`? Recommend yes (same pattern). Sealed Secrets is also available per arch-infra — either works; confirm preference.
-- **arch-infra commit:** I can prepare `apps/homework.yaml` but registering it is a change to a *different* repo. Want me to open a PR there, or hand you the file to commit?
+- **Cluster timezone** → **`America/New_York`** (set as `api.env.TZ` in values.yaml; matches `config.tz`).
+- **Secret creation** → replicated homecal's `scripts/create-cluster-secret.sh` + gitignored
+  `cluster-secrets.env` (two keys: `DATABASE_URL`, `POSTGRES_PASSWORD`). Sealed Secrets deferred.
+- **arch-infra commit** → committed `apps/homework.yaml` **directly to arch-infra main** (`d2e3e80`),
+  per user choice. Not pushed (user pushes).
+
+## Progress
+
+- **`deploy/`**: `Dockerfile.api` (node:22-alpine, pnpm@10.29.3, bakes `drizzle/`), `Dockerfile.web`
+  (multi-stage standalone, `NEXT_PUBLIC_API_URL` build-arg — no auth URL), `compose.yaml`
+  (postgres:17-alpine + api + web), `cluster-secrets.env.example`, and the full `chart/` (homecal
+  pattern, stripped of auth/LLM/APNS/SMTP env): api Deployment **Recreate**, web Deployment, db
+  StatefulSet (PGDATA subdir, headless svc), services, Traefik ingresses
+  (`homework{,-api}.arch.local`), gated pre-install migrate Job. `scripts/create-cluster-secret.sh`.
+- **CI** `.github/workflows/build.yml`: test (dummy DATABASE_URL → `test:fast`) → build-and-deploy
+  (matrix api/web → GHCR `:latest`+`:sha`, web `NEXT_PUBLIC_API_URL` build-arg) → bump-arch-infra
+  (`yq` bumps api+web `image.tag` in `apps/homework.yaml` via `ARCH_INFRA_TOKEN`).
+- **arch-infra** `apps/homework.yaml` (committed to its main): Argo CD Application → homework repo
+  `deploy/chart`, ns `homework`, automated prune+selfHeal, CreateNamespace+ServerSideApply. A
+  review copy also lives at `deploy/arch-infra/homework.yaml` in this repo.
+- **Incidental fix:** `apps/web` had no `public/` dir, so `Dockerfile.web`'s `COPY public` failed —
+  added `apps/web/public/.gitkeep` (conventional for Next; build now succeeds).
+
+## Outcome
+
+Everything locally verifiable is **green**: both images build, `helm lint`/`template` clean, the
+prod images run as a full stack under compose (health, web routes, web→api hop, data persistence,
+pino+TZ all confirmed), and the repo check loop passes. arch-infra is registered (committed, awaiting
+push). What remains is inherently cluster-side and needs your `git push` + `kubectl`/Argo on the live
+k3s box — documented in the exit criteria above. The standing prerequisites for that first deploy:
+(1) run `scripts/create-cluster-secret.sh` with a real `cluster-secrets.env`, (2) push both repos,
+(3) after the db is up, flip `migrate.enabled=true` in `apps/homework.yaml`, (4) ensure the
+`ARCH_INFRA_TOKEN` + GHCR-package-public bits are set as the siblings document.
 
 ## References
 

@@ -1,0 +1,163 @@
+# Default values for the homework chart.
+# Override via `helm install --set` or the ArgoCD Application's
+# spec.source.helm.parameters in arch-infra/apps/homework.yaml.
+#
+# Chart shape: three components (api, web, db) + a pre-install migrate Job, all
+# in one release. Helper templates take a (dict "context" . "component" "X")
+# argument so each workload gets its own labels + selectors.
+
+# Real secrets live in this Secret, created out-of-band before deploy:
+#   bash scripts/create-cluster-secret.sh   (reads ./cluster-secrets.env)
+# homework needs only DATABASE_URL + POSTGRES_PASSWORD — SMTP/portal passwords
+# are user-configured via Settings and stored in Postgres (LAN-only decision).
+secrets:
+  name: homework-secrets
+
+api:
+  image:
+    repository: ghcr.io/autumnfallenwang/homework-api
+    # CI bumps `tag` to a commit SHA in the ArgoCD Application's parameters
+    # (api.image.tag). web bumps in the same commit (web.image.tag) so api +
+    # web roll together — the web build embeds NEXT_PUBLIC_API_URL at build
+    # time and the API contract evolves in lockstep.
+    tag: latest
+    pullPolicy: IfNotPresent
+  # The fetch/notify scheduler is a node-cron singleton inside the API process;
+  # do not scale (see deployment-api.yaml Recreate strategy).
+  replicaCount: 1
+  service:
+    port: 80
+    targetPort: 52001
+  ingress:
+    enabled: true
+    className: traefik
+    host: homework-api.arch.local
+  # Plaintext config. DATABASE_URL is wired via secretKeyRef in deployment-api.yaml.
+  env:
+    API_PORT: "52001"
+    CORS_ORIGINS: http://homework.arch.local
+    LOG_LEVEL: info
+    # Scheduler fire times + the digest's "today" use the pod's local time;
+    # this must be the family's timezone (M05 / ADR-recorded default).
+    TZ: America/New_York
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  probes:
+    liveness:
+      httpGet:
+        path: /health
+        port: 52001
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    readiness:
+      httpGet:
+        path: /health
+        port: 52001
+      initialDelaySeconds: 3
+      periodSeconds: 10
+
+web:
+  image:
+    repository: ghcr.io/autumnfallenwang/homework-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 80
+    targetPort: 52000
+  ingress:
+    enabled: true
+    className: traefik
+    host: homework.arch.local
+  env:
+    PORT: "52000"
+    HOSTNAME: "0.0.0.0"
+    # Runtime override for the web's server-side fetches — points at the
+    # in-cluster API Service DNS so SSR/route-handler calls never leave the pod
+    # network (browsers use the NEXT_PUBLIC_API_URL baked at build time).
+    API_URL: http://homework-api
+    LOG_LEVEL: info
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  probes:
+    liveness:
+      httpGet:
+        path: /
+        port: 52000
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    readiness:
+      httpGet:
+        path: /
+        port: 52000
+      initialDelaySeconds: 3
+      periodSeconds: 10
+
+db:
+  # Plain postgres:17-alpine — homework uses no Postgres extensions.
+  image:
+    repository: postgres
+    tag: 17-alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 5432
+    targetPort: 5432
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+    mountPath: /var/lib/postgresql/data
+  env:
+    # initdb honors POSTGRES_DB + POSTGRES_USER only on an empty PGDATA.
+    POSTGRES_DB: homework
+    POSTGRES_USER: homework
+    # POSTGRES_PASSWORD comes from the homework-secrets Secret.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  # Postgres image runs as UID/GID 999. fsGroup 999 lets it write to the PVC.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+
+# Migrate Job — Helm pre-install/pre-upgrade hook running drizzle-kit migrate
+# against the SQL files baked into the api image (apps/api/drizzle/*.sql).
+# Disabled by default until homework-secrets exists; flip via the ArgoCD
+# parameter migrate.enabled=true once the secret + db are up.
+migrate:
+  enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# Pod- and container-level security contexts. api + web run as node UID 1000;
+# the DB pod runs as postgres UID 999 and overrides podSecurityContext in its
+# template. allowPrivilegeEscalation / readOnlyRootFilesystem / capabilities
+# are container-level only — keep them in containerSecurityContext.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "homework.fullname" (dict "context" . "component" "api") }}
+  labels:
+    {{- include "homework.labels" (dict "context" . "component" "api") | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  # Recreate, not RollingUpdate. The fetch/notify scheduler is a node-cron
+  # singleton inside the API process; running two pods in parallel during a
+  # rolling cutover would double-fire fetches + digest emails.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "homework.selectorLabels" (dict "context" . "component" "api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "homework.selectorLabels" (dict "context" . "component" "api") | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.service.targetPort }}
+              protocol: TCP
+          env:
+            # Plaintext config (port, CORS, log level, TZ) from values.yaml.
+            {{- range $k, $v := .Values.api.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            # DATABASE_URL — wired via secretKeyRef to homework-secrets, created
+            # out-of-band (scripts/create-cluster-secret.sh).
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: DATABASE_URL
+          livenessProbe:
+            {{- toYaml .Values.api.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.api.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}

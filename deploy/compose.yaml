@@ -1,0 +1,74 @@
+# Local full-stack bring-up — mirrors the in-cluster topology (api + web +
+# Postgres) for smoke-testing the production images before they ship. Not used
+# in k3s; the Helm chart owns the cluster deployment.
+
+services:
+  homework-db-prod:
+    image: postgres:17-alpine
+    container_name: homework-db-prod
+    restart: unless-stopped
+    ports:
+      - "52432:5432"
+    environment:
+      - POSTGRES_DB=homework
+      - POSTGRES_USER=homework
+      - POSTGRES_PASSWORD=homework
+    volumes:
+      - homework-db-prod-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homework -d homework"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  homework-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    container_name: homework-api
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      homework-db-prod:
+        condition: service_healthy
+    environment:
+      - API_PORT=52001
+      - DATABASE_URL=postgresql://homework:homework@localhost:52432/homework
+      - CORS_ORIGINS=http://localhost:52000
+      - TZ=America/New_York
+      - LOG_LEVEL=info
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  homework-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:52001
+    container_name: homework-web
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - homework-api
+    environment:
+      - PORT=52000
+      - HOSTNAME=0.0.0.0
+      - API_URL=http://localhost:52001
+      - LOG_LEVEL=info
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  homework-db-prod-data:

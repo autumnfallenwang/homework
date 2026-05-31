@@ -1,0 +1,8 @@
+apiVersion: v2
+name: homework
+description: TeacherEase Parent Companion — api + web + Postgres
+type: application
+version: 0.1.0
+# appVersion tracks the homework product, not any one component. Bump manually
+# on semver-significant releases.
+appVersion: "0.1.0"
