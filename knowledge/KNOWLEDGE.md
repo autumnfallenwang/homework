@@ -51,3 +51,4 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [hono-route-conventions](hono-route-conventions.md) — manual zod safeParse, flat `{error,details}`, `*App` mounted under `/api`, no auth
 - [scheduler-nodecron-slots](scheduler-nodecron-slots.md) — node-cron singleton: one task per shared computeSlots→slotToCron slot, timezone:config.tz, skipped under NODE_ENV=test
 - [smtp-tls-port-rule](smtp-tls-port-rule.md) — nodemailer secure:true only on port 465; SMTP config from settings table, English-only digest
+- [next-extensionalias-workspace](next-extensionalias-workspace.md) — web next.config needs transpilePackages + webpack extensionAlias (.js→.ts) or the build fails on shared/.js imports (typecheck stays green)

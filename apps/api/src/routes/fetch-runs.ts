@@ -51,3 +51,12 @@ fetchRunsApp.get("/:id/standards", async (c) => {
   }
   return c.json(await q.getAllClassDetails(db, fetchRunId));
 });
+
+// Per-run grades + assignments (the web's recent-activity diff reads two runs).
+fetchRunsApp.get("/:id/grades", async (c) => {
+  return c.json(await q.getGradesForFetchRun(db, c.req.param("id")));
+});
+
+fetchRunsApp.get("/:id/assignments", async (c) => {
+  return c.json(await q.getAssignmentsForFetchRun(db, c.req.param("id")));
+});
