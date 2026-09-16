@@ -76,7 +76,7 @@ jobs:
           # fetches. No auth in this app, so no NEXT_PUBLIC_AUTH_URL. The api
           # image needs no build args.
           build-args: |
-            ${{ matrix.component == 'web' && 'NEXT_PUBLIC_API_URL=http://homework-api.arch.local' || '' }}
+            ${{ matrix.component == 'web' && 'NEXT_PUBLIC_API_URL=http://homework-api.arch.internal' || '' }}
           # Separate cache scopes — api and web have unrelated dep trees.
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}

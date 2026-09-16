@@ -20,7 +20,7 @@ RUN pnpm install --frozen-lockfile
 
 # Build Next.js with standalone output. NEXT_PUBLIC_API_URL is inlined into the
 # client bundle at build time (Next.js evaluates it during `next build`), so the
-# GHA workflow passes --build-arg NEXT_PUBLIC_API_URL=http://homework-api.arch.local
+# GHA workflow passes --build-arg NEXT_PUBLIC_API_URL=http://homework-api.arch.internal
 # for browser-side fetches. The chart additionally sets API_URL at runtime for
 # the SSR/server-component fetches to use in-cluster Service DNS (homework-api).
 # No auth in this app, so no NEXT_PUBLIC_AUTH_URL (unlike homecal).

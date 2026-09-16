@@ -31,11 +31,11 @@ api:
   ingress:
     enabled: true
     className: traefik
-    host: homework-api.arch.local
+    host: homework-api.arch.internal
   # Plaintext config. DATABASE_URL is wired via secretKeyRef in deployment-api.yaml.
   env:
     API_PORT: "52001"
-    CORS_ORIGINS: http://homework.arch.local
+    CORS_ORIGINS: http://homework.arch.internal
     LOG_LEVEL: info
     # Scheduler fire times + the digest's "today" use the pod's local time;
     # this must be the family's timezone (M05 / ADR-recorded default).
@@ -72,7 +72,7 @@ web:
   ingress:
     enabled: true
     className: traefik
-    host: homework.arch.local
+    host: homework.arch.internal
   env:
     PORT: "52000"
     HOSTNAME: "0.0.0.0"
