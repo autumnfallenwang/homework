@@ -13,7 +13,7 @@ M07 mirrors homecal's deploy tree (`homecal → homework`, auth/LLM/APNS/SMTP en
   (`.gitkeep` keeps it) or `COPY public` fails the build.
 - **Chart `deploy/chart`:** api Deployment **`Recreate`/replicas=1** (scheduler is a singleton — never
   scale or RollingUpdate); web Deployment RollingUpdate; db StatefulSet `postgres:17-alpine` (PGDATA
-  subdir, headless service); Traefik ingresses `homework.arch.local` + `homework-api.arch.local`;
+  subdir, headless service); Traefik ingresses `homework.arch.internal` + `homework-api.arch.internal`;
   pre-install/upgrade **migrate Job gated `migrate.enabled=false`** (flip true after secret+db exist).
   Ports 52001 (api) / 52000 (web). `api.env.TZ=America/New_York`, `LOG_LEVEL=info` (both).
 - **Secrets:** only `DATABASE_URL` + `POSTGRES_PASSWORD` (SMTP/portal passwords live in Postgres).

@@ -20,7 +20,7 @@ The system follows the established house pattern of the sibling projects `homene
 
 ## Constraints and non-goals
 
-- **LAN-only.** Served behind `*.arch.local` ingress on the home k3s cluster; no public-internet exposure (matching `homenews` / `homecal`).
+- **LAN-only.** Served behind `*.arch.internal` ingress on the home k3s cluster; no public-internet exposure (matching `homenews` / `homecal`).
 - **Scope is a 1:1 functional port.** Multi-user accounts, authentication, and additional features are explicitly future work, not part of this migration.
 - **The desktop / Tauri build is retired** in favor of the web app.
 
