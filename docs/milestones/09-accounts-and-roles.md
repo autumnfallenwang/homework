@@ -62,9 +62,12 @@ Account self-service (review feedback, 2026-09-30) — the common pattern (GitHu
 an **Account** page inside Settings, and the signed-in name in every sidebar links to it.
 - Parent: Settings → **Account** (first tab): rename yourself, see your sign-in email and role,
   change password. The Settings sidebar gets the account footer too.
-- Child: a **Settings** area (`/child/settings`, sidebar item on desktop, third tab on a phone) with
-  **Account** (name, username and role read-only — the name belongs to the child profile; change
-  password) and **Appearance** (the parent's Appearance settings, kept per browser).
+- Child: **Settings** works exactly like the parent's (review round 2): the SAME `SettingsSidebar`
+  replaces the main navigation (Back → `/child`) and the SAME `SettingsView` renders
+  `/child/settings/[tab]`, limited to **Account** (name, username and role read-only — the name
+  belongs to the child profile; change password) and **Appearance** (kept per browser). Reached
+  from a sidebar item on desktop, a third tab on a phone. Below tablet width the settings sidebar
+  (both roles) is an icon rail.
 - Sidebar footer is the same for both roles: name, then role ("Aaron · Parent", "Ivy · Child").
 - Password changes use Better Auth's `change-password` (current password checked, every OTHER
   session revoked, this one kept); the parent's rename uses `update-user`.
@@ -139,6 +142,9 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
   plugin cannot take custom role names without an access-control policy (dropped, ADR 0004); the
   child's phone header showed a stray rule (fixed, re-checked on the rebuilt image).
 
+- 2026-09-30 (review round 2): child Settings reuse the parent's settings sidebar and view instead
+  of a separate top-tab header; the settings sidebar takes its tab list, base path and Back target
+  as props and becomes an icon rail on phones.
 - 2026-09-30 (review round 1): Account page in Settings + footer link for both roles, child
   Settings (Account, Appearance), consistent footer (name · role), theme provider moved to the root
   layout (fixed a dark-mode flash introduced with the session gate). Remaining, pre-existing: a

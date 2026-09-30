@@ -1,9 +1,11 @@
 "use client";
 
 // Settings-specific sidebar (Phase 30 / D-23). Replaces the main sidebar
-// when pathname starts with /settings — Back row + "Settings" eyebrow +
-// 7 tab rows (Account first). Derives activeTab from the URL itself so the layout
-// doesn't have to thread state through.
+// while in settings — Back row + "Settings" eyebrow + one row per tab.
+// Derives the active tab from the URL itself so the layout doesn't have to
+// thread state through. The SAME component serves both roles (ADR 0004): the
+// parent's /settings (7 tabs, Back → Today) and a child's /child/settings
+// (Account + Appearance, Back → /child).
 
 import {
   ArrowLeft,
@@ -32,7 +34,7 @@ export type SettingsTab =
   | "notifications"
   | "advanced";
 
-interface SettingsTabItem {
+export interface SettingsTabItem {
   readonly key: SettingsTab;
   readonly label: string;
   readonly icon: LucideIcon;
@@ -40,7 +42,7 @@ interface SettingsTabItem {
 
 const COLLAPSED_KEY = "ui.sidebarCollapsed";
 
-const TABS: readonly SettingsTabItem[] = [
+export const PARENT_SETTINGS_TABS: readonly SettingsTabItem[] = [
   // Your own login (ADR 0004) — first, as most apps put the account.
   { key: "account", label: "Account", icon: CircleUser },
   { key: "children", label: "Children", icon: BookUser },
@@ -51,28 +53,53 @@ const TABS: readonly SettingsTabItem[] = [
   { key: "advanced", label: "Advanced", icon: SettingsIcon },
 ];
 
-export function isSettingsTab(value: unknown): value is SettingsTab {
-  return typeof value === "string" && TABS.some((t) => t.key === value);
+/** A child's settings: their own login and how the app looks — nothing of the parent's. */
+export const CHILD_SETTINGS_TABS: readonly SettingsTabItem[] = PARENT_SETTINGS_TABS.filter(
+  (t) => t.key === "account" || t.key === "appearance",
+);
+
+export function isSettingsTab(
+  value: unknown,
+  tabs: readonly SettingsTabItem[] = PARENT_SETTINGS_TABS,
+): value is SettingsTab {
+  return typeof value === "string" && tabs.some((t) => t.key === value);
 }
 
-function tabFromPathname(pathname: string): SettingsTab {
-  const m = pathname.match(/^\/settings\/([^/]+)/);
-  return m && isSettingsTab(m[1]) ? m[1] : "children";
+export function tabFromPathname(
+  pathname: string,
+  basePath: string,
+  tabs: readonly SettingsTabItem[],
+): SettingsTab | undefined {
+  const rest = pathname.startsWith(`${basePath}/`) ? pathname.slice(basePath.length + 1) : "";
+  const key = rest.split("/")[0];
+  return isSettingsTab(key, tabs) ? key : undefined;
 }
 
-export function SettingsSidebar() {
+export function SettingsSidebar({
+  tabs = PARENT_SETTINGS_TABS,
+  basePath = "/settings",
+  backHref = "/",
+}: {
+  tabs?: readonly SettingsTabItem[];
+  basePath?: string;
+  /** Where Back goes: the role's home. */
+  backHref?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const activeTab = tabFromPathname(pathname);
+  const activeTab = tabFromPathname(pathname, basePath, tabs);
   const [collapsedRaw, setCollapsedRaw] = usePref(COLLAPSED_KEY, "false");
   const collapsed = collapsedRaw === "true";
+  // Labels show only when expanded AND the screen is at least tablet-wide;
+  // on a phone the sidebar is always an icon rail.
+  const label = collapsed ? "hidden" : "hidden md:inline";
 
-  // Always exits settings to Today (/). `router.back()` walks browser
+  // Always exits settings to the role's home. `router.back()` walks browser
   // history one step, but each tab click in the settings sidebar pushes
   // a history entry, so "back" rewinds tab-by-tab instead of exiting
   // settings — surprising. Going home is predictable.
   const handleBack = () => {
-    router.push("/");
+    router.push(backHref);
   };
 
   return (
@@ -80,24 +107,22 @@ export function SettingsSidebar() {
       // See sidebar.tsx for why we divide 100vh by --font-scale here instead
       // of using h-screen directly.
       className={`flex shrink-0 flex-col border-r bg-card/60 backdrop-blur-sm transition-[width] duration-200 ${
-        collapsed ? "w-14" : "w-48"
+        collapsed ? "w-14" : "w-14 md:w-48"
       }`}
       style={{ height: "calc(100vh / var(--font-scale, 1))" }}
     >
       <div className="flex items-center justify-between px-2.5 py-3">
-        {!collapsed && (
-          <span
-            className="pl-1 text-[13px] font-semibold tracking-tight"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            Settings
-          </span>
-        )}
+        <span
+          className={`pl-1 text-[13px] font-semibold tracking-tight ${label}`}
+          style={{ fontFamily: "var(--font-heading)" }}
+        >
+          Settings
+        </span>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsedRaw(collapsed ? "false" : "true")}
-          className="h-7 w-7 shrink-0"
+          className="hidden h-7 w-7 shrink-0 md:inline-flex"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <PanelLeft className="h-3.5 w-3.5" />
@@ -108,24 +133,23 @@ export function SettingsSidebar() {
         <button
           type="button"
           onClick={handleBack}
-          title={collapsed ? "Back" : undefined}
+          title="Back"
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Back</span>}
+          <span className={label}>Back</span>
         </button>
       </nav>
 
       <nav className="flex flex-col gap-0.5 px-2 py-1">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = tab.key === activeTab;
-          const label = tab.label;
           return (
             <Link
               key={tab.key}
-              href={`/settings/${tab.key}`}
-              title={collapsed ? label : undefined}
+              href={`${basePath}/${tab.key}`}
+              title={tab.label}
               className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
                 active
                   ? "bg-secondary font-medium text-foreground"
@@ -133,14 +157,14 @@ export function SettingsSidebar() {
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{label}</span>}
+              <span className={label}>{tab.label}</span>
             </Link>
           );
         })}
       </nav>
 
       <div className="mt-auto">
-        <AccountFooter collapsed={collapsed} />
+        <AccountFooter collapsed={collapsed} railOnMobile />
       </div>
     </aside>
   );

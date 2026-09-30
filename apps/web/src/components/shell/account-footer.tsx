@@ -15,10 +15,13 @@ import { accountPathFor, signOut } from "@/lib/auth-client";
 export function AccountFooter({
   collapsed = false,
   inline = false,
+  railOnMobile = false,
 }: {
   collapsed?: boolean;
   /** Inside a header bar (the child's phone layout): no top rule, no padding. */
   inline?: boolean;
+  /** In a sidebar that is an icon rail on phones: hide the name there. */
+  railOnMobile?: boolean;
 }) {
   const me = useMe();
   const [busy, setBusy] = useState(false);
@@ -36,7 +39,9 @@ export function AccountFooter({
         <Link
           href={accountPathFor(me.user.role)}
           title="Account settings"
-          className="-mx-1 min-w-0 flex-1 rounded-md px-1 py-0.5 hover:bg-secondary/50"
+          className={`-mx-1 min-w-0 flex-1 rounded-md px-1 py-0.5 hover:bg-secondary/50 ${
+            railOnMobile ? "hidden md:block" : ""
+          }`}
           data-testid="account-link"
         >
           <p className="truncate text-[12px] font-medium" data-testid="signed-in-name">
