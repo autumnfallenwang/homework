@@ -16,7 +16,7 @@ export const childLoginsApp = new Hono<{ Variables: AuthVariables }>();
 const idSchema = z.string().uuid();
 
 /** InviteError codes → the house's flat `{ error }` with a status. */
-export function inviteErrorStatus(err: InviteError): 400 | 404 | 409 | 410 {
+export function inviteErrorStatus(err: InviteError): 400 | 403 | 404 | 409 | 410 {
   switch (err.code) {
     case "child_not_found":
     case "invalid":
@@ -24,8 +24,10 @@ export function inviteErrorStatus(err: InviteError): 400 | 404 | 409 | 410 {
     case "expired":
     case "used":
       return 410;
-    case "username_required":
+    case "email_required":
       return 400;
+    case "name_locked":
+      return 403;
     default:
       return 409;
   }
@@ -39,11 +41,7 @@ childLoginsApp.get("/:id/login", async (c) => {
   const login = await findChildLogin(db, id);
   const body: ChildLogin = {
     login: login
-      ? {
-          userId: login.id,
-          username: login.displayUsername ?? login.username,
-          createdAt: login.createdAt.toISOString(),
-        }
+      ? { userId: login.id, email: login.email, createdAt: login.createdAt.toISOString() }
       : null,
     invite: await openInvite(db, id),
   };

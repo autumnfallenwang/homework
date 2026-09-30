@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isAuthPage } from "./api.js";
-import { accountPathFor, changePassword, getMe, homeFor, signIn, signOut } from "./auth-client.js";
+import {
+  accountPathFor,
+  changePassword,
+  getMe,
+  homeFor,
+  signIn,
+  signOut,
+  updateMe,
+} from "./auth-client.js";
 
 function mockFetch(status = 200, body: unknown = {}) {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -17,19 +25,21 @@ afterEach(() => {
 });
 
 describe("the web auth client", () => {
-  it("signs a parent in by email and a child by username", async () => {
+  it("signs every login in by email (ADR 0005)", async () => {
     const fetchMock = mockFetch();
-    await signIn(" parent@example.com ", "pw");
-    await signIn("ivy", "pw");
-    const urls = fetchMock.mock.calls.map((c) => (c as unknown as [string])[0]);
-    expect(urls[0]).toMatch(/\/api\/auth\/sign-in\/email$/);
-    expect(urls[1]).toMatch(/\/api\/auth\/sign-in\/username$/);
-    expect(
-      JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body)),
-    ).toEqual({
-      username: "ivy",
-      password: "pw",
-    });
+    await signIn(" ivy@example.com ", "pw");
+    const [url, init] = callOf(fetchMock);
+    expect(url).toMatch(/\/api\/auth\/sign-in\/email$/);
+    expect(JSON.parse(String(init.body))).toEqual({ email: "ivy@example.com", password: "pw" });
+  });
+
+  it("changes your own login through PATCH /api/me", async () => {
+    const fetchMock = mockFetch();
+    await updateMe({ email: "new@example.com" });
+    const [url, init] = callOf(fetchMock);
+    expect(url).toMatch(/\/api\/me$/);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(String(init.body))).toEqual({ email: "new@example.com" });
   });
 
   it("★ signs out with a JSON body — Better Auth refuses a bare POST (415)", async () => {
@@ -48,7 +58,7 @@ describe("the web auth client", () => {
   });
 
   it("sends a child to /child and a parent to /", () => {
-    const user = { id: "u", name: "n", email: "e", username: null };
+    const user = { id: "u", name: "n", email: "e" };
     expect(homeFor({ user: { ...user, role: "child" }, child: null })).toBe("/child");
     expect(homeFor({ user: { ...user, role: "parent" }, child: null })).toBe("/");
   });

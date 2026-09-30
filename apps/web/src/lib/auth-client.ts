@@ -11,6 +11,7 @@ import type {
   InvitePreview,
   Me,
   SetupState,
+  UpdateMeInput,
 } from "@homework/shared";
 import { apiBaseUrl } from "./api";
 
@@ -47,12 +48,12 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown })
   return parsed as T;
 }
 
-/** Parents sign in with their email, children with their username — one field takes either. */
-export function signIn(identifier: string, password: string): Promise<unknown> {
-  const id = identifier.trim();
-  return id.includes("@")
-    ? call("/api/auth/sign-in/email", { method: "POST", body: { email: id, password } })
-    : call("/api/auth/sign-in/username", { method: "POST", body: { username: id, password } });
+/** Every login signs in the same way: email + password (ADR 0005). */
+export function signIn(email: string, password: string): Promise<unknown> {
+  return call("/api/auth/sign-in/email", {
+    method: "POST",
+    body: { email: email.trim(), password },
+  });
 }
 
 /**
@@ -82,9 +83,12 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
   });
 }
 
-/** Rename yourself. Only the parent's Account page offers it — a child's name comes from their profile. */
-export function updateMyName(name: string): Promise<unknown> {
-  return call("/api/auth/update-user", { method: "POST", body: { name: name.trim() } });
+/**
+ * Change your own login — name (a child's is refused: it belongs to their
+ * profile) and email (your sign-in). The API's one self-service door.
+ */
+export function updateMe(patch: UpdateMeInput): Promise<unknown> {
+  return call("/api/me", { method: "PATCH", body: patch });
 }
 
 /** Where a user's own Account page is. */

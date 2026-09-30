@@ -89,7 +89,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
         <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
         {state.login ? (
           <span>
-            Login: <span className="font-medium">@{state.login.username}</span>
+            Login: <span className="font-medium">{state.login.email}</span>
           </span>
         ) : (
           <span className="text-muted-foreground">Login: none</span>

@@ -189,13 +189,10 @@ export const users = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     name: text().notNull(),
-    // Required by Better Auth; a child's login gets a placeholder never shown.
+    // Every login's sign-in, parent or child (ADR 0005).
     email: text().notNull().unique(),
     emailVerified: boolean().notNull().default(false),
     image: text(),
-    // username plugin — how a child signs in.
-    username: text().unique(),
-    displayUsername: text(),
     // 'parent' | 'child'. A Better Auth additional field that no request can
     // set (`input: false`); the CHECK below ties a child to a profile.
     role: text().notNull().default("child"),

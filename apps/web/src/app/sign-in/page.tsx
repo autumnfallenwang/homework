@@ -11,7 +11,7 @@ import { getMe, getSetupState, homeFor, signIn, signUpParent } from "@/lib/auth-
 
 /**
  * `/sign-in` — the only door (ADR 0004). Parents sign in with their email,
- * children with the username they picked from their invite link. On a fresh
+ * children with the email they gave on their invite link. On a fresh
  * install it asks for the parent account instead: the first account is the
  * parent, and sign-up closes behind it.
  */
@@ -57,7 +57,7 @@ function SignInForm() {
       const me = await getMe();
       router.replace(me ? homeFor(me) : "/");
     } catch {
-      setError("That username or password is not right.");
+      setError("That email or password is not right.");
       setBusy(false);
     }
   }
@@ -66,10 +66,11 @@ function SignInForm() {
     <AuthCard title="Sign in to Homework">
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="identifier">Email or username</Label>
+          <Label htmlFor="identifier">Email</Label>
           <Input
             id="identifier"
-            autoComplete="username"
+            type="email"
+            autoComplete="email"
             autoCapitalize="none"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}

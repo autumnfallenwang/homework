@@ -12,7 +12,8 @@ introduce the word "kid" in any file.
 Two things share the word, so name which one:
 - **child profile** — a `children` row: the student, their grades/homework, and the parent-managed
   data sources (TeacherEase login, homework page).
-- **child login** — a Better Auth user with `role: 'child'`, linked by `users.child_id`.
+- **child login** — a Better Auth user with `role: 'child'` (signs in with email, ADR 0005),
+  linked by `users.child_id`.
 
 In generic code comments and copy, refer to a child as "they/their", not "she/her".
 

@@ -8,10 +8,10 @@ import * as q from "./db/queries.js";
 import {
   type AuthVariables,
   authorize,
+  authRouteGate,
   betterAuthSession,
   publicRateLimiter,
   type ResolveSession,
-  signupGate,
 } from "./middleware/auth.js";
 import { requestLogger } from "./middleware/logger.js";
 import { appMetaApp } from "./routes/app-meta.js";
@@ -69,8 +69,8 @@ export function createApp(options: AppOptions = {}) {
     app.use("/api/auth/sign-in/*", publicRateLimiter(10));
     app.use("/api/public/*", publicRateLimiter(30));
   }
-  // Must precede the Better Auth handler: it gates one of its routes.
-  app.use("/api/auth/*", signupGate);
+  // Must precede the Better Auth handler: it gates some of its routes.
+  app.use("/api/auth/*", authRouteGate);
   app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
   // Everything under /api/* past this point needs a session with the right role.
   app.use("/api/*", authorize(resolveSession));

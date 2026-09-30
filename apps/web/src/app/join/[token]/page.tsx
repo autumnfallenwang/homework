@@ -65,7 +65,7 @@ function JoinForm({
 }) {
   const router = useRouter();
   const isJoin = preview.purpose === "join";
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +73,8 @@ function JoinForm({
 
   async function submit(event: SyntheticEvent) {
     event.preventDefault();
-    if (isJoin && !/^[A-Za-z0-9_.]{3,30}$/.test(username.trim())) {
-      return setError("Usernames are 3–30 letters, numbers, _ or .");
+    if (isJoin && !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      return setError("Enter a valid email.");
     }
     if (password.length < 8) return setError("Use at least 8 characters.");
     if (password !== confirm) return setError("The passwords do not match.");
@@ -82,10 +82,10 @@ function JoinForm({
     setError(null);
     try {
       const accepted = await acceptInvite(token, {
-        ...(isJoin ? { username: username.trim() } : {}),
+        ...(isJoin ? { email: email.trim() } : {}),
         password,
       });
-      await signIn(accepted.username, password);
+      await signIn(accepted.email, password);
       router.replace("/child");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
@@ -98,25 +98,24 @@ function JoinForm({
       title={isJoin ? `Hi ${preview.childName}!` : "Set a new password"}
       subtitle={
         isJoin
-          ? "Create your Homework login. You will use it to add your homework and hand in your work."
-          : `Choose a new password for ${preview.username ?? preview.childName}.`
+          ? "Create your Homework login with your email and a password. You will use it to add your homework and hand in your work."
+          : `Choose a new password for ${preview.email ?? preview.childName}.`
       }
     >
       <form onSubmit={submit} className="space-y-4">
         {isJoin ? (
           <div className="space-y-1.5">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              autoComplete="username"
+              id="email"
+              type="email"
+              autoComplete="email"
               autoCapitalize="none"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <p className="text-[11px] text-muted-foreground">
-              Letters, numbers, _ or . — you will sign in with it.
-            </p>
+            <p className="text-[11px] text-muted-foreground">You will sign in with it.</p>
           </div>
         ) : null}
         <div className="space-y-1.5">

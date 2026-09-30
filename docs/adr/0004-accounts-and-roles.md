@@ -1,6 +1,6 @@
 # 0004 — Accounts and roles: parent-managed profiles, invite-only child logins
 
-- **Status:** accepted
+- **Status:** accepted — amended by [0005](./0005-email-sign-in-for-everyone.md) (email is the only sign-in; no usernames)
 - **Date:** 2026-09-29
 - **Deciders:** project founder
 

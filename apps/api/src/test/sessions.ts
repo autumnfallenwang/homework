@@ -8,7 +8,6 @@ export const PARENT: SessionUser = {
   id: "00000000-0000-4000-8000-00000000000a",
   name: "Test Parent",
   email: "parent@example.com",
-  username: null,
   role: "parent",
   childId: null,
 };
@@ -18,7 +17,6 @@ export function childOf(childId: string): SessionUser {
     id: "00000000-0000-4000-8000-00000000000b",
     name: "Test Child",
     email: `child-${childId}@homework.invalid`,
-    username: "child",
     role: "child",
     childId,
   };

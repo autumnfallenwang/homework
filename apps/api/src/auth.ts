@@ -9,7 +9,6 @@
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins";
 import { count } from "drizzle-orm";
 import { config } from "./config.js";
 import { db } from "./db/index.js";
@@ -18,7 +17,7 @@ import { log } from "./lib/logger.js";
 
 export type Role = "parent" | "child";
 
-const WRONG_CREDENTIALS = /invalid (password|username|email)|user not found/i;
+const WRONG_CREDENTIALS = /invalid (password|email)|user not found/i;
 
 export const auth = betterAuth({
   secret: config.betterAuthSecret,
@@ -59,8 +58,6 @@ export const auth = betterAuth({
       ? { crossSubDomainCookies: { enabled: true, domain: config.cookieDomain } }
       : {}),
   },
-  // Children sign in with a username (POST /api/auth/sign-in/username).
-  plugins: [username()],
   databaseHooks: {
     user: {
       create: {

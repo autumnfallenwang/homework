@@ -30,8 +30,8 @@ export class InviteError extends Error {
       | "invalid"
       | "expired"
       | "used"
-      | "username_required"
-      | "username_taken",
+      | "email_required"
+      | LoginError["code"],
     message: string,
   ) {
     super(message);
@@ -143,14 +143,14 @@ export async function previewInvite(
     status: "valid",
     purpose: row.purpose as InvitePurpose,
     childName: row.childName,
-    username: login?.displayUsername ?? login?.username ?? null,
+    email: login?.email ?? null,
     expiresAt: row.expiresAt.toISOString(),
   };
 }
 
 /**
  * Use a link. It is CLAIMED first by one conditional UPDATE, so two tabs
- * cannot both use it; if creating the login then fails (a taken username), the
+ * cannot both use it; if creating the login then fails (an email already used), the
  * claim is released and the child can try again with the same link.
  */
 export async function acceptInvite(
@@ -158,7 +158,7 @@ export async function acceptInvite(
   token: string,
   input: AcceptInviteInput,
   now: Date = new Date(),
-): Promise<{ username: string }> {
+): Promise<{ email: string }> {
   const [claimed] = await db
     .update(invites)
     .set({ usedAt: now })
@@ -179,17 +179,17 @@ export async function acceptInvite(
   }
 
   try {
-    let result: { id: string; username: string };
+    let result: { id: string; email: string };
     if (claimed.purpose === "join") {
-      if (!input.username) throw new InviteError("username_required", "Choose a username");
+      if (!input.email) throw new InviteError("email_required", "Enter your email");
       const [child] = await db
         .select({ displayName: children.displayName })
         .from(children)
         .where(eq(children.id, claimed.childId));
       result = await createChildLogin(db, {
         childId: claimed.childId,
-        name: child?.displayName ?? input.username,
-        username: input.username,
+        name: child?.displayName ?? input.email,
+        email: input.email,
         password: input.password,
       });
     } else {
@@ -205,7 +205,7 @@ export async function acceptInvite(
       },
       "invite link used",
     );
-    return { username: result.username };
+    return { email: result.email };
   } catch (err) {
     await db.update(invites).set({ usedAt: null }).where(eq(invites.id, claimed.id));
     if (err instanceof LoginError) throw new InviteError(err.code, err.message);

@@ -1,6 +1,7 @@
-// Logins, roles and invite links (ADR 0004). A LOGIN (Better Auth user, role
-// `parent` | `child`) is not a PROFILE (`ChildRecord`); a child's login points at
-// one profile.
+// Logins, roles and invite links (ADR 0004, ADR 0005). Every login has the same
+// shape — a name, an email (its sign-in), a password, a role (`parent` |
+// `child`). A LOGIN is not a PROFILE (`ChildRecord`): a child's login points at
+// one child profile, and the profile owns the child's name.
 
 import { z } from "zod";
 
@@ -10,17 +11,8 @@ export type Role = z.infer<typeof roleSchema>;
 export const invitePurposeSchema = z.enum(["join", "reset"]);
 export type InvitePurpose = z.infer<typeof invitePurposeSchema>;
 
-/**
- * A child's username: 3–30 letters, digits, `_` or `.` — the same rule as Better
- * Auth's username plugin, so a later rename through it keeps working. Stored
- * lower-cased; sign-in is case-insensitive.
- */
-export const childUsernameSchema = z
-  .string()
-  .trim()
-  .min(3, "At least 3 characters")
-  .max(30, "At most 30 characters")
-  .regex(/^[A-Za-z0-9_.]+$/, "Letters, numbers, _ and . only");
+/** Every login's sign-in. Stored lower-cased; sign-in is case-insensitive. */
+export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email");
 
 /** Better Auth's default password bounds. */
 export const passwordSchema = z
@@ -33,18 +25,30 @@ export const passwordSchema = z
 export const createInviteSchema = z.object({ purpose: invitePurposeSchema });
 export type CreateInviteInput = z.infer<typeof createInviteSchema>;
 
-/** Accepting a link: a join needs a username; a reset only a new password. */
+/** Accepting a link: a join needs the child's email; a reset only a new password. */
 export const acceptInviteSchema = z.object({
-  username: childUsernameSchema.optional(),
+  email: emailSchema.optional(),
   password: passwordSchema,
 });
 export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
+
+/**
+ * `PATCH /api/me` — change your own login. A child's `name` is refused: it
+ * belongs to their child profile, which only a parent edits (ADR 0005).
+ */
+export const updateMeSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter a name").max(80).optional(),
+    email: emailSchema.optional(),
+  })
+  .refine((v) => v.name !== undefined || v.email !== undefined, { message: "Nothing to change" });
+export type UpdateMeInput = z.infer<typeof updateMeSchema>;
 
 // --- Responses ---
 
 /** `GET /api/me` — who is signed in, and (for a child) whose profile. */
 export interface Me {
-  user: { id: string; name: string; email: string; username: string | null; role: Role };
+  user: { id: string; name: string; email: string; role: Role };
   child: { id: string; displayName: string } | null;
 }
 
@@ -55,7 +59,7 @@ export interface SetupState {
 
 /** `GET /api/children/:id/login` — a profile's login and any open link. */
 export interface ChildLogin {
-  login: { userId: string; username: string | null; createdAt: string } | null;
+  login: { userId: string; email: string; createdAt: string } | null;
   invite: { purpose: InvitePurpose; expiresAt: string } | null;
 }
 
@@ -67,20 +71,20 @@ export interface IssuedInvite {
   expiresAt: string;
 }
 
-/** `GET /api/public/invites/:token`. */
+/** `GET /api/public/invites/:token`. For a reset, `email` is the login being reset. */
 export type InvitePreview =
   | {
       status: "valid";
       purpose: InvitePurpose;
       childName: string;
-      username: string | null;
+      email: string | null;
       expiresAt: string;
     }
   | { status: "invalid" | "expired" | "used" };
 
 /** `POST /api/public/invites/:token/accept` — the web then signs in with it. */
 export interface AcceptedInvite {
-  username: string;
+  email: string;
 }
 
 /** `GET /api/child/profile` — what a child may read about their own profile. */

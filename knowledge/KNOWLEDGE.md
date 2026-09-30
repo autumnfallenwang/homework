@@ -54,5 +54,5 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [next-extensionalias-workspace](next-extensionalias-workspace.md) — web next.config needs transpilePackages + webpack extensionAlias (.js→.ts) or the build fails on shared/.js imports (typecheck stays green)
 - [logging-pino-loki](logging-pino-loki.md) — one JSON line per event (ADR 0003): level words, static msg, req_id/job+run_id context, Drizzle params scrubbed; Loki cheat-sheet + post-deploy log check
 - [deploy-helm-arch-infra](deploy-helm-arch-infra.md) — M07 deploy: homecal-pattern Dockerfiles + chart (api Recreate, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra; TZ/LOG_LEVEL/COOKIE_DOMAIN; 3 secrets; web needs public/.gitkeep
-- [better-auth-parent-child](better-auth-parent-child.md) — M09 logins: Better Auth w/o admin plugin, parent/child roles, users.child_id → children, invite links, path-based enforcement + pitfalls
+- [better-auth-parent-child](better-auth-parent-child.md) — M09 logins: Better Auth, no plugins; every login = name + email + password + role; users.child_id → children; invite links; PATCH /api/me; path-based enforcement + pitfalls
 - [wording-child](wording-child.md) — say "child"/"children" everywhere (never the other word); child PROFILE = `children` row, child LOGIN = user with role `child`

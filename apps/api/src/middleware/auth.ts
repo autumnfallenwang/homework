@@ -19,7 +19,6 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
-  username: string | null;
   role: Role;
   childId: string | null;
 }
@@ -33,16 +32,11 @@ export type ResolveSession = (headers: Headers) => Promise<SessionUser | null>;
 export const betterAuthSession: ResolveSession = async (headers) => {
   const session = await auth.api.getSession({ headers });
   if (!session) return null;
-  const u = session.user as typeof session.user & {
-    role?: string;
-    childId?: string | null;
-    username?: string | null;
-  };
+  const u = session.user as typeof session.user & { role?: string; childId?: string | null };
   return {
     id: u.id,
     name: u.name,
     email: u.email,
-    username: u.username ?? null,
     // Anything but an explicit parent is treated as the least-privileged role.
     role: u.role === "parent" ? "parent" : "child",
     childId: u.childId ?? null,
@@ -86,13 +80,22 @@ export function authorize(resolveSession: ResolveSession): MiddlewareHandler {
   };
 }
 
+/** Better Auth's own self-service routes — closed: `PATCH /api/me` is the one door (ADR 0005). */
+const CLOSED_AUTH_ROUTES = ["/api/auth/update-user", "/api/auth/change-email"];
+
 /**
- * Public sign-up is open only until the first account exists — that account is
- * the parent. After that, child logins come from invite links only. (Better
- * Auth's `disableSignUp` is a static flag and cannot say "open until the first
- * user"; homeparentcontrol's signup-gate, same reasoning.)
+ * Guards Better Auth's routes (ADR 0004, ADR 0005):
+ * - Public sign-up is open only until the first account exists — that account
+ *   is the parent. After that, child logins come from invite links only.
+ *   (Better Auth's `disableSignUp` is a static flag and cannot say "open until
+ *   the first user"; homeparentcontrol's signup-gate, same reasoning.)
+ * - Its update-user / change-email are closed, so the rules of `PATCH /api/me`
+ *   (a child's name is locked; emails unique) cannot be sidestepped.
  */
-export const signupGate: MiddlewareHandler = async (c, next) => {
+export const authRouteGate: MiddlewareHandler = async (c, next) => {
+  if (CLOSED_AUTH_ROUTES.includes(c.req.path)) {
+    return c.json({ error: "Not found — change your account with PATCH /api/me" }, 404);
+  }
   if (c.req.method !== "POST" || !c.req.path.startsWith("/api/auth/sign-up/")) return next();
   const [result] = await db.select({ value: count() }).from(users);
   if ((result?.value ?? 0) > 0) {

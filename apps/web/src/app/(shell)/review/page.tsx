@@ -29,8 +29,8 @@ export default function ReviewPage() {
                 >
                   Settings → Children
                 </Link>
-                : create an invite link and send it to them. They pick a username and password and
-                see only their own area.
+                : create an invite link and send it to them. They sign up with their email and a
+                password and see only their own area.
               </p>
             </div>
           </div>

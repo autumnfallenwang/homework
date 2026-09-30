@@ -80,6 +80,23 @@ an **Account** page inside Settings, and the signed-in name in every sidebar lin
 
 Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-child`.
 
+### Review round 3 — one account shape, email only ([ADR 0005](../adr/0005-email-sign-in-for-everyone.md))
+
+Plan (2026-09-30), replacing the per-role sign-in:
+1. **Everyone signs in with email + password**; the first-run parent gives name, email, password; a
+   child's invite asks for email + password (their name comes from the profile).
+2. **Remove usernames**: drop Better Auth's `username` plugin and the `username` /
+   `display_username` columns; no placeholder emails.
+3. **Same Account page for both roles**: Name (a child's is locked — it follows their profile one
+   way), Email (each person changes their own; unique), Role, Password. `PATCH /api/me` is the one
+   self-service door; Better Auth's `update-user` / `change-email` are closed.
+4. **Child cards** show the login's email; **reset links** preview the login's email.
+5. **Parent recovery command** in the api pod: prints a one-time new password.
+6. **Migration `0002`**: delete logins with a placeholder email (the child login made under ADR 0004 —
+   profile and history untouched; re-invite), then drop the username columns.
+7. Tests (unit, live Postgres incl. the migration on a copy of the prod shape), prod images in a
+   real browser for both roles, deploy, verify live; docs + knowledge.
+
 ## Exit criteria
 
 - [x] **Access matrix** (DB-free, every route the app registers, probed through `authorize` on a stub
@@ -120,6 +137,20 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
   homework rows); the new pod's lines in Loki are all JSON. The exact prod image run with the
   cluster's `COOKIE_DOMAIN`/`BETTER_AUTH_URL` issues the session cookie as
   `Domain=.arch.internal; HttpOnly; SameSite=Lax` (7 days, no `Secure` — right for plain HTTP).
+- [x] **Round 3 — email only (ADR 0005):** live Postgres: first sign-up → parent; invite join needs an
+  email (400 without), an email another login uses → 409 and the link survives for a retry; sign-in
+  by email is case-insensitive; `update-user` / `change-email` → 404; `PATCH /api/me`: parent renames
+  + changes email (old email then 401, new 200), a child's name → 403, email taken → 409, bad email →
+  400; renaming the profile renames the child login; reset link previews the login's email.
+  **Migration 0002 on a prod-shaped copy** (built with the deployed image, seeded like prod): the
+  placeholder-email child login + its password and session removed; the parent login, password and
+  session kept; profile, fetch runs and invite history untouched; username columns dropped.
+  **Recovery command** in the new image: case-insensitive email, one-time password printed once
+  (logged only as an event), unknown email → exit 1; the parent then signs in with it. **Browser on
+  the prod images**: sign-in page asks Email + password; child card "Login: none" after the
+  migration → new invite → join with an email in use (error) → own email (in) → child Account: name
+  locked, email editable → changed email signs in, old one does not; parent Account shows the same
+  layout; the parent's card shows the child's new email.
 - [ ] *(cluster, you)* Create the parent account, an invite link for your daughter, and review both
   sides.
 
@@ -142,6 +173,10 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
   plugin cannot take custom role names without an access-control policy (dropped, ADR 0004); the
   child's phone header showed a stray rule (fixed, re-checked on the rebuilt image).
 
+- 2026-09-30 (review round 3): usernames dropped — email is the only sign-in for both roles (ADR
+  0005); one Account page (Name, Email, Role, Password; a child's name locked, following the
+  profile); `PATCH /api/me` is the one self-service door; parent recovery command; migration 0002
+  removes placeholder-email child logins (re-invite) and the username columns.
 - 2026-09-30 (review round 2): child Settings reuse the parent's settings sidebar and view instead
   of a separate top-tab header; the settings sidebar takes its tab list, base path and Back target
   as props and becomes an icon rail on phones.

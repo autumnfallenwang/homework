@@ -7,29 +7,23 @@ import { SettingsSection } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { changePassword, updateMyName } from "@/lib/auth-client";
+import { changePassword, updateMe } from "@/lib/auth-client";
 
 export const ROLE_LABEL = { parent: "Parent", child: "Child" } as const;
 
 /**
- * Your own login (ADR 0004), for either role: who you are, and a new password.
- * A parent can rename themselves; a child's name comes from their child
- * profile, which only a parent edits.
+ * Your own login (ADR 0004, ADR 0005) — the same page for both roles: name,
+ * email (your sign-in), role, and a new password. A child's name comes from
+ * their child profile, which only a parent edits, so it is shown locked.
  */
 export function AccountSettings() {
-  const me = useMe();
-  const isChild = me.user.role === "child";
   return (
     <div className="space-y-5">
       <SettingsSection
         title="Profile"
-        help={
-          isChild
-            ? "Your name comes from your profile. Ask a parent if it needs to change."
-            : "The name shown in the sidebar."
-        }
+        help="Your name is shown in the app; your email is your sign-in."
       >
-        {isChild ? <ReadOnlyProfile /> : <ParentProfileForm />}
+        <ProfileForm />
       </SettingsSection>
       <SettingsSection
         title="Password"
@@ -41,49 +35,40 @@ export function AccountSettings() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="truncate font-medium">{value}</span>
-    </div>
-  );
-}
-
-function ReadOnlyProfile() {
-  const me = useMe();
-  return (
-    <div className="space-y-2">
-      <div className="divide-y">
-        <Row label="Name" value={me.user.name} />
-        <Row label="Username" value={`@${me.user.username ?? ""}`} />
-        <Row label="Role" value={ROLE_LABEL[me.user.role]} />
-      </div>
-      <p className="text-[12px] text-muted-foreground">
-        Your name comes from your profile — ask a parent if it needs to change.
-      </p>
-    </div>
-  );
-}
-
-function ParentProfileForm() {
+function ProfileForm() {
   const me = useMe();
   const refreshMe = useRefreshMe();
+  const nameLocked = me.user.role === "child";
   const [name, setName] = useState(me.user.name);
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [email, setEmail] = useState(me.user.email);
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const changed = {
+    ...(!nameLocked && name.trim() !== me.user.name ? { name: name.trim() } : {}),
+    ...(email.trim().toLowerCase() !== me.user.email ? { email: email.trim() } : {}),
+  };
+  const dirty = Object.keys(changed).length > 0;
 
   async function save(event: SyntheticEvent) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (!dirty) return;
     setState("saving");
+    setError(null);
     try {
-      await updateMyName(name);
+      await updateMe(changed);
       await refreshMe();
       setState("saved");
-    } catch {
-      setState("error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save.");
+      setState("idle");
     }
   }
+
+  const edit = () => {
+    setState("idle");
+    setError(null);
+  };
 
   return (
     <form onSubmit={save} className="space-y-3">
@@ -92,32 +77,51 @@ function ParentProfileForm() {
         <Input
           id="account-name"
           value={name}
+          disabled={nameLocked}
           onChange={(e) => {
             setName(e.target.value);
-            setState("idle");
+            edit();
           }}
           required
         />
+        {nameLocked ? (
+          <p className="text-[12px] text-muted-foreground">
+            Your name comes from your profile — ask a parent if it needs to change.
+          </p>
+        ) : null}
       </div>
-      <div className="divide-y">
-        <Row label="Email (sign-in)" value={me.user.email} />
-        <Row label="Role" value={ROLE_LABEL[me.user.role]} />
+      <div className="space-y-1.5">
+        <Label htmlFor="account-email">Email</Label>
+        <Input
+          id="account-email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            edit();
+          }}
+          required
+        />
+        <p className="text-[12px] text-muted-foreground">You sign in with it.</p>
       </div>
+      <div className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
+        <span className="text-muted-foreground">Role</span>
+        <span className="font-medium">{ROLE_LABEL[me.user.role]}</span>
+      </div>
+      {error ? (
+        <p role="alert" className="text-[12px] text-destructive">
+          {error}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2">
-        <Button
-          type="submit"
-          size="sm"
-          disabled={state === "saving" || name.trim() === me.user.name}
-        >
-          {state === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save name"}
+        <Button type="submit" size="sm" disabled={!dirty || state === "saving"}>
+          {state === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save changes"}
         </Button>
         {state === "saved" ? (
           <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
             <Check className="h-3.5 w-3.5" /> Saved
           </span>
-        ) : null}
-        {state === "error" ? (
-          <span className="text-[12px] text-destructive">Could not save the name.</span>
         ) : null}
       </div>
     </form>

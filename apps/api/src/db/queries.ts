@@ -32,6 +32,7 @@ import {
   homework,
   rawPayloads,
   settings,
+  users,
 } from "./schema.js";
 import { seedSettings } from "./seed-settings.js";
 
@@ -141,15 +142,27 @@ export async function addChild(db: Database, params: AddChildInput): Promise<str
   return row.id;
 }
 
+/**
+ * Rename a child profile / change its TeacherEase login (`username` here is the
+ * PORTAL username, not the child login's). The profile owns the child's name
+ * (ADR 0005): the child login's name follows it, one way — nothing a child does
+ * changes the profile.
+ */
 export async function updateChildIdentity(
   db: Database,
   id: string,
   params: { displayName: string; username: string },
 ): Promise<void> {
-  await db
-    .update(children)
-    .set({ displayName: params.displayName, username: params.username })
-    .where(eq(children.id, id));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(children)
+      .set({ displayName: params.displayName, username: params.username })
+      .where(eq(children.id, id));
+    await tx
+      .update(users)
+      .set({ name: params.displayName, updatedAt: new Date() })
+      .where(eq(users.childId, id));
+  });
 }
 
 export async function updateChildPassword(

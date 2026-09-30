@@ -34,7 +34,7 @@ export default function ChildHomeworkPage() {
               </p>
               <p className="text-[12px] text-muted-foreground">
                 {[profile?.grade, profile?.school].filter(Boolean).join(" · ") ||
-                  `Signed in as @${me.user.username ?? ""}`}
+                  `Signed in as ${me.user.email}`}
               </p>
             </div>
           </div>
