@@ -55,3 +55,6 @@ temp/
 
 # Claude
 # (intentionally tracking .claude/ for project context)
+
+# Playwright MCP browser-tool output (screenshots, snapshots, console logs)
+.playwright-mcp/

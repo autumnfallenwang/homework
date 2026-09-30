@@ -48,9 +48,11 @@ The skill picks a slug, writes the file with the right frontmatter, and updates 
 - [drizzle-kit-generate-prompt](drizzle-kit-generate-prompt.md) — run `drizzle-kit generate` with `< /dev/null --name` to avoid the rename-prompt loop
 - [drizzle-casing-onconflict](drizzle-casing-onconflict.md) — set `casing: "snake_case"` in both drizzle configs or upserts throw duplicate-key
 - [drizzle-sql-select-alias](drizzle-sql-select-alias.md) — bare `sql` in a `.select({...})` projection needs `.as("alias")` or tsc TS2769
-- [hono-route-conventions](hono-route-conventions.md) — manual zod safeParse, flat `{error,details}`, `*App` mounted under `/api`, no auth
+- [hono-route-conventions](hono-route-conventions.md) — manual zod safeParse, flat `{error,details}`, `*App` mounted under `/api`, parent-only by default (ADR 0004)
 - [scheduler-nodecron-slots](scheduler-nodecron-slots.md) — node-cron singleton: one task per shared computeSlots→slotToCron slot, timezone:config.tz, skipped under NODE_ENV=test
 - [smtp-tls-port-rule](smtp-tls-port-rule.md) — nodemailer secure:true only on port 465; SMTP config from settings table, English-only digest
 - [next-extensionalias-workspace](next-extensionalias-workspace.md) — web next.config needs transpilePackages + webpack extensionAlias (.js→.ts) or the build fails on shared/.js imports (typecheck stays green)
 - [logging-pino-loki](logging-pino-loki.md) — one JSON line per event (ADR 0003): level words, static msg, req_id/job+run_id context, Drizzle params scrubbed; Loki cheat-sheet + post-deploy log check
-- [deploy-helm-arch-infra](deploy-helm-arch-infra.md) — M07 deploy: homecal-pattern Dockerfiles + chart (api Recreate, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra; TZ/LOG_LEVEL; 2 secrets; web needs public/.gitkeep
+- [deploy-helm-arch-infra](deploy-helm-arch-infra.md) — M07 deploy: homecal-pattern Dockerfiles + chart (api Recreate, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra; TZ/LOG_LEVEL/COOKIE_DOMAIN; 3 secrets; web needs public/.gitkeep
+- [better-auth-parent-child](better-auth-parent-child.md) — M09 logins: Better Auth w/o admin plugin, parent/child roles, users.child_id → children, invite links, path-based enforcement + pitfalls
+- [wording-child](wording-child.md) — say "child"/"children" everywhere (never the other word); child PROFILE = `children` row, child LOGIN = user with role `child`

@@ -24,6 +24,12 @@ if (!config.databaseUrl) {
   log.fatal({ event: "config.error" }, "DATABASE_URL is required");
   process.exit(1);
 }
+// Sessions are signed with it (ADR 0004). Without it Better Auth would fall
+// back to a default secret — refuse to start instead.
+if (!config.betterAuthSecret) {
+  log.fatal({ event: "config.error" }, "BETTER_AUTH_SECRET is required");
+  process.exit(1);
+}
 
 // Boot work runs before the port opens, so a DB that is not reachable yet (a
 // node reboot races the db pod's DNS) is one `server.boot_failed` line and a

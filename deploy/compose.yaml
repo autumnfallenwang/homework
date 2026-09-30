@@ -40,6 +40,10 @@ services:
       - API_PORT=52001
       - DATABASE_URL=postgresql://homework:homework@localhost:52432/homework
       - CORS_ORIGINS=http://localhost:52000
+      # Local smoke-test values only. No COOKIE_DOMAIN: on localhost the
+      # session cookie stays host-only and still reaches both ports.
+      - BETTER_AUTH_SECRET=local-compose-only-not-a-real-secret-0123456789
+      - BETTER_AUTH_URL=http://localhost:52001
       - TZ=America/New_York
       - LOG_LEVEL=info
     logging:

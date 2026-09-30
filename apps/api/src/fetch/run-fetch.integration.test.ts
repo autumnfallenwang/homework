@@ -76,7 +76,7 @@ async function makeChild(homeworkUrl: string | null) {
   const [row] = await db
     .insert(children)
     .values({
-      displayName: "Test Kid",
+      displayName: "Test Child",
       baseUrl: "https://x.example.com",
       username: "u@e.com",
       portalPassword: "secret",

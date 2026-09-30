@@ -3,8 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
+import { asParent } from "../test/sessions.js";
 
-const app = createApp();
+// Route behaviour as the signed-in parent (access rules: access.test.ts).
+const app = createApp({ resolveSession: asParent });
 
 function postJson(path: string, body: unknown) {
   return app.request(path, {

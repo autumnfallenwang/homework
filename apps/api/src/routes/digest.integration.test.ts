@@ -6,9 +6,11 @@ import { createApp } from "../app.js";
 import { closeDb, db } from "../db/index.js";
 import { children, settings } from "../db/schema.js";
 import { seedSettings } from "../db/seed-settings.js";
+import { asParent } from "../test/sessions.js";
 
 const url = process.env.DATABASE_URL;
-const app = createApp();
+// Route behaviour as the signed-in parent (access rules: access.test.ts).
+const app = createApp({ resolveSession: asParent });
 
 describe.skipIf(!url)("digest routes (live DB)", () => {
   beforeEach(async () => {

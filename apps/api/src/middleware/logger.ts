@@ -6,6 +6,15 @@ import { log, withLogContext } from "../lib/logger.js";
 const REQUEST_ID = /^[A-Za-z0-9-]{1,64}$/;
 
 /**
+ * The path as it may be logged. ⚠️ An invite token is a credential (ADR 0004)
+ * and sits IN the path of the public invite routes, so it is masked here —
+ * otherwise every opened link would be readable in Loki for 30 days.
+ */
+export function logPath(path: string): string {
+  return path.replace(/^\/api\/public\/invites\/[^/]+/, "/api/public/invites/:token");
+}
+
+/**
  * One `http.request` line per request, in the house shape
  * (`req_id / method / path / status / latency_ms`), and a `req_id` on every
  * line logged while handling it.
@@ -37,8 +46,10 @@ export async function requestLogger(c: Context, next: Next) {
       event: "http.request",
       req_id: reqId,
       method: c.req.method,
-      path: c.req.path,
+      path: logPath(c.req.path),
       status,
+      // Set by middleware/auth.ts once the request is authorised.
+      ...(c.get("user") ? { user_id: (c.get("user") as { id: string }).id } : {}),
       latency_ms: Date.now() - start,
       ...(status >= 500 && c.error ? { err: c.error } : {}),
     },

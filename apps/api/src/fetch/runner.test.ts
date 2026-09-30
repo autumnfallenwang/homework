@@ -5,7 +5,7 @@ import type { FetchRunnerDeps, FetchSource } from "./types.js";
 
 const child = {
   id: "c1",
-  displayName: "Kid",
+  displayName: "Child",
   portalType: "teacherease",
   baseUrl: "https://x.example.com",
   username: "u",

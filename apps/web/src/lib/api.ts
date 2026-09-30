@@ -8,6 +8,8 @@
 import type {
   AssignmentRecord,
   AttentionConfig,
+  ChildLogin,
+  ChildProfile,
   ChildRecord,
   ClassDetails,
   ClassRecord,
@@ -15,6 +17,8 @@ import type {
   GradeRecord,
   HomeworkMonth,
   HomeworkRecord,
+  InvitePurpose,
+  IssuedInvite,
   StatusHistoryEntry,
 } from "@homework/shared";
 
@@ -88,6 +92,11 @@ export class ApiClientError extends Error {
   }
 }
 
+/** Pages that talk to the API before anyone is signed in. */
+export function isAuthPage(pathname: string): boolean {
+  return pathname.startsWith("/sign-in") || pathname.startsWith("/join");
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBaseUrl()}${path}`, {
     ...options,
@@ -96,6 +105,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     cache: "no-store",
   });
   if (res.status === 204) return undefined as T;
+  // Session gone (expired, signed out elsewhere, password reset): back to the
+  // door. The sign-in and join pages handle their own 401s.
+  if (
+    res.status === 401 &&
+    typeof window !== "undefined" &&
+    !isAuthPage(window.location.pathname)
+  ) {
+    window.location.assign("/sign-in");
+  }
   if (!res.ok) {
     let body: ApiError;
     try {
@@ -331,4 +349,25 @@ export function resetAllAppData(): Promise<{ ok: boolean }> {
 export async function getAppVersion(): Promise<string> {
   const res = await get<{ version: string }>("/api/app/version");
   return res.version;
+}
+
+// --- Child logins (ADR 0004) ------------------------------------------------
+
+/** A profile's child login and any open invite link — for its card in Settings. */
+export function getChildLogin(childId: string): Promise<ChildLogin> {
+  return get(`/api/children/${childId}/login`);
+}
+
+/** Issue a one-time link. The token is returned once; only its hash is stored. */
+export function createInvite(childId: string, purpose: InvitePurpose): Promise<IssuedInvite> {
+  return post(`/api/children/${childId}/invites`, { purpose });
+}
+
+export function removeChildLogin(childId: string): Promise<void> {
+  return del(`/api/children/${childId}/login`);
+}
+
+/** What a signed-in child may read about their own profile. */
+export function getChildProfile(): Promise<ChildProfile> {
+  return get("/api/child/profile");
 }

@@ -6,7 +6,7 @@ created: 2026-05-30
 
 # Migration overview — desktop → k3s
 
-This is the roadmap index for porting **TeacherEase Parent Companion** (a Next.js + Tauri/Rust desktop app) to **homework** (a Turborepo full-stack web app on the home k3s cluster). Scope is a **1:1 functional port**; multi-user/auth and other extras are future work.
+This is the roadmap index for porting **TeacherEase Parent Companion** (a Next.js + Tauri/Rust desktop app) to **homework** (a Turborepo full-stack web app on the home k3s cluster). The port itself (M01–M07) was a **1:1 functional port**; M08+ are post-migration work, starting with logging and the staged child-homework plan (accounts and roles from M09).
 
 Milestones 01–07 are the port itself; 08+ are post-migration improvements. Each milestone below is a separate file with detailed scope, exit criteria, locked decisions, and open questions. Work them in order — each depends on the prior.
 
@@ -20,6 +20,7 @@ Milestones 01–07 are the port itself; 08+ are post-migration improvements. Eac
 | 06 | [Web frontend](06-web-frontend.md) | Port views, swap ipc→api, drop desktop-only features | 04, 05 |
 | 07 | [Deploy & GitOps](07-deploy-gitops.md) | Dockerfiles, Helm, CI, arch-infra registration | 01–06 |
 | 08 | [Logging house standard](08-logging-house-standard.md) | One JSON line per event (ADR 0003): level words, request/run context, crash + shutdown lines, web error line | 07 |
+| 09 | [Accounts and roles](09-accounts-and-roles.md) | Stage 1 of child homework: Better Auth logins, parent + child roles, invite links (ADR 0004), placeholder cards for stages 2–4 | 08 |
 
 ## Cross-cutting decisions (locked)
 
@@ -27,7 +28,7 @@ Milestones 01–07 are the port itself; 08+ are post-migration improvements. Eac
 - **Credentials at rest:** plaintext in Postgres (1:1 with desktop; LAN-only single-user). App-level encryption deferred to a future milestone.
 - **Feature cuts** (desktop-only, removed in M06): auto-updater, autostart + system tray, OS notifications.
 - **i18n:** KEPT (fully-implemented pure module; cheaper to keep than remove) — see M06 if reconsidering.
-- **No auth** — single-user, LAN-only.
+- **No auth** — single-user, LAN-only. *(Superseded by M09 / ADR 0004: parent + child logins.)*
 
 ## Standing open questions (need your input before the relevant milestone)
 

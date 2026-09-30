@@ -1,9 +1,10 @@
 "use client";
 
-import { BookOpen, History, Home, Info, PanelLeft, Settings } from "lucide-react";
+import { BookOpen, ClipboardCheck, History, Home, Info, PanelLeft, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import { AccountFooter } from "@/components/shell/account-footer";
 import { SidebarChildSelector } from "@/components/shell/sidebar-child-selector";
 import { Button } from "@/components/ui/button";
 import { usePref } from "@/hooks/use-pref";
@@ -18,6 +19,8 @@ const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/", label: "Today", icon: Home },
   { href: "/classes", label: "Classes", icon: BookOpen },
   { href: "/history", label: "History", icon: History },
+  // Child-entered homework and hand-ins land here (stages 2–4).
+  { href: "/review", label: "Review", icon: ClipboardCheck },
 ];
 
 const UTILITY_NAV: readonly NavItem[] = [
@@ -131,6 +134,7 @@ export function Sidebar() {
           />
         ))}
       </nav>
+      <AccountFooter collapsed={collapsed} />
     </aside>
   );
 }

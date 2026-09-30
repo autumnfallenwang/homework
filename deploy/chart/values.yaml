@@ -8,8 +8,8 @@
 
 # Real secrets live in this Secret, created out-of-band before deploy:
 #   bash scripts/create-cluster-secret.sh   (reads ./cluster-secrets.env)
-# homework needs only DATABASE_URL + POSTGRES_PASSWORD — SMTP/portal passwords
-# are user-configured via Settings and stored in Postgres (LAN-only decision).
+# homework needs DATABASE_URL + POSTGRES_PASSWORD + BETTER_AUTH_SECRET — SMTP and
+# portal passwords are user-configured via Settings and stored in Postgres.
 secrets:
   name: homework-secrets
 
@@ -36,6 +36,12 @@ api:
   env:
     API_PORT: "52001"
     CORS_ORIGINS: http://homework.arch.internal
+    # ★ Required for sign-in to work (ADR 0004). The UI is homework.arch.internal
+    # and the API homework-api.arch.internal — two hosts — so the session cookie
+    # must be set for the shared parent domain. Without it: sign-in returns 200,
+    # then every request 401s (homeparentcontrol hit exactly this). Same site,
+    # so SameSite=Lax still applies; plain HTTP on the LAN, as the siblings.
+    COOKIE_DOMAIN: .arch.internal
     LOG_LEVEL: info
     # Scheduler fire times + the digest's "today" use the pod's local time;
     # this must be the family's timezone (M05 / ADR-recorded default).

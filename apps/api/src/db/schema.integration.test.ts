@@ -34,7 +34,7 @@ describe.skipIf(!url)("schema integration (live DB)", () => {
   it("inserts a child → fetchRun → grade and reads it back", async () => {
     const [child] = await db
       .insert(children)
-      .values({ displayName: "Test Kid", baseUrl: "https://x.example.com", username: "u@e.com" })
+      .values({ displayName: "Test Child", baseUrl: "https://x.example.com", username: "u@e.com" })
       .returning();
     expect(child?.id).toBeTruthy();
 
@@ -54,7 +54,11 @@ describe.skipIf(!url)("schema integration (live DB)", () => {
   it("cascades deletes from children down to fetch_runs", async () => {
     const [child] = await db
       .insert(children)
-      .values({ displayName: "Cascade Kid", baseUrl: "https://y.example.com", username: "c@e.com" })
+      .values({
+        displayName: "Cascade Child",
+        baseUrl: "https://y.example.com",
+        username: "c@e.com",
+      })
       .returning();
     await db.insert(fetchRuns).values({ childId: child!.id, status: "success" });
 

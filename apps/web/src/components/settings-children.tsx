@@ -2,6 +2,7 @@
 
 import { Loader2, Lock, Pencil, Plus, Trash2, User } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { ChildLoginPanel } from "@/components/settings/child-login";
 import { SettingsSection } from "@/components/settings/section";
 import { CHILD_DATA_REFRESHED_EVENT } from "@/components/shell/sidebar-child-selector";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export function SettingsChildren() {
     <div className="space-y-5">
       <SettingsSection
         title="Children"
-        help="The kids this app tracks. Each row edits name, TeacherEase login, and optional homework URL."
+        help="The children this app tracks. Each row edits name, TeacherEase login, and optional homework URL."
         card={false}
       >
         {children.length === 0 && !showAdd ? (
@@ -281,6 +282,8 @@ function ChildRow({
       <div className="mt-2 pl-11 text-[11px] text-muted-foreground">
         {child.homeworkUrl ? `Homework: ${child.homeworkUrl}` : "Homework: not set"}
       </div>
+
+      <ChildLoginPanel childId={child.id} childName={child.displayName} />
     </div>
   );
 }

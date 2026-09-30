@@ -1,7 +1,8 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  check,
   doublePrecision,
   index,
   integer,
@@ -177,12 +178,131 @@ export const homework = pgTable(
   ],
 );
 
+// ─── Logins (ADR 0004) ──────────────────────────────────────────────────────
+// Better Auth's core tables, shaped as in homecal / homeparentcontrol
+// (`usePlural`, Postgres-generated uuids). A LOGIN is not a PROFILE: the
+// student profile stays `children` (with the parent's TeacherEase login);
+// a child's login points at it through `users.child_id`.
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    // Required by Better Auth; a child's login gets a placeholder never shown.
+    email: text().notNull().unique(),
+    emailVerified: boolean().notNull().default(false),
+    image: text(),
+    // username plugin — how a child signs in.
+    username: text().unique(),
+    displayUsername: text(),
+    // 'parent' | 'child'. A Better Auth additional field that no request can
+    // set (`input: false`); the CHECK below ties a child to a profile.
+    role: text().notNull().default("child"),
+    // The link to the student profile. Set from an invite row, never from a
+    // request. Deleting the profile removes the child's login with it.
+    childId: uuid().references(() => children.id, { onDelete: "cascade" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One login per profile.
+    unique("users_child_id_unique").on(table.childId),
+    check(
+      "users_child_role_has_child",
+      sql`${table.role} <> 'child' OR ${table.childId} IS NOT NULL`,
+    ),
+  ],
+);
+
+export const sessions = pgTable("sessions", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text().notNull().unique(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  ipAddress: text(),
+  userAgent: text(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const accounts = pgTable("accounts", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accountId: text().notNull(),
+  providerId: text().notNull(),
+  accessToken: text(),
+  refreshToken: text(),
+  accessTokenExpiresAt: timestamp({ withTimezone: true }),
+  refreshTokenExpiresAt: timestamp({ withTimezone: true }),
+  scope: text(),
+  idToken: text(),
+  // The password HASH lives here, not on `users`.
+  password: text(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const verifications = pgTable("verifications", {
+  id: uuid().primaryKey().defaultRandom(),
+  identifier: text().notNull(),
+  value: text().notNull(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+// One-time links a parent hands to a child: 'join' creates the child's login for
+// `child_id`, 'reset' sets a new password on it. Only the SHA-256 of the
+// token is stored (ADR 0004).
+export const invites = pgTable(
+  "invites",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    childId: uuid()
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    purpose: text().notNull(), // 'join' | 'reset' — Zod-enforced
+    tokenHash: text().notNull().unique(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    usedAt: timestamp({ withTimezone: true }),
+    usedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("invites_child_idx").on(table.childId)],
+);
+
 // Relations — used by the Drizzle relational query builder in M04.
 
 export const childrenRelations = relations(children, ({ many }) => ({
   fetchRuns: many(fetchRuns),
   classes: many(classes),
   homework: many(homework),
+  logins: many(users),
+  invites: many(invites),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  child: one(children, { fields: [users.childId], references: [children.id] }),
+  sessions: many(sessions),
+  accounts: many(accounts),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+}));
+
+export const invitesRelations = relations(invites, ({ one }) => ({
+  child: one(children, { fields: [invites.childId], references: [children.id] }),
 }));
 
 export const fetchRunsRelations = relations(fetchRuns, ({ one, many }) => ({

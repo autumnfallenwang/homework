@@ -1,6 +1,6 @@
 ---
 name: hono-route-conventions
-description: API route conventions for this repo — manual zod safeParse (no @hono/zod-validator), flat {error,details} envelope, *App Hono instances mounted under /api, no auth, Zod 3.
+description: API route conventions for this repo — manual zod safeParse (no @hono/zod-validator), flat {error,details} envelope, *App Hono instances mounted under /api, parent-only unless the path says otherwise (ADR 0004), Zod 3.
 metadata:
   type: feedback
 ---
@@ -16,7 +16,10 @@ The HTTP API (`apps/api/src/routes/`) follows the homecal/homenews house style, 
 - Each resource is a named `xxxApp = new Hono()` exported from its file and mounted in `app.ts`
   with `app.route("/api/...", xxxApp)`. Several sub-apps can share the `/api/children` prefix
   (children/grades/homework/fetch) — each owns distinct sub-paths.
-- **No auth** (single-user LAN-only) — plain `new Hono()`, no `requireAuth`/session middleware.
+- **Auth is by path, in one place** (ADR 0004, `middleware/auth.ts#authorize`): a new route under
+  `/api/*` is **parent-only by default**; `/api/child/*` is child-only (read the child from
+  `c.get("user").childId`, never from the URL); `/api/public/*` is open. Sub-apps that read the user
+  are `new Hono<{ Variables: AuthVariables }>()`. See [[better-auth-parent-child]].
 - Schemas + inferred types live in `@homework/shared` (**Zod 3** syntax: `z.string().uuid()`,
   `z.string().datetime()` — NOT Zod-4 `z.iso.*`). IDs are uuid strings.
 - Tests use Hono's built-in `app.request(path, init)` — no test-client lib. Validation-only 400

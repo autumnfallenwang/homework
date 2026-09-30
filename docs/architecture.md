@@ -9,7 +9,8 @@ The system follows the established house pattern of the sibling projects `homene
 ## Key components
 
 - **`apps/api` (Hono + Zod)** — the TeacherEase scraper (cheerio), the fetch scheduler, the SMTP digest sender, and Drizzle data access.
-- **`apps/web` (Next.js App Router)** — the Today / Classes / History / Settings views ported from the desktop app.
+- **`apps/web` (Next.js App Router)** — the Today / Classes / History / Settings views ported from the desktop app, plus the parent's Review tab, a separate child area (`/child`), `/sign-in` and `/join/<token>`.
+- **Logins ([ADR 0004](adr/0004-accounts-and-roles.md))** — Better Auth in the API (Drizzle tables `users`/`sessions`/`accounts`/`verifications`, plus `invites`), two roles: **parent** (the whole app, manages child profiles and their data sources) and **child** (their own area only). A *child login* (`users.child_id`) points at a *child profile* (`children`); child logins are created from one-time invite links, never by open sign-up. The API enforces every rule by path: `/api/public/*` open, `/api/child/*` child-only, everything else parent-only. The session cookie is shared across the web and API hosts via `COOKIE_DOMAIN=.arch.internal`.
 - **`packages/shared`** — shared Zod schemas and TypeScript types used by both API and web.
 - **PostgreSQL (Drizzle)** — per-child grades, homework, and settings; replaces the desktop app's local SQLite.
 - **`deploy/chart` (Helm)** — managed by `arch-infra` + Argo CD, which own the k3s lifecycle.
@@ -25,11 +26,12 @@ The system follows the established house pattern of the sibling projects `homene
 ## Constraints and non-goals
 
 - **LAN-only.** Served behind `*.arch.internal` ingress on the home k3s cluster; no public-internet exposure (matching `homenews` / `homecal`).
-- **Scope is a 1:1 functional port.** Multi-user accounts, authentication, and additional features are explicitly future work, not part of this migration.
+- **The port (M01–M07) was 1:1; features since are staged** — logging (M08), then the child-homework stages starting with accounts and roles (M09). One household; no multi-tenant accounts.
+- **Plain HTTP on the LAN.** Session cookies and invite links travel unencrypted on the home network, as in the sibling apps; exposure beyond the LAN would require HTTPS first (ADR 0004).
 - **The desktop / Tauri build is retired** in favor of the web app.
 
 ## Open questions
 
-- How are TeacherEase portal credentials and SMTP secrets stored in-cluster? Likely Sealed Secrets via `arch-infra` (as `homecal` does), since the desktop app's OS-keychain storage no longer applies.
-- Schema design for credentials and config at rest now that there is no per-machine keychain — single shared config vs. per-child rows.
-- Does the fetch scheduler run inside the API process or as a separate worker / k8s CronJob?
+- **Encryption at rest** for TeacherEase portal and SMTP passwords. Today they are plaintext in Postgres (M02: per-child rows for portal logins, the global `settings` table for SMTP), behind the parent login since M09. The only cluster Secret is `homework-secrets` (`DATABASE_URL`, `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`); Sealed Secrets are not wired.
+
+Answered: the fetch scheduler runs inside the API process as a node-cron singleton (M05; the api Deployment is `Recreate`, one replica).

@@ -7,9 +7,11 @@ import { createApp } from "../app.js";
 import { closeDb, db } from "../db/index.js";
 import { children, fetchRuns } from "../db/schema.js";
 import { seedSettings } from "../db/seed-settings.js";
+import { asParent } from "../test/sessions.js";
 
 const url = process.env.DATABASE_URL;
-const app = createApp();
+// Route behaviour as the signed-in parent (access rules: access.test.ts).
+const app = createApp({ resolveSession: asParent });
 
 function postJson(path: string, body: unknown) {
   return app.request(path, {
@@ -20,7 +22,7 @@ function postJson(path: string, body: unknown) {
 }
 
 const VALID_CHILD = {
-  displayName: "Test Kid",
+  displayName: "Test Child",
   baseUrl: "https://x.example.com",
   username: "u@e.com",
   password: "secret",
@@ -42,7 +44,7 @@ describe.skipIf(!url)("children routes (live DB)", () => {
     expect(created.status).toBe(201);
     const child = (await created.json()) as { id: string; displayName: string };
     expect(child.id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(child.displayName).toBe("Test Kid");
+    expect(child.displayName).toBe("Test Child");
 
     const list = await app.request("/api/children");
     expect(list.status).toBe(200);

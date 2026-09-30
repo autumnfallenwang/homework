@@ -14,7 +14,7 @@ const CFG: AttentionConfig = DEFAULT_ATTENTION_CONFIG;
 function child(id: string, overrides: Partial<ChildRecord> = {}): ChildRecord {
   return {
     id,
-    displayName: `Kid ${id}`,
+    displayName: `Child ${id}`,
     portalType: "teacherease",
     baseUrl: "https://x.example.com",
     username: "u@e.com",

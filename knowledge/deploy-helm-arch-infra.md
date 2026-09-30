@@ -1,6 +1,6 @@
 ---
 name: deploy-helm-arch-infra
-description: Deploy follows the homecal pattern — deploy/Dockerfile.{api,web} + deploy/chart (api Recreate/singleton, db StatefulSet, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra. TZ=America/New_York, LOG_LEVEL=info, 2 secrets only.
+description: Deploy follows the homecal pattern — deploy/Dockerfile.{api,web} + deploy/chart (api Recreate/singleton, db StatefulSet, gated migrate Job) + CI→GHCR + apps/homework.yaml in arch-infra. TZ=America/New_York, LOG_LEVEL=info, COOKIE_DOMAIN=.arch.internal, 3 secrets.
 metadata:
   type: reference
 ---
@@ -18,7 +18,9 @@ M07 mirrors homecal's deploy tree (`homecal → homework`, auth/LLM/APNS/SMTP en
   pre-install/upgrade **migrate Job gated `migrate.enabled=false`** (flip true after secret+db exist;
   now `true` in arch-infra, so the hook runs every sync — its command is `node node_modules/drizzle-kit/bin.cjs migrate`).
   Ports 52001 (api) / 52000 (web). `api.env.TZ=America/New_York`, `LOG_LEVEL=info` (both).
-- **Secrets:** only `DATABASE_URL` + `POSTGRES_PASSWORD` (SMTP/portal passwords live in Postgres).
+- **Secrets:** `DATABASE_URL` + `POSTGRES_PASSWORD` + `BETTER_AUTH_SECRET` (M09; SMTP/portal passwords
+  live in Postgres). The script replaces the whole Secret and refuses an env file missing a key.
+  The api also needs `COOKIE_DOMAIN=.arch.internal` (values) and `BETTER_AUTH_URL` (template).
   Create out-of-band: `scripts/create-cluster-secret.sh` reads gitignored `cluster-secrets.env`
   → `homework-secrets` Secret. `web.env.API_URL=http://homework-api` (in-cluster Service DNS) for SSR.
 - **CI** `.github/workflows/build.yml`: test (dummy `DATABASE_URL`, `test:fast`) → build-and-deploy

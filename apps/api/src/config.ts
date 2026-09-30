@@ -23,4 +23,22 @@ export const config = {
    * Defaults to America/New_York (set TZ on the M07 Deployment).
    */
   tz: process.env.TZ ?? "America/New_York",
+  /**
+   * Better Auth's signing secret (ADR 0004). Required: index.ts refuses to
+   * start without it. Tests get a fixed one so they need no env.
+   */
+  betterAuthSecret:
+    process.env.BETTER_AUTH_SECRET ??
+    (process.env.NODE_ENV === "test" ? "test-only-better-auth-secret-0123456789" : undefined),
+  /** This API's own public URL — Better Auth's baseURL. */
+  betterAuthUrl: process.env.BETTER_AUTH_URL ?? `http://localhost:${process.env.API_PORT ?? 3001}`,
+  /**
+   * Cookie domain shared by the web and API hosts in the cluster
+   * (`.arch.internal`): the UI is homework.arch.internal and the API is
+   * homework-api.arch.internal, so a host-only cookie would never travel with
+   * the UI's requests — "sign-in 200, then 401 on everything".
+   * ⚠️ Must stay UNSET in local dev: a `.arch.internal` cookie is invalid on
+   * localhost and the browser drops it silently.
+   */
+  cookieDomain: process.env.COOKIE_DOMAIN?.trim() || undefined,
 } as const;

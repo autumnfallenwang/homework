@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 import { log } from "../lib/logger.js";
+import { asParent } from "../test/sessions.js";
+import { logPath } from "./logger.js";
 
 /** Every `http.request` line the app logs, with its level. */
 function requestLines() {
@@ -58,7 +60,7 @@ describe("the request log", () => {
   });
 
   it("★ the global handler swallows nothing — a hand-mapped 400 keeps its details", async () => {
-    const res = await createApp().request("/api/children", {
+    const res = await createApp({ resolveSession: asParent }).request("/api/children", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ displayName: "" }),
@@ -84,5 +86,15 @@ describe("the request log", () => {
     const id = res.headers.get("x-request-id") ?? "";
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     expect(lines[0]?.fields.req_id).toBe(id);
+  });
+});
+
+describe("logPath", () => {
+  it("★ masks an invite token — it is a credential (ADR 0004)", () => {
+    expect(logPath("/api/public/invites/AbC-123_xyz")).toBe("/api/public/invites/:token");
+    expect(logPath("/api/public/invites/AbC-123_xyz/accept")).toBe(
+      "/api/public/invites/:token/accept",
+    );
+    expect(logPath("/api/children/42/login")).toBe("/api/children/42/login");
   });
 });
