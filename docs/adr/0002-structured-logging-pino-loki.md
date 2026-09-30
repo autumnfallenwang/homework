@@ -1,6 +1,6 @@
 # 0002 — Structured logging with pino for Loki
 
-- **Status:** accepted
+- **Status:** accepted — amended by [0003](./0003-one-json-line-per-event.md) (levels as words, one line per event)
 - **Date:** 2026-05-31
 - **Deciders:** project founder
 

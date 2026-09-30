@@ -8,13 +8,15 @@ metadata:
 M07 mirrors homecal's deploy tree (`homecal → homework`, auth/LLM/APNS/SMTP env stripped).
 
 - **Images:** `ghcr.io/autumnfallenwang/homework-{api,web}`. `deploy/Dockerfile.api` (node:22-alpine,
-  pnpm@10.29.3, bakes `apps/api/drizzle/`); `deploy/Dockerfile.web` (multi-stage standalone, build-arg
+  pnpm@10.29.3 at build time only, bakes `apps/api/drizzle/`, runs as `node --import tsx src/index.ts`
+  so node is PID 1 and gets SIGTERM — never `pnpm … start`, ADR 0003); `deploy/Dockerfile.web` (multi-stage standalone, build-arg
   `NEXT_PUBLIC_API_URL` only — no auth). The web image needs `apps/web/public/` to exist
   (`.gitkeep` keeps it) or `COPY public` fails the build.
 - **Chart `deploy/chart`:** api Deployment **`Recreate`/replicas=1** (scheduler is a singleton — never
   scale or RollingUpdate); web Deployment RollingUpdate; db StatefulSet `postgres:17-alpine` (PGDATA
   subdir, headless service); Traefik ingresses `homework.arch.internal` + `homework-api.arch.internal`;
-  pre-install/upgrade **migrate Job gated `migrate.enabled=false`** (flip true after secret+db exist).
+  pre-install/upgrade **migrate Job gated `migrate.enabled=false`** (flip true after secret+db exist;
+  now `true` in arch-infra, so the hook runs every sync — its command is `node node_modules/drizzle-kit/bin.cjs migrate`).
   Ports 52001 (api) / 52000 (web). `api.env.TZ=America/New_York`, `LOG_LEVEL=info` (both).
 - **Secrets:** only `DATABASE_URL` + `POSTGRES_PASSWORD` (SMTP/portal passwords live in Postgres).
   Create out-of-band: `scripts/create-cluster-secret.sh` reads gitignored `cluster-secrets.env`

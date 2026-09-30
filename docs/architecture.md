@@ -13,10 +13,14 @@ The system follows the established house pattern of the sibling projects `homene
 - **`packages/shared`** — shared Zod schemas and TypeScript types used by both API and web.
 - **PostgreSQL (Drizzle)** — per-child grades, homework, and settings; replaces the desktop app's local SQLite.
 - **`deploy/chart` (Helm)** — managed by `arch-infra` + Argo CD, which own the k3s lifecycle.
-- **Loki / Grafana / Alloy** — centralized logs, consistent with the sibling apps. Both `apps/api`
-  and `apps/web` log structured JSON to stdout via **pino** (`service`/`version`/`time`/`level`/`msg`
-  + `event`/`req_id`/`latency_ms`); an Alloy DaemonSet tails stdout and labels by pod, Loki parses
-  JSON at query time. See [ADR 0002](adr/0002-structured-logging-pino-loki.md).
+- **Loki / Grafana / Alloy** — centralized logs, consistent with the sibling apps. Every line is
+  one JSON object on stdout in the house shape (`level` as a word, `time`/`service`/`version`/
+  `event`/static `msg` + fields): the API via **pino** (`req_id` on every line of a request,
+  `job`/`run_id` on every line of a scheduled run, crashes as one `fatal` line), the web via Next's
+  `onRequestError` (`web.request_error`). An Alloy DaemonSet tails stdout and labels by
+  namespace/pod/container; Loki parses JSON at query time and keeps `homework` for 30 days. See
+  [ADR 0002](adr/0002-structured-logging-pino-loki.md) and
+  [ADR 0003](adr/0003-one-json-line-per-event.md).
 
 ## Constraints and non-goals
 

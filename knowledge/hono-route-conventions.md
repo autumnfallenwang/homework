@@ -10,6 +10,9 @@ The HTTP API (`apps/api/src/routes/`) follows the homecal/homenews house style, 
 - **Validate with manual `schema.safeParse(body)`**, not `@hono/zod-validator` (no such dep). On
   failure return `c.json({ error: "Validation failed", details: parsed.error.issues }, 400)`.
 - **Error envelope is flat**: `{ error: string, details?: unknown }`. 404 → `{ error: "Not found" }`.
+- **Return** expected errors (400/404); don't throw them. A thrown error is caught by the global
+  `app.onError` → `{ error: "internal" }` 500, and the `http.request` line carries `err` at `error`
+  (ADR 0003) — so never log-and-rethrow in a handler.
 - Each resource is a named `xxxApp = new Hono()` exported from its file and mounted in `app.ts`
   with `app.route("/api/...", xxxApp)`. Several sub-apps can share the `/api/children` prefix
   (children/grades/homework/fetch) — each owns distinct sub-paths.

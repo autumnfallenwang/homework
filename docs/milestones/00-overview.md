@@ -8,7 +8,7 @@ created: 2026-05-30
 
 This is the roadmap index for porting **TeacherEase Parent Companion** (a Next.js + Tauri/Rust desktop app) to **homework** (a Turborepo full-stack web app on the home k3s cluster). Scope is a **1:1 functional port**; multi-user/auth and other extras are future work.
 
-Each milestone below is a separate file with detailed scope, exit criteria, locked decisions, and open questions. Work them in order — each depends on the prior.
+Milestones 01–07 are the port itself; 08+ are post-migration improvements. Each milestone below is a separate file with detailed scope, exit criteria, locked decisions, and open questions. Work them in order — each depends on the prior.
 
 | # | Milestone | What ships | Depends on |
 |---|-----------|-----------|------------|
@@ -19,6 +19,7 @@ Each milestone below is a separate file with detailed scope, exit criteria, lock
 | 05 | [Scheduler & email](05-scheduler-email.md) | node-cron scheduler + nodemailer digests | 03, 04 |
 | 06 | [Web frontend](06-web-frontend.md) | Port views, swap ipc→api, drop desktop-only features | 04, 05 |
 | 07 | [Deploy & GitOps](07-deploy-gitops.md) | Dockerfiles, Helm, CI, arch-infra registration | 01–06 |
+| 08 | [Logging house standard](08-logging-house-standard.md) | One JSON line per event (ADR 0003): level words, request/run context, crash + shutdown lines, web error line | 07 |
 
 ## Cross-cutting decisions (locked)
 

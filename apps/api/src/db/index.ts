@@ -16,7 +16,7 @@ export const db = drizzle(client, { schema, casing: "snake_case" });
 
 export type Database = typeof db;
 
-/** Close the connection pool. Used by integration tests so vitest can exit. */
+/** Close the connection pool. Used by graceful shutdown and by integration tests so vitest can exit. */
 export async function closeDb(): Promise<void> {
   await client.end();
 }

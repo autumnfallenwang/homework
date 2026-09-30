@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { config } from "./config.js";
 import { db } from "./db/index.js";
 import * as q from "./db/queries.js";
@@ -17,8 +18,18 @@ import { settingsApp } from "./routes/settings.js";
 export function createApp() {
   const app = new Hono();
 
-  // Request logging (structured JSON logs with req_id)
+  // One `http.request` line per request; `req_id` on every line inside it.
   app.use("*", requestLogger);
+
+  // The last resort for a THROWN error nothing else handled: the house's flat
+  // `{ error }` and a 500. It does not log — the request line above already
+  // carries `err` at `error` level, as one JSON line. Without it, Hono's
+  // default printed a multi-line stack that Loki split into one entry per line
+  // (ADR 0003). Routes hand-map their 400/404s as RETURNED responses, so this
+  // swallows nothing; an HTTPException keeps its own response.
+  app.onError((err, c) =>
+    err instanceof HTTPException ? err.getResponse() : c.json({ error: "internal" }, 500),
+  );
 
   // CORS — allow the web frontend origin(s)
   app.use(

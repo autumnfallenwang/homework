@@ -61,8 +61,8 @@ export async function runFetch(
   const deps: FetchRunnerDeps = {
     startFetchRun: (cid, source) => startFetchRun(db, cid, source),
     completeFetchRun: (id, result) => completeFetchRun(db, id, result),
-    log: (msg) => log.info({ event: "fetch" }, msg),
-    logErr: (msg) => log.error({ event: "fetch" }, msg),
+    log: (fields, msg) => log.info(fields, msg),
+    logErr: (fields, msg) => log.error(fields, msg),
   };
 
   const runner = new FetchRunner(sources, deps);

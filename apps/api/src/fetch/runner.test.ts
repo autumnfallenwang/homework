@@ -74,6 +74,44 @@ describe("FetchRunner.runAll", () => {
     expect(deps.completions[0]?.status).toBe("failed");
   });
 
+  it("logs one structured line per source outcome — fields, not an interpolated message", async () => {
+    const deps = makeDeps();
+    const boom = new Error("network down");
+    const sources: FetchSource[] = [
+      { name: "ok", isApplicable: () => true, run: async () => {} },
+      {
+        name: "bad",
+        isApplicable: () => true,
+        run: async () => {
+          throw boom;
+        },
+      },
+    ];
+    await new FetchRunner(sources, deps).runAll({ child, fetchImpl });
+    expect(deps.log).toHaveBeenCalledWith(
+      {
+        event: "fetch.source.done",
+        source: "ok",
+        child_id: child.id,
+        fetch_run_id: "run-1",
+        status: "success",
+        duration_ms: 0,
+      },
+      "fetch source finished",
+    );
+    expect(deps.logErr).toHaveBeenCalledTimes(1);
+    expect(deps.logErr).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "fetch.source.done",
+        source: "bad",
+        fetch_run_id: "run-2",
+        status: "failed",
+        err: boom,
+      }),
+      "fetch source failed",
+    );
+  });
+
   it("skips inapplicable sources and isolates failures from later sources", async () => {
     const deps = makeDeps();
     const sources: FetchSource[] = [

@@ -48,14 +48,16 @@ export class FetchRunner {
 
       const start = now();
       const fetchRunId = await this.deps.startFetchRun(child.id, source.name);
-      this.deps.log(`fetch: started source=${source.name} childId=${child.id} id=${fetchRunId}`);
+      const fields = { source: source.name, child_id: child.id, fetch_run_id: fetchRunId };
+      this.deps.log({ event: "fetch.source.start", ...fields }, "fetch source started");
 
       try {
         await source.run({ child, childId: child.id, fetchRunId, fetchImpl: ctx.fetchImpl });
         const durationMs = now() - start;
         await this.deps.completeFetchRun(fetchRunId, { status: "success", durationMs });
         this.deps.log(
-          `fetch: complete source=${source.name} childId=${child.id} id=${fetchRunId} durationMs=${durationMs}`,
+          { event: "fetch.source.done", ...fields, status: "success", duration_ms: durationMs },
+          "fetch source finished",
         );
         successes += 1;
         runs.push({ source: source.name, fetchRunId, status: "success", durationMs });
@@ -65,7 +67,8 @@ export class FetchRunner {
         const status: FetchRunStatus = err instanceof ParserError ? "parser_error" : "failed";
         await this.deps.completeFetchRun(fetchRunId, { status, durationMs, errorMessage });
         this.deps.logErr(
-          `fetch: ${status} source=${source.name} childId=${child.id} id=${fetchRunId} — ${errorMessage}`,
+          { event: "fetch.source.done", ...fields, status, duration_ms: durationMs, err },
+          "fetch source failed",
         );
         failures += 1;
         runs.push({ source: source.name, fetchRunId, status, durationMs, errorMessage });

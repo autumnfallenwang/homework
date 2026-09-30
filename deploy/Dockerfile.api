@@ -31,4 +31,10 @@ USER node
 # port inside the process comes from API_PORT env (defaulted to 52001 in k3s).
 EXPOSE 52001
 
-CMD ["pnpm", "--filter", "@homework/api", "start"]
+# ★ `node` is PID 1, not pnpm (ADR 0003). Under `pnpm --filter … start` every
+# start printed ~5 non-JSON lines into Loki (incl. Corepack downloading pnpm from
+# npmjs.org — so a boot needed internet), and SIGTERM went to pnpm: the API's
+# graceful shutdown in index.ts never ran. tsx is loaded as an import hook, not
+# its CLI, so no extra wrapper process either.
+WORKDIR /app/apps/api
+CMD ["node", "--import", "tsx", "src/index.ts"]

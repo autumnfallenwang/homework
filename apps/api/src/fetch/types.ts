@@ -35,8 +35,9 @@ export interface FetchRunCompletion {
 export interface FetchRunnerDeps {
   startFetchRun: (childId: string, source: string) => Promise<string>;
   completeFetchRun: (id: string, result: FetchRunCompletion) => Promise<void>;
-  log: (message: string) => void;
-  logErr: (message: string) => void;
+  /** Structured log line: `fields` (incl. `event`) + a static message. */
+  log: (fields: Record<string, unknown>, msg: string) => void;
+  logErr: (fields: Record<string, unknown>, msg: string) => void;
   now?: () => number;
 }
 
