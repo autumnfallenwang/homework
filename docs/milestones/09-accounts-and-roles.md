@@ -90,8 +90,14 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
 - [x] Logs: every api line JSON (117 in the run), no password or token anywhere, invite paths logged
   as `:token`, wrong passwords at `warn`; browser console errors are only the expected 401/403/410s.
 - [x] Nothing else regressed: a real cron tick ran with its `job`/`run_id`; SIGTERM still drains.
-- [ ] *(cluster)* Secret patched, released via CI → arch-infra → Argo, migration applied; from the
-  LAN the API answers 401 without a session and the sign-in page offers the first-run form.
+- [x] *(cluster)* `BETTER_AUTH_SECRET` added to the live `homework-secrets` (generated in place, never
+  printed; the other keys untouched); released `af920e9` via CI (`36658318234`) → arch-infra → Argo;
+  the migrate hook applied `0001` (tables `users`…`invites`, 0 users); from the LAN every API route
+  answers 401 without a session, `setup-state` says first run, CORS allows the web origin with
+  credentials, all web routes serve, existing data intact (1 child profile, 638 fetch runs, 753
+  homework rows); the new pod's lines in Loki are all JSON. The exact prod image run with the
+  cluster's `COOKIE_DOMAIN`/`BETTER_AUTH_URL` issues the session cookie as
+  `Domain=.arch.internal; HttpOnly; SameSite=Lax` (7 days, no `Secure` — right for plain HTTP).
 - [ ] *(cluster, you)* Create the parent account, an invite link for your daughter, and review both
   sides.
 
@@ -113,6 +119,11 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
   Loki (now masked + tested); Better Auth logs a wrong password at `error` (now `warn`); the admin
   plugin cannot take custom role names without an access-control policy (dropped, ADR 0004); the
   child's phone header showed a stray rule (fixed, re-checked on the rebuilt image).
+
+- 2026-09-30: released to the cluster and verified (see exit criteria); the parent account is
+  deliberately left unclaimed for you. Before re-running `scripts/create-cluster-secret.sh`, copy
+  the live `BETTER_AUTH_SECRET` into your local `cluster-secrets.env` (the script now refuses a file
+  without it; changing the value signs everyone out).
 
 ## References
 
