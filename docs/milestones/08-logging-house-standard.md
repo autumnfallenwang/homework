@@ -1,6 +1,6 @@
 ---
 name: 08-logging-house-standard
-status: in-progress
+status: done
 created: 2026-09-29
 ---
 
@@ -66,9 +66,14 @@ whole by `req_id` / `run_id`.
 - [x] Web standalone server with throwaway throwing routes: a render error and a route-handler error
   each write one `web.request_error` JSON line (query string dropped); the render digest matches the
   one in the page payload. (Next's own stderr stack remains — see ADR 0003 residue.)
-- [ ] *(cluster)* Deployed via CI → arch-infra → Argo; migrate hook succeeds; pods Ready.
-- [ ] *(cluster)* In Loki: the new pod's API lines are all JSON with `detected_level` set; `/health`
-  gone; a 404 with a chosen `X-Request-Id` is one `warn` line; `req_id` / `job`+`run_id` present.
+- [x] *(cluster)* Deployed via CI (`36650964223`: test, both images, arch-infra bump) → Argo; the
+  pre-upgrade migrate hook ran the new `node …/drizzle-kit/bin.cjs migrate` on the new image and
+  completed before the api pod started; api + web rolled out Ready on `4b4de38`.
+- [x] *(cluster)* In Loki: the new api pod's lines are **all JSON** (0 non-JSON) with
+  `detected_level` = `info`/`warn` (was 100% `unknown`); **0 `/health` lines**; a 404 sent with
+  `X-Request-Id: postdeploy-20260929-204059` is exactly one line, `level=warn`, echoed header.
+  The only non-JSON/health lines in the window are the OLD pod's last ones — pnpm dying on SIGTERM
+  (`ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL … Exit status 143`), the failure this milestone removes.
 
 ## Decisions
 
@@ -84,6 +89,21 @@ whole by `req_id` / `run_id`.
 - 2026-09-29: implemented, unit-tested, and verified end to end on the prod images under compose
   (see exit criteria). The e2e run caught the mixin leak: `scheduler.fetch.done` carried the previous
   line's `status:"failed"`/`err`; fixed + regression test + image rebuilt and re-verified.
+
+- 2026-09-30: pushed `4b4de38`; CI green; Argo rolled api + web and ran the migrate hook; post-deploy
+  log check passed in live Loki (see exit criteria). Found in Loki: our `job` field surfaces as
+  `job_extracted` (Alloy's stream label `job` wins) — documented in ADR 0003 and the knowledge
+  cheat-sheet. The first in-cluster scheduled run with `job`/`run_id` is the 23:00 America/New_York
+  fetch slot; the same path was verified on the prod image under compose.
+
+## Outcome
+
+Closed: 2026-09-30. homework's logs now follow the home apps' standard: one JSON line per event,
+levels as words, `req_id` / `job`+`run_id` context, crashes and boot failures as one `fatal` line,
+graceful SIGTERM, web server errors as `web.request_error`, and no plaintext password in any error
+line. API log volume drops ~98% (no probe lines). Beyond homeparentcontrol's version: Drizzle
+params scrubbing and a fixed mixin leak (which homeparentcontrol still has). Residue (Next banner +
+stderr stack, drizzle-kit hook output, `job_extracted`) is recorded in ADR 0003.
 
 ## References
 

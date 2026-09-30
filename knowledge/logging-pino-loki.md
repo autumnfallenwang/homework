@@ -38,6 +38,9 @@ withLogContext({ job: "fetch", run_id: randomUUID() }, () => work()); // every l
 - every failure, both containers: `{namespace="homework"} | json | __error__="" | level=~"error|fatal"`
 - one request: `{namespace="homework"} | json | req_id="<id>"` (send `X-Request-Id: <id>` to pick it)
 - one scheduled run: `{namespace="homework", container="api"} | json | run_id="<id>"`
+- ⚠️ **`job` is `job_extracted` in Loki**: Alloy stamps every stream with a label
+  `job="loki.source.kubernetes.pods"`, which wins over our JSON field, so `| json | job="fetch"`
+  silently matches nothing. Use `| json | job_extracted="fetch"` (all home apps; verified 2026-09-30).
 - fetch outcomes: `sum by (status) (count_over_time({namespace="homework", container="api"} | json | event="fetch.source.done" [1d]))`
 - dashboard: Grafana → folder "Home apps" → "Home apps — HTTP overview", namespace `homework`.
 

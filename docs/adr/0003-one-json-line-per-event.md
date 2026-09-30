@@ -77,7 +77,12 @@ body (the web client already tolerates any error body). One more module-level me
 - Next still prints its startup banner (6 lines per web start) and, for a server error, its own
   `⨯ Error…` stack to stderr next to our JSON line — the same as homeparentcontrol. Queries use
   `| json | __error__=""`, which skips them.
-- The migrate Job's `drizzle-kit migrate` prints its own progress lines (a short-lived hook pod).
+- The migrate Job's `drizzle-kit migrate` prints its own progress lines and Postgres NOTICE
+  objects (a short-lived hook pod).
+- The field `job` reaches Loki as **`job_extracted`**: Alloy's stream label
+  `job="loki.source.kubernetes.pods"` takes precedence over a JSON field of the same name, so a
+  query must say `| json | job_extracted="fetch"`. Kept as `job` for parity with
+  homeparentcontrol, which has the same collision; renaming it is a cross-app decision.
 - Postgres logs stay plain text.
 
 ## Notes
