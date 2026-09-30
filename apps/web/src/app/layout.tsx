@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { RootTheme } from "@/components/theme/root-theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         className="overflow-hidden antialiased"
         style={{ height: "calc(100vh / var(--font-scale, 1))" }}
       >
+        <RootTheme />
         {children}
       </body>
     </html>

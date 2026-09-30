@@ -90,7 +90,7 @@ describe.skipIf(!url)("logins (live DB)", () => {
     expect(await db.select().from(users)).toHaveLength(1);
   });
 
-  it("★ invite → child picks username + password → signs in → sees only her own area", async () => {
+  it("★ invite → child picks username + password → signs in → sees only their own area", async () => {
     const parent = await signUpParent();
     const ivy = await addChild(parent, "Ivy");
     expect(await (await parent("GET", `/api/children/${ivy}/login`)).json()).toEqual({
@@ -152,14 +152,14 @@ describe.skipIf(!url)("logins (live DB)", () => {
     }
     // …and the parent never lands in the child's API.
     expect((await parent("GET", "/api/child/profile")).status).toBe(403);
-    // The parent's card shows her login.
+    // The parent's card shows the child login.
     expect(await (await parent("GET", `/api/children/${ivy}/login`)).json()).toMatchObject({
       login: { username: "Ivy_1" },
       invite: null,
     });
   });
 
-  it("★ a child cannot promote herself or move to another profile", async () => {
+  it("★ a child cannot promote themselves or move to another profile", async () => {
     const parent = await signUpParent();
     const ivy = await addChild(parent, "Ivy");
     const other = await addChild(parent, "Other");
@@ -180,7 +180,7 @@ describe.skipIf(!url)("logins (live DB)", () => {
     expect((await child("GET", "/api/children")).status).toBe(403);
   });
 
-  it("★ a reset link sets a new password and signs her out everywhere", async () => {
+  it("★ a reset link sets a new password and signs them out everywhere", async () => {
     const parent = await signUpParent();
     const ivy = await addChild(parent);
     const join = await issue(parent, ivy, "join");
@@ -299,6 +299,60 @@ describe.skipIf(!url)("logins (live DB)", () => {
     await expect(
       db.insert(users).values({ name: "x", email: "x@homework.invalid", role: "child" }),
     ).rejects.toThrow();
+  });
+
+  it("★ Account: a parent renames themselves; the new name is what /api/me reports", async () => {
+    const parent = await signUpParent();
+    const res = await parent("POST", "/api/auth/update-user", { name: "Aaron" });
+    expect(res.status).toBe(200);
+    expect(await (await parent("GET", "/api/me")).json()).toMatchObject({
+      user: { name: "Aaron", role: "parent" },
+    });
+  });
+
+  it("★ Account: a child changes their own password; other devices are signed out", async () => {
+    const parent = await signUpParent();
+    const ivy = await addChild(parent);
+    const { body } = await issue(parent, ivy, "join");
+    await browser()("POST", `/api/public/invites/${body.token}/accept`, {
+      username: "ivy",
+      password: "first-password-1",
+    });
+    const phone = browser();
+    const laptop = browser();
+    for (const device of [phone, laptop]) {
+      await device("POST", "/api/auth/sign-in/username", {
+        username: "ivy",
+        password: "first-password-1",
+      });
+      expect((await device("GET", "/api/me")).status).toBe(200);
+    }
+
+    const wrong = await laptop("POST", "/api/auth/change-password", {
+      currentPassword: "not-my-password",
+      newPassword: "second-password-2",
+      revokeOtherSessions: true,
+    });
+    expect(wrong.status).not.toBe(200);
+
+    const ok = await laptop("POST", "/api/auth/change-password", {
+      currentPassword: "first-password-1",
+      newPassword: "second-password-2",
+      revokeOtherSessions: true,
+    });
+    expect(ok.status).toBe(200);
+    expect((await laptop("GET", "/api/me")).status).toBe(200); // this device stays in
+    expect((await phone("GET", "/api/me")).status).toBe(401); // the other one is out
+    const old = await browser()("POST", "/api/auth/sign-in/username", {
+      username: "ivy",
+      password: "first-password-1",
+    });
+    expect(old.status).toBe(401);
+    const fresh = await browser()("POST", "/api/auth/sign-in/username", {
+      username: "ivy",
+      password: "second-password-2",
+    });
+    expect(fresh.status).toBe(200);
   });
 
   it("sign-out ends the session", async () => {

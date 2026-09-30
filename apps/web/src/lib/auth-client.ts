@@ -71,6 +71,27 @@ export function signOut(): Promise<unknown> {
   return call("/api/auth/sign-out", { method: "POST", body: {} });
 }
 
+/**
+ * Change your own password (Better Auth checks the current one). Every OTHER
+ * device is signed out; this one gets a fresh session.
+ */
+export function changePassword(currentPassword: string, newPassword: string): Promise<unknown> {
+  return call("/api/auth/change-password", {
+    method: "POST",
+    body: { currentPassword, newPassword, revokeOtherSessions: true },
+  });
+}
+
+/** Rename yourself. Only the parent's Account page offers it — a child's name comes from their profile. */
+export function updateMyName(name: string): Promise<unknown> {
+  return call("/api/auth/update-user", { method: "POST", body: { name: name.trim() } });
+}
+
+/** Where a user's own Account page is. */
+export function accountPathFor(role: Me["user"]["role"]): string {
+  return role === "child" ? "/child/settings/account" : "/settings/account";
+}
+
 /** Who is signed in, or null. */
 export async function getMe(): Promise<Me | null> {
   try {

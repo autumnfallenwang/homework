@@ -6,6 +6,7 @@ import { SettingsTabClient } from "./client";
 // which is why the actual rendering logic is split into ./client.tsx.
 export function generateStaticParams() {
   return [
+    { tab: "account" },
     { tab: "children" },
     { tab: "appearance" },
     { tab: "attention" },

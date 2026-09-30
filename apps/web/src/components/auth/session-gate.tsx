@@ -6,13 +6,20 @@ import { useRouter } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { getMe, homeFor } from "@/lib/auth-client";
 
-const MeContext = createContext<Me | null>(null);
+const MeContext = createContext<{ me: Me; refresh: () => Promise<void> } | null>(null);
 
 /** The signed-in user, inside a `SessionGate`. */
 export function useMe(): Me {
-  const me = useContext(MeContext);
-  if (!me) throw new Error("useMe() used outside a SessionGate");
-  return me;
+  const ctx = useContext(MeContext);
+  if (!ctx) throw new Error("useMe() used outside a SessionGate");
+  return ctx.me;
+}
+
+/** Re-read the signed-in user after changing it (e.g. a new name). */
+export function useRefreshMe(): () => Promise<void> {
+  const ctx = useContext(MeContext);
+  if (!ctx) throw new Error("useRefreshMe() used outside a SessionGate");
+  return ctx.refresh;
 }
 
 /**
@@ -54,5 +61,9 @@ export function SessionGate({
       </div>
     );
   }
-  return <MeContext.Provider value={me}>{children}</MeContext.Provider>;
+  const refresh = async () => {
+    const next = await getMe();
+    if (next) setMe(next);
+  };
+  return <MeContext.Provider value={{ me, refresh }}>{children}</MeContext.Provider>;
 }

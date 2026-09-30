@@ -29,6 +29,11 @@ never the URL); **every other `/api/*` route parent-only** — a new route is pa
   log. Better Auth logs a wrong password at `error`; auth.ts downgrades it to `warn`.
 - The API exits at boot without `BETTER_AUTH_SECRET`; `scripts/create-cluster-secret.sh` refuses an
   env file missing it (the script REPLACES the whole Secret).
+- Self-service goes through Better Auth, not our API: `POST /api/auth/change-password`
+  (`revokeOtherSessions: true`) and `update-user` (name). The Account page lives in Settings for both
+  roles; the sidebar name links there (`accountPathFor`).
+- Global client providers (the theme) belong in the ROOT layout, never inside `SessionGate` — gated
+  children mount only after `/api/me` returns, which flashed light mode on every dark-mode load.
 - Tests: `createApp({ resolveSession: asParent | asChild() | asNobody })` (`src/test/sessions.ts`)
   for DB-free route tests. Never probe the real app with a parent session to test access — the
   handlers run (`POST /api/app/reset` would wipe the dev DB); `access.test.ts` probes `authorize` on

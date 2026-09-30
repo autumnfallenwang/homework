@@ -2,13 +2,14 @@
 
 // Settings-specific sidebar (Phase 30 / D-23). Replaces the main sidebar
 // when pathname starts with /settings — Back row + "Settings" eyebrow +
-// 6 tab rows. Derives activeTab from the URL itself so the layout
+// 7 tab rows (Account first). Derives activeTab from the URL itself so the layout
 // doesn't have to thread state through.
 
 import {
   ArrowLeft,
   Bell,
   BookUser,
+  CircleUser,
   Download,
   Eye,
   FlagTriangleRight,
@@ -18,10 +19,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AccountFooter } from "@/components/shell/account-footer";
 import { Button } from "@/components/ui/button";
 import { usePref } from "@/hooks/use-pref";
 
 export type SettingsTab =
+  | "account"
   | "children"
   | "appearance"
   | "attention"
@@ -38,6 +41,8 @@ interface SettingsTabItem {
 const COLLAPSED_KEY = "ui.sidebarCollapsed";
 
 const TABS: readonly SettingsTabItem[] = [
+  // Your own login (ADR 0004) — first, as most apps put the account.
+  { key: "account", label: "Account", icon: CircleUser },
   { key: "children", label: "Children", icon: BookUser },
   { key: "appearance", label: "Appearance", icon: Eye },
   { key: "attention", label: "Attention", icon: FlagTriangleRight },
@@ -133,6 +138,10 @@ export function SettingsSidebar() {
           );
         })}
       </nav>
+
+      <div className="mt-auto">
+        <AccountFooter collapsed={collapsed} />
+      </div>
     </aside>
   );
 }

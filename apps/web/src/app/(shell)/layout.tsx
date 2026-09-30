@@ -7,11 +7,6 @@ import { SessionGate } from "@/components/auth/session-gate";
 import { SettingsSidebar } from "@/components/shell/settings-sidebar";
 import { Sidebar } from "@/components/shell/sidebar";
 
-const ThemeProvider = dynamic(
-  () => import("@/components/theme/theme-provider").then((m) => m.ThemeProvider),
-  { ssr: false },
-);
-
 const DisclaimerGate = dynamic(
   () => import("@/components/shell/disclaimer-gate").then((m) => m.DisclaimerGate),
   { ssr: false },
@@ -27,7 +22,6 @@ export default function ShellLayout({ children }: { children: ReactNode }) {
   return (
     <SessionGate requiredRole="parent">
       <DisclaimerGate>
-        <ThemeProvider />
         {/* Height = 100vh / --font-scale — globals.css applies `zoom` to <html>
           which scales content but not viewport units, so we compensate here
           and in the sidebars to keep the shell exactly viewport-tall and pin

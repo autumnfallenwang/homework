@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isAuthPage } from "./api.js";
-import { getMe, homeFor, signIn, signOut } from "./auth-client.js";
+import { accountPathFor, changePassword, getMe, homeFor, signIn, signOut } from "./auth-client.js";
 
 function mockFetch(status = 200, body: unknown = {}) {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -57,5 +57,22 @@ describe("the web auth client", () => {
     expect(isAuthPage("/sign-in")).toBe(true);
     expect(isAuthPage("/join/abc")).toBe(true);
     expect(isAuthPage("/settings/children")).toBe(false);
+  });
+
+  it("changes a password and signs out every OTHER device", async () => {
+    const fetchMock = mockFetch();
+    await changePassword("old-one-1", "new-one-2");
+    const [url, init] = callOf(fetchMock);
+    expect(url).toMatch(/\/api\/auth\/change-password$/);
+    expect(JSON.parse(String(init.body))).toEqual({
+      currentPassword: "old-one-1",
+      newPassword: "new-one-2",
+      revokeOtherSessions: true,
+    });
+  });
+
+  it("opens each role's own Account page", () => {
+    expect(accountPathFor("parent")).toBe("/settings/account");
+    expect(accountPathFor("child")).toBe("/child/settings/account");
   });
 });

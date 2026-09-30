@@ -1,12 +1,17 @@
 "use client";
 
 import { LogOut } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { useMe } from "@/components/auth/session-gate";
+import { ROLE_LABEL } from "@/components/settings/account-settings";
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth-client";
+import { accountPathFor, signOut } from "@/lib/auth-client";
 
-/** Who is signed in, and the way out. Both sidebars. */
+/**
+ * Who is signed in, and the way out — every sidebar. The same two lines for
+ * every role (name, then role); clicking them opens your Account settings.
+ */
 export function AccountFooter({
   collapsed = false,
   inline = false,
@@ -28,14 +33,19 @@ export function AccountFooter({
   return (
     <div className={`flex items-center gap-2 ${inline ? "" : "border-t px-2.5 py-2.5"}`}>
       {!collapsed && (
-        <div className="min-w-0 flex-1">
+        <Link
+          href={accountPathFor(me.user.role)}
+          title="Account settings"
+          className="-mx-1 min-w-0 flex-1 rounded-md px-1 py-0.5 hover:bg-secondary/50"
+          data-testid="account-link"
+        >
           <p className="truncate text-[12px] font-medium" data-testid="signed-in-name">
             {me.user.name}
           </p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {me.user.role === "child" ? `@${me.user.username ?? ""}` : "Parent"}
+          <p className="truncate text-[11px] text-muted-foreground" data-testid="signed-in-role">
+            {ROLE_LABEL[me.user.role]}
           </p>
-        </div>
+        </Link>
       )}
       <Button
         variant="ghost"

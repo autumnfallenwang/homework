@@ -58,6 +58,19 @@ answers 401; with a child session every parent route answers 403.
   (4); parent **Review** tab — a live "child logins are ready" card, *Homework the children entered*
   (2), *Screenshots* (3), *Waiting for your review* (4).
 
+Account self-service (review feedback, 2026-09-30) — the common pattern (GitHub, Linear, Notion):
+an **Account** page inside Settings, and the signed-in name in every sidebar links to it.
+- Parent: Settings → **Account** (first tab): rename yourself, see your sign-in email and role,
+  change password. The Settings sidebar gets the account footer too.
+- Child: a **Settings** area (`/child/settings`, sidebar item on desktop, third tab on a phone) with
+  **Account** (name, username and role read-only — the name belongs to the child profile; change
+  password) and **Appearance** (the parent's Appearance settings, kept per browser).
+- Sidebar footer is the same for both roles: name, then role ("Aaron · Parent", "Ivy · Child").
+- Password changes use Better Auth's `change-password` (current password checked, every OTHER
+  session revoked, this one kept); the parent's rename uses `update-user`.
+- The theme provider moved from the role-gated layouts to the root layout: no light flash while
+  the session loads, and `/sign-in` / `/join` follow the appearance preference.
+
 `deploy/`: `BETTER_AUTH_SECRET` from `homework-secrets`, `BETTER_AUTH_URL`, `COOKIE_DOMAIN:
 .arch.internal`; `create-cluster-secret.sh` refuses an env file missing a required key;
 `compose.yaml` and `.env.example` get local values.
@@ -90,6 +103,12 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
 - [x] Logs: every api line JSON (117 in the run), no password or token anywhere, invite paths logged
   as `:token`, wrong passwords at `warn`; browser console errors are only the expected 401/403/410s.
 - [x] Nothing else regressed: a real cron tick ran with its `job`/`run_id`; SIGTERM still drains.
+- [x] **Account self-service** — integration: a parent renames themselves (`/api/me` reflects it); a
+  child changes their password with the wrong current one (refused) and the right one (200), the
+  other device's session → 401, this one stays, old password 401, new 200. Browser on the prod
+  images: footer "Aaron / Parent" and "Ivy / Child", each opening its own Account page; parent
+  rename updates the footer at once; wrong / right current password; child Account + Appearance
+  (dark persists across reloads, applies on `/sign-in` too); phone layout with the Settings tab.
 - [x] *(cluster)* `BETTER_AUTH_SECRET` added to the live `homework-secrets` (generated in place, never
   printed; the other keys untouched); released `af920e9` via CI (`36658318234`) → arch-infra → Argo;
   the migrate hook applied `0001` (tables `users`…`invites`, 0 users); from the LAN every API route
@@ -120,6 +139,11 @@ Docs: ADR 0004, `docs/architecture.md`, knowledge entry `better-auth-parent-chil
   plugin cannot take custom role names without an access-control policy (dropped, ADR 0004); the
   child's phone header showed a stray rule (fixed, re-checked on the rebuilt image).
 
+- 2026-09-30 (review round 1): Account page in Settings + footer link for both roles, child
+  Settings (Account, Appearance), consistent footer (name · role), theme provider moved to the root
+  layout (fixed a dark-mode flash introduced with the session gate). Remaining, pre-existing: a
+  brief light flash before any JavaScript runs — fixable with an inline `<head>` script
+  (next-themes style); not done here.
 - 2026-09-30: released to the cluster and verified (see exit criteria); the parent account is
   deliberately left unclaimed for you. Before re-running `scripts/create-cluster-secret.sh`, copy
   the live `BETTER_AUTH_SECRET` into your local `cluster-secrets.env` (the script now refuses a file

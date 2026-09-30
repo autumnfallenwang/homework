@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Upload } from "lucide-react";
+import { ClipboardList, Settings, Upload } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
@@ -12,11 +12,33 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
-/** The child's whole app: two tabs (ADR 0004 / stage plan). */
+/** The child's whole app: two tabs (ADR 0004 / stage plan)… */
 export const CHILD_NAV: readonly NavItem[] = [
   { href: "/child", label: "Homework", icon: ClipboardList },
   { href: "/child/solutions", label: "Solutions", icon: Upload },
 ];
+
+/** …and their own settings, at the bottom like the parent's. */
+const CHILD_UTILITY_NAV: readonly NavItem[] = [
+  { href: "/child/settings", label: "Settings", icon: Settings },
+];
+
+function DesktopLink({ item, pathname }: { item: NavItem; pathname: string | null }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
+        isActive(pathname, item.href)
+          ? "bg-secondary font-medium text-foreground"
+          : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+      }`}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
 
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -57,27 +79,16 @@ export function ChildSidebar() {
           <Brand />
         </div>
         <nav className="flex flex-col gap-0.5 px-2 py-1">
-          {CHILD_NAV.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
-                  isActive(pathname, item.href)
-                    ? "bg-secondary font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          {CHILD_NAV.map((item) => (
+            <DesktopLink key={item.href} item={item} pathname={pathname} />
+          ))}
         </nav>
-        <div className="mt-auto">
-          <AccountFooter />
-        </div>
+        <nav className="mt-auto flex flex-col gap-0.5 px-2 py-1">
+          {CHILD_UTILITY_NAV.map((item) => (
+            <DesktopLink key={item.href} item={item} pathname={pathname} />
+          ))}
+        </nav>
+        <AccountFooter />
       </aside>
 
       <header className="border-b bg-card/80 md:hidden">
@@ -86,7 +97,7 @@ export function ChildSidebar() {
           <AccountFooter collapsed inline />
         </div>
         <nav className="flex gap-1 px-2 pb-2">
-          {CHILD_NAV.map((item) => (
+          {[...CHILD_NAV, ...CHILD_UTILITY_NAV].map((item) => (
             <Link
               key={item.href}
               href={item.href}
