@@ -170,6 +170,7 @@ describe.skipIf(!url)("logins (live DB)", () => {
       displayName: "Ivy",
       grade: null,
       school: null,
+      homeworkEntry: false,
     });
 
     // The child never reaches the parent's API — least of all the TeacherEase password.

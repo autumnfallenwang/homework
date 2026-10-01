@@ -13,13 +13,23 @@ import type {
   ChildRecord,
   ClassDetails,
   ClassRecord,
+  CreateHomeworkItemInput,
   FetchRunRecord,
   GradeRecord,
+  HomeworkClass,
+  HomeworkClassListInput,
+  HomeworkClassSuggestions,
+  HomeworkDay,
+  HomeworkItem,
+  HomeworkItemList,
   HomeworkMonth,
+  HomeworkPhotoRef,
   HomeworkRecord,
+  HomeworkSource,
   InvitePurpose,
   IssuedInvite,
   StatusHistoryEntry,
+  UpdateHomeworkItemInput,
 } from "@homework/shared";
 
 // Re-export the entity types so components can `import { type X } from "@/lib/api"`
@@ -370,4 +380,91 @@ export function removeChildLogin(childId: string): Promise<void> {
 /** What a signed-in child may read about their own profile. */
 export function getChildProfile(): Promise<ChildProfile> {
   return get("/api/child/profile");
+}
+
+// --- Child-entered homework (ADR 0006) ---------------------------------------
+
+/** The "Child enters homework" switch on a child's card. */
+export function setHomeworkSource(childId: string, source: HomeworkSource): Promise<ChildRecord> {
+  return patch(`/api/children/${childId}`, { homeworkSource: source });
+}
+
+export function getHomeworkClasses(childId: string): Promise<HomeworkClass[]> {
+  return get(`/api/children/${childId}/homework-classes`);
+}
+
+/** Replace the whole list, in order (an entry with an id keeps that class). */
+export function saveHomeworkClasses(
+  childId: string,
+  classes: HomeworkClassListInput["classes"],
+): Promise<HomeworkClass[]> {
+  return put(`/api/children/${childId}/homework-classes`, { classes });
+}
+
+export function getHomeworkClassSuggestions(childId: string): Promise<HomeworkClassSuggestions> {
+  return get(`/api/children/${childId}/homework-classes/suggestions`);
+}
+
+/** A child's list, read only (the parent's Review tab and Today). */
+export function getChildHomeworkItems(childId: string): Promise<HomeworkItemList> {
+  return get(`/api/children/${childId}/homework-items`);
+}
+
+export function getHomeworkItem(itemId: string): Promise<HomeworkItem> {
+  return get(`/api/homework-items/${itemId}`);
+}
+
+export function homeworkPhotoUrl(itemId: string, photoId: string): string {
+  return `${apiBaseUrl()}/api/homework-items/${itemId}/photos/${photoId}`;
+}
+
+// The signed-in child's own (the child id comes from the session).
+
+export function getMyHomework(): Promise<HomeworkItemList> {
+  return get("/api/child/homework");
+}
+
+export function getMyHomeworkItem(itemId: string): Promise<HomeworkItem> {
+  return get(`/api/child/homework/${itemId}`);
+}
+
+export function createMyHomework(input: CreateHomeworkItemInput): Promise<HomeworkItem> {
+  return post("/api/child/homework", input);
+}
+
+export function updateMyHomework(
+  itemId: string,
+  input: UpdateHomeworkItemInput,
+): Promise<HomeworkItem> {
+  return patch(`/api/child/homework/${itemId}`, input);
+}
+
+export function deleteMyHomework(itemId: string): Promise<void> {
+  return del(`/api/child/homework/${itemId}`);
+}
+
+/** Upload one (already shrunk) photo as the raw request body. */
+export function uploadMyHomeworkPhoto(itemId: string, photo: Blob): Promise<HomeworkPhotoRef> {
+  return request(`/api/child/homework/${itemId}/photos`, {
+    method: "POST",
+    body: photo,
+    headers: { "Content-Type": photo.type || "image/jpeg" },
+  });
+}
+
+export function deleteMyHomeworkPhoto(itemId: string, photoId: string): Promise<void> {
+  return del(`/api/child/homework/${itemId}/photos/${photoId}`);
+}
+
+export function myHomeworkPhotoUrl(itemId: string, photoId: string): string {
+  return `${apiBaseUrl()}/api/child/homework/${itemId}/photos/${photoId}`;
+}
+
+export function getMyHomeworkClasses(): Promise<HomeworkClass[]> {
+  return get("/api/child/homework-classes");
+}
+
+/** "That's everything for today" — or take it back. */
+export function setMyDayComplete(complete: boolean): Promise<HomeworkDay> {
+  return complete ? put("/api/child/homework-day") : del("/api/child/homework-day");
 }

@@ -12,6 +12,7 @@ const child = {
   grade: null,
   school: null,
   homeworkUrl: null,
+  homeworkSource: "page" as const,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 

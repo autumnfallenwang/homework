@@ -18,6 +18,7 @@ import {
   type GradeRecord,
   type HomeworkMonth,
   type HomeworkRecord,
+  type HomeworkSource,
   parseAttentionConfig,
   type StatusHistoryEntry,
 } from "@homework/shared";
@@ -38,7 +39,7 @@ import { seedSettings } from "./seed-settings.js";
 
 // --- Row → record mappers -------------------------------------------------
 
-function toChildRecord(row: typeof children.$inferSelect): ChildRecord {
+export function toChildRecord(row: typeof children.$inferSelect): ChildRecord {
   return {
     id: row.id,
     displayName: row.displayName,
@@ -48,6 +49,7 @@ function toChildRecord(row: typeof children.$inferSelect): ChildRecord {
     grade: row.grade,
     school: row.school,
     homeworkUrl: row.homeworkUrl,
+    homeworkSource: row.homeworkSource === "child" ? "child" : "page",
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -175,6 +177,15 @@ export async function updateChildPassword(
 
 export async function setHomeworkUrl(db: Database, id: string, url: string | null): Promise<void> {
   await db.update(children).set({ homeworkUrl: url }).where(eq(children.id, id));
+}
+
+/** The "Child enters homework" switch (ADR 0006). */
+export async function setHomeworkSource(
+  db: Database,
+  id: string,
+  source: HomeworkSource,
+): Promise<void> {
+  await db.update(children).set({ homeworkSource: source }).where(eq(children.id, id));
 }
 
 /** Delete a child. FK cascade clears all downstream rows. Returns false if no

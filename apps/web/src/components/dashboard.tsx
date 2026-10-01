@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AttentionSection } from "@/components/attention-section";
 import { EmptyState } from "@/components/empty-state";
+import { EnteredHomeworkToday } from "@/components/homework/entered-homework-today";
 import { HomeworkTodaySections } from "@/components/homework-card";
 import { PageHeader } from "@/components/shell/page-header";
 import { CHILD_DATA_REFRESHED_EVENT } from "@/components/shell/sidebar-child-selector";
@@ -48,6 +49,8 @@ export function Dashboard() {
   const [homeworkForToday, setHomeworkForToday] = useState<HomeworkRecord[]>([]);
   const [homeworkDueToday, setHomeworkDueToday] = useState<HomeworkRecord[]>([]);
   const [heroStatuses, setHeroStatuses] = useState<ChildStatus[]>([]);
+  // Bumped on every data refresh so the child-entered homework reloads too.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   // Attention engine (Phase 15 AT2) — computed from the full ClassDetails
   // tree + the user-tunable forgiveness + low-score config. `new Date()`
@@ -114,6 +117,7 @@ export function Dashboard() {
           await reloadHero(children);
         }
         if (childId != null) await loadData(childId);
+        setRefreshTick((n) => n + 1);
       })();
     };
     window.addEventListener(CHILD_DATA_REFRESHED_EVENT, handleDataRefreshed);
@@ -127,6 +131,8 @@ export function Dashboard() {
     },
     [childId, setSelectedChildId],
   );
+
+  const selectedChild = allChildren.find((c) => c.id === childId);
 
   if (childId === null && allChildren.length === 0) {
     return (
@@ -159,9 +165,15 @@ export function Dashboard() {
           agedOut={attentionResult.agedOut}
         />
 
-        {allChildren.find((c) => c.id === childId)?.homeworkUrl && (
+        {selectedChild?.homeworkSource === "child" ? (
+          <EnteredHomeworkToday
+            childId={selectedChild.id}
+            childName={selectedChild.displayName}
+            refreshKey={refreshTick}
+          />
+        ) : selectedChild?.homeworkUrl ? (
           <HomeworkTodaySections forToday={homeworkForToday} dueToday={homeworkDueToday} />
-        )}
+        ) : null}
 
         <div className="pt-2 text-center">
           <Link

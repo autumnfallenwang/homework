@@ -92,4 +92,6 @@ export interface ChildProfile {
   displayName: string;
   grade: string | null;
   school: string | null;
+  /** The parent turned on "Child enters homework" for this profile (ADR 0006). */
+  homeworkEntry: boolean;
 }

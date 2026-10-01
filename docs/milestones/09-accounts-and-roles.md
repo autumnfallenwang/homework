@@ -1,6 +1,6 @@
 ---
 name: 09-accounts-and-roles
-status: in-progress
+status: done
 created: 2026-09-29
 ---
 

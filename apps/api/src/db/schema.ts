@@ -3,14 +3,18 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
+  date,
   doublePrecision,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -21,20 +25,29 @@ import {
 // TeacherEase's own numeric ids (te_class_id, te_cgpid, te_assignment_id)
 // stay integer — they're upstream identifiers, not our PKs.
 
-export const children = pgTable("children", {
-  id: uuid().primaryKey().defaultRandom(),
-  displayName: text().notNull(),
-  portalType: text().notNull().default("teacherease"),
-  baseUrl: text().notNull(),
-  username: text().notNull(),
-  // Plaintext per the locked M02 decision (LAN-only, single-user). App-level
-  // encryption is deferred to a future milestone.
-  portalPassword: text(),
-  grade: text(),
-  school: text(),
-  homeworkUrl: text(),
-  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-});
+export const children = pgTable(
+  "children",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    displayName: text().notNull(),
+    portalType: text().notNull().default("teacherease"),
+    baseUrl: text().notNull(),
+    username: text().notNull(),
+    // Plaintext per the locked M02 decision (LAN-only, single-user). App-level
+    // encryption is deferred to a future milestone.
+    portalPassword: text(),
+    grade: text(),
+    school: text(),
+    homeworkUrl: text(),
+    // Where this child's homework comes from (ADR 0006): 'page' = the scraped
+    // class homework page, 'child' = the child's own entries (homework_items).
+    homeworkSource: text().notNull().default("page"),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("children_homework_source_valid", sql`${table.homeworkSource} IN ('page', 'child')`),
+  ],
+);
 
 // Global key-value store (single-user; no per-user scope).
 export const settings = pgTable("settings", {
@@ -272,6 +285,95 @@ export const invites = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("invites_child_idx").on(table.childId)],
+);
+
+// ─── Child-entered homework (ADR 0006) ──────────────────────────────────────
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+// The parent-owned class list a child picks from (plus a fixed "Other", which
+// is not a row). A removed class that items still use is archived, not deleted.
+export const childClasses = pgTable(
+  "child_classes",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    childId: uuid()
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    position: integer().notNull().default(0),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("child_classes_child_name_unique").on(table.childId, sql`lower(${table.name})`),
+  ],
+);
+
+// One thing to do, entered by the child. Several per class per day.
+export const homeworkItems = pgTable(
+  "homework_items",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    childId: uuid()
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    // NULL = Other.
+    classId: uuid().references(() => childClasses.id, { onDelete: "set null" }),
+    kind: text().notNull().default("homework"),
+    title: text().notNull(),
+    details: text(),
+    // The local day it was entered (server TZ); never edited.
+    assignedOn: date({ mode: "string" }).notNull(),
+    dueOn: date({ mode: "string" }).notNull(),
+    status: text().notNull().default("todo"),
+    completedAt: timestamp({ withTimezone: true }),
+    createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("homework_items_child_due_idx").on(table.childId, table.dueOn),
+    check(
+      "homework_items_kind_valid",
+      sql`${table.kind} IN ('homework', 'test', 'project', 'other')`,
+    ),
+    check("homework_items_status_valid", sql`${table.status} IN ('todo', 'done')`),
+  ],
+);
+
+// Photos of an item, shrunk in the browser (JPEG ≤ 1600 px). Never read by lists.
+export const homeworkPhotos = pgTable(
+  "homework_photos",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    itemId: uuid()
+      .notNull()
+      .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    contentType: text().notNull(),
+    byteSize: integer().notNull(),
+    bytes: bytea().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("homework_photos_item_idx").on(table.itemId)],
+);
+
+// "That's everything for today", per child and local day.
+export const homeworkDays = pgTable(
+  "homework_days",
+  {
+    childId: uuid()
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    day: date({ mode: "string" }).notNull(),
+    completedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    completedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+  },
+  (table) => [primaryKey({ columns: [table.childId, table.day] })],
 );
 
 // Relations — used by the Drizzle relational query builder in M04.

@@ -45,7 +45,7 @@ childrenApp.patch("/:id", async (c) => {
   const existing = await q.getChild(db, id);
   if (!existing) return c.json({ error: "Not found" }, 404);
 
-  const { displayName, username, password, homeworkUrl } = parsed.data;
+  const { displayName, username, password, homeworkUrl, homeworkSource } = parsed.data;
   if (displayName !== undefined || username !== undefined) {
     await q.updateChildIdentity(db, id, {
       displayName: displayName ?? existing.displayName,
@@ -54,6 +54,7 @@ childrenApp.patch("/:id", async (c) => {
   }
   if (password !== undefined) await q.updateChildPassword(db, id, password);
   if (homeworkUrl !== undefined) await q.setHomeworkUrl(db, id, homeworkUrl);
+  if (homeworkSource !== undefined) await q.setHomeworkSource(db, id, homeworkSource);
 
   return c.json(await q.getChild(db, id));
 });

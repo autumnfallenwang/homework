@@ -3,6 +3,7 @@
 // uuid PKs, not the desktop app's integer ids); timestamps are ISO strings.
 
 import { z } from "zod";
+import { homeworkSourceSchema } from "./homework-entry.js";
 
 // --- Read records (response bodies) ---
 
@@ -15,6 +16,8 @@ export const childRecordSchema = z.object({
   grade: z.string().nullable(),
   school: z.string().nullable(),
   homeworkUrl: z.string().nullable(),
+  /** Where this child's homework comes from (ADR 0006). */
+  homeworkSource: homeworkSourceSchema,
   createdAt: z.string(),
 });
 export type ChildRecord = z.infer<typeof childRecordSchema>;
@@ -117,13 +120,15 @@ export const addChildSchema = z.object({
 });
 export type AddChildInput = z.infer<typeof addChildSchema>;
 
-// PATCH /children/:id — any subset of identity / password / homeworkUrl.
+// PATCH /children/:id — any subset of identity / password / homeworkUrl /
+// homework source (the "Child enters homework" switch).
 export const patchChildSchema = z
   .object({
     displayName: z.string().min(1).optional(),
     username: z.string().min(1).optional(),
     password: z.string().min(1).optional(),
     homeworkUrl: z.string().nullable().optional(),
+    homeworkSource: homeworkSourceSchema.optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "At least one field must be provided",

@@ -11,8 +11,9 @@ The system follows the established house pattern of the sibling projects `homene
 - **`apps/api` (Hono + Zod)** — the TeacherEase scraper (cheerio), the fetch scheduler, the SMTP digest sender, and Drizzle data access.
 - **`apps/web` (Next.js App Router)** — the Today / Classes / History / Settings views ported from the desktop app, plus the parent's Review tab, a separate child area (`/child`), `/sign-in` and `/join/<token>`.
 - **Logins ([ADR 0004](adr/0004-accounts-and-roles.md))** — Better Auth in the API (Drizzle tables `users`/`sessions`/`accounts`/`verifications`, plus `invites`), two roles: **parent** (the whole app, manages child profiles and their data sources) and **child** (their own area only). A *child login* (`users.child_id`) points at a *child profile* (`children`); child logins are created from one-time invite links, never by open sign-up. The API enforces every rule by path: `/api/public/*` open, `/api/child/*` child-only, everything else parent-only. The session cookie is shared across the web and API hosts via `COOKIE_DOMAIN=.arch.internal`.
+- **Child-entered homework ([ADR 0006](adr/0006-child-entered-homework.md))** — each child profile has one homework source: the scraped class homework page (`page`) or the child's own entries (`child`). Entries live in `homework_items` (class from a parent-owned `child_classes` list, or Other), with photos as bytea in `homework_photos` (shrunk in the browser) and "that's everything for today" in `homework_days`. The child writes under `/api/child/homework*`; the parent reads them read-only on Review and Today and in the digest.
 - **`packages/shared`** — shared Zod schemas and TypeScript types used by both API and web.
-- **PostgreSQL (Drizzle)** — per-child grades, homework, and settings; replaces the desktop app's local SQLite.
+- **PostgreSQL (Drizzle)** — per-child grades, scraped and child-entered homework (with photos), logins and settings; replaces the desktop app's local SQLite. No backup job yet (ADR 0006).
 - **`deploy/chart` (Helm)** — managed by `arch-infra` + Argo CD, which own the k3s lifecycle.
 - **Loki / Grafana / Alloy** — centralized logs, consistent with the sibling apps. Every line is
   one JSON object on stdout in the house shape (`level` as a word, `time`/`service`/`version`/
@@ -26,7 +27,7 @@ The system follows the established house pattern of the sibling projects `homene
 ## Constraints and non-goals
 
 - **LAN-only.** Served behind `*.arch.internal` ingress on the home k3s cluster; no public-internet exposure (matching `homenews` / `homecal`).
-- **The port (M01–M07) was 1:1; features since are staged** — logging (M08), then the child-homework stages starting with accounts and roles (M09). One household; no multi-tenant accounts.
+- **The port (M01–M07) was 1:1; features since are staged** — logging (M08), then the child-homework stages: accounts and roles (M09), child homework entry (M10). One household; no multi-tenant accounts.
 - **Plain HTTP on the LAN.** Session cookies and invite links travel unencrypted on the home network, as in the sibling apps; exposure beyond the LAN would require HTTPS first (ADR 0004).
 - **The desktop / Tauri build is retired** in favor of the web app.
 

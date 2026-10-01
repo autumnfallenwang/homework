@@ -5,10 +5,11 @@
 
 import { eq } from "drizzle-orm";
 import { type Database, db as defaultDb } from "../db/index.js";
+import { toChildRecord } from "../db/queries.js";
 import { children } from "../db/schema.js";
 import { log } from "../lib/logger.js";
 import { createNodeFetch } from "../scraper/transport.js";
-import type { ChildRecord, FetchImpl } from "../scraper/types.js";
+import type { FetchImpl } from "../scraper/types.js";
 import { HomeworkSource } from "./homework-source.js";
 import { completeFetchRun, startFetchRun } from "./persist.js";
 import { FetchRunner } from "./runner.js";
@@ -22,20 +23,6 @@ export interface RunFetchOptions {
   readonly fetchImpl?: FetchImpl;
   /** Override the password lookup (tests). Defaults to reading the child row. */
   readonly getPassword?: (childId: string) => Promise<string | null>;
-}
-
-function toChildRecord(row: typeof children.$inferSelect): ChildRecord {
-  return {
-    id: row.id,
-    displayName: row.displayName,
-    portalType: row.portalType,
-    baseUrl: row.baseUrl,
-    username: row.username,
-    grade: row.grade,
-    school: row.school,
-    homeworkUrl: row.homeworkUrl,
-    createdAt: row.createdAt.toISOString(),
-  };
 }
 
 /**

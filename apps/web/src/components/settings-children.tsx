@@ -3,6 +3,7 @@
 import { Loader2, Lock, Pencil, Plus, Trash2, User } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ChildLoginPanel } from "@/components/settings/child-login";
+import { HomeworkEntrySettings } from "@/components/settings/homework-entry-settings";
 import { SettingsSection } from "@/components/settings/section";
 import { CHILD_DATA_REFRESHED_EVENT } from "@/components/shell/sidebar-child-selector";
 import { Button } from "@/components/ui/button";
@@ -280,7 +281,23 @@ function ChildRow({
       </div>
 
       <div className="mt-2 pl-11 text-[11px] text-muted-foreground">
-        {child.homeworkUrl ? `Homework: ${child.homeworkUrl}` : "Homework: not set"}
+        {child.homeworkUrl
+          ? `Homework page: ${child.homeworkUrl}${
+              child.homeworkSource === "child"
+                ? " (not checked while the child enters homework)"
+                : ""
+            }`
+          : "Homework page: not set"}
+      </div>
+
+      <div className="mt-3 border-t pt-3 pl-11">
+        <HomeworkEntrySettings
+          child={child}
+          onChanged={async () => {
+            await onChanged();
+            notifyChildDataRefreshed();
+          }}
+        />
       </div>
 
       <ChildLoginPanel childId={child.id} childName={child.displayName} />

@@ -10,6 +10,8 @@ import {
   type ChildRecord,
   type ClassDetails,
   computeChildAttention,
+  HOMEWORK_KIND_LABELS,
+  type HomeworkItem,
   type HomeworkRecord,
   sortItemsMissingFirst,
 } from "@homework/shared";
@@ -23,6 +25,7 @@ import {
   getHomeworkForDay,
   getLatestSuccessfulFetchRun,
 } from "../db/queries.js";
+import { getDay, itemsForDay } from "./homework-entry.js";
 
 // --- Types (digest subset of the desktop notify/types.ts) -----------------
 
@@ -41,6 +44,10 @@ export interface ChildDigest {
   readonly homeworkConfigured: boolean;
   readonly homeworkForToday: HomeworkRecord[];
   readonly homeworkDueToday: HomeworkRecord[];
+  /** The child enters their own homework (ADR 0006) — rows are their items. */
+  readonly homeworkEnteredByChild: boolean;
+  /** …and marked today complete ("That's everything for today"). */
+  readonly homeworkDayComplete: boolean;
 }
 
 export interface FamilyHero {
@@ -71,6 +78,8 @@ export interface BuildRefreshDigestInput {
   readonly perChildHomeworkForToday: ReadonlyMap<string, readonly HomeworkRecord[]>;
   readonly perChildHomeworkDueToday: ReadonlyMap<string, readonly HomeworkRecord[]>;
   readonly perChildHeroCounts: ReadonlyMap<string, ChildHeroCounts>;
+  /** Children who entered their own homework and marked today complete. */
+  readonly perChildHomeworkDayComplete?: ReadonlyMap<string, boolean>;
   readonly cfg: AttentionConfig;
   readonly now: Date;
 }
@@ -92,6 +101,7 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
     perChildHomeworkForToday,
     perChildHomeworkDueToday,
     perChildHeroCounts,
+    perChildHomeworkDayComplete,
     cfg,
     now,
   } = input;
@@ -99,7 +109,8 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
   const todayLocal = toLocalIso(now);
 
   const childDigests: ChildDigest[] = children.map((child) => {
-    const homeworkConfigured = Boolean(child.homeworkUrl);
+    const homeworkEnteredByChild = child.homeworkSource === "child";
+    const homeworkConfigured = Boolean(child.homeworkUrl) || homeworkEnteredByChild;
     const homeworkForToday = [...(perChildHomeworkForToday.get(child.id) ?? [])];
     const homeworkDueToday = [...(perChildHomeworkDueToday.get(child.id) ?? [])];
     const details = perChildDetails.get(child.id) ?? [];
@@ -126,6 +137,9 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
       homeworkConfigured,
       homeworkForToday,
       homeworkDueToday,
+      homeworkEnteredByChild,
+      homeworkDayComplete:
+        homeworkEnteredByChild && (perChildHomeworkDayComplete?.get(child.id) ?? false),
     };
   });
 
@@ -163,6 +177,25 @@ function rollUpFamily(children: readonly ChildDigest[]): FamilyHero {
 
 // --- Assemble from DB — ported from desktop build-from-db.ts ---------------
 
+/** A child's entered item in the scraped-homework row shape the digest renders. */
+export function enteredItemAsRecord(item: HomeworkItem): HomeworkRecord {
+  const subject =
+    item.kind === "homework"
+      ? item.className
+      : `${item.className} · ${HOMEWORK_KIND_LABELS[item.kind]}`;
+  const content = [item.title, item.details].filter(Boolean).join(" — ");
+  return {
+    id: item.id,
+    childId: item.childId,
+    hwDate: item.assignedOn,
+    subject,
+    content: item.status === "done" ? `${content} (done)` : content,
+    dueDate: item.dueOn,
+    dueDateInferred: false,
+    scrapedAt: item.createdAt,
+  };
+}
+
 export async function buildDigestFromDb(db: Database, now: Date): Promise<RefreshDigest> {
   const cfg = await getAttentionConfig(db);
   const children = await getChildren(db);
@@ -171,10 +204,19 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
   const perChildHomeworkForToday = new Map<string, readonly HomeworkRecord[]>();
   const perChildHomeworkDueToday = new Map<string, readonly HomeworkRecord[]>();
   const perChildHeroCounts = new Map<string, ChildHeroCounts>();
+  const perChildHomeworkDayComplete = new Map<string, boolean>();
 
   const todayIso = toLocalIso(now);
 
   for (const child of children) {
+    // A child who enters their own homework needs no successful fetch for it.
+    if (child.homeworkSource === "child") {
+      const { givenToday, dueToday } = await itemsForDay(db, child.id, todayIso);
+      perChildHomeworkForToday.set(child.id, givenToday.map(enteredItemAsRecord));
+      perChildHomeworkDueToday.set(child.id, dueToday.map(enteredItemAsRecord));
+      const day = await getDay(db, child.id, todayIso);
+      perChildHomeworkDayComplete.set(child.id, day.completedAt !== null);
+    }
     const run = await getLatestSuccessfulFetchRun(db, child.id, "teacherease");
     if (!run) {
       // No successful fetch yet — hero shows zeros, no attention/homework.
@@ -192,8 +234,10 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
     }
     perChildHeroCounts.set(child.id, { meetingCount, notAssessedCount });
 
-    perChildHomeworkForToday.set(child.id, await getHomeworkForDay(db, child.id, todayIso));
-    perChildHomeworkDueToday.set(child.id, await getHomeworkDueOnDay(db, child.id, todayIso));
+    if (child.homeworkSource !== "child") {
+      perChildHomeworkForToday.set(child.id, await getHomeworkForDay(db, child.id, todayIso));
+      perChildHomeworkDueToday.set(child.id, await getHomeworkDueOnDay(db, child.id, todayIso));
+    }
   }
 
   return buildRefreshDigest({
@@ -202,6 +246,7 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
     perChildHomeworkForToday,
     perChildHomeworkDueToday,
     perChildHeroCounts,
+    perChildHomeworkDayComplete,
     cfg,
     now,
   });
@@ -361,11 +406,21 @@ function renderHomeworkSectionHtml(
       </ul>`;
 }
 
+/** The child's own word on today, for a child who enters their homework. */
+function dayCompleteText(c: ChildDigest): string {
+  return c.homeworkDayComplete
+    ? `${c.childName} marked today's homework complete.`
+    : `${c.childName} hasn't marked today's homework complete yet.`;
+}
+
 function renderChildDetailHtml(c: ChildDigest): string {
   const header = `<h2 style="margin:0 0 10px;font-size:15px;color:#111827;">${escapeHtml(c.childName)}</h2>`;
   const attentionBlock = renderAttentionBlockHtml(c);
+  const dayLine = c.homeworkEnteredByChild
+    ? `<p style="margin:0 0 8px;color:${c.homeworkDayComplete ? "#059669" : "#6b7280"};font-size:13px;">${escapeHtml(dayCompleteText(c))}</p>`
+    : "";
   const homeworkBlocks = c.homeworkConfigured
-    ? `${renderHomeworkSectionHtml("Homework for today", c.homeworkForToday, "No homework posted for today.", ICON_HW_FOR)}
+    ? `${dayLine}${renderHomeworkSectionHtml("Homework for today", c.homeworkForToday, "No homework posted for today.", ICON_HW_FOR)}
       ${renderHomeworkSectionHtml("Homework due today", c.homeworkDueToday, "Nothing due today.", ICON_HW_DUE)}`
     : "";
   return `<section style="margin:0 0 20px;padding:12px 0 0;border-top:1px solid #e5e7eb;">
@@ -416,6 +471,7 @@ function renderChildText(c: ChildDigest): string[] {
   }
   if (c.homeworkConfigured) {
     lines.push("");
+    if (c.homeworkEnteredByChild) lines.push(`  ${dayCompleteText(c)}`);
     lines.push(...renderHomeworkText("Homework for today", c.homeworkForToday, "none posted"));
     lines.push(...renderHomeworkText("Homework due today", c.homeworkDueToday, "nothing due"));
   }

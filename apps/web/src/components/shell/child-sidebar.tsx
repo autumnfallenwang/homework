@@ -42,7 +42,9 @@ function DesktopLink({ item, pathname }: { item: NavItem; pathname: string | nul
 
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
-  return href === "/child" ? pathname === "/child" : pathname.startsWith(href);
+  // The Add / Edit homework pages belong to the Homework tab.
+  if (href === "/child") return pathname === "/child" || pathname.startsWith("/child/homework");
+  return pathname.startsWith(href);
 }
 
 function Brand() {

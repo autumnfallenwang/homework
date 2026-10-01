@@ -37,8 +37,24 @@ describe("the access matrix", () => {
       "/api/digest/send",
       `/api/children/${ID}/fetch`,
       `/api/children/${ID}/invites`,
+      `/api/children/${ID}/homework-items`,
+      `/api/children/${ID}/homework-classes`,
+      `/api/homework-items/${ID}/photos/${ID}`,
     ]) {
       expect(parentOnly).toContain(path);
+    }
+  });
+
+  it("covers the child's homework routes as child-only (ADR 0006)", () => {
+    const childOnly = routes.filter((r) => kind(r.path) === "child").map((r) => r.path);
+    for (const path of [
+      "/api/child/homework",
+      `/api/child/homework/${ID}`,
+      `/api/child/homework/${ID}/photos/${ID}`,
+      "/api/child/homework-classes",
+      "/api/child/homework-day",
+    ]) {
+      expect(childOnly).toContain(path);
     }
   });
 

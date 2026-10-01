@@ -13,8 +13,9 @@ export class HomeworkSource implements FetchSource {
 
   constructor(private readonly db: Database) {}
 
-  isApplicable(child: { homeworkUrl: string | null }): boolean {
-    return Boolean(child.homeworkUrl);
+  /** Only for a child whose homework comes from the page (ADR 0006). */
+  isApplicable(child: { homeworkUrl: string | null; homeworkSource: string }): boolean {
+    return Boolean(child.homeworkUrl) && child.homeworkSource !== "child";
   }
 
   async run(ctx: FetchContext): Promise<void> {

@@ -1,65 +1,100 @@
 "use client";
 
-import type { ChildProfile } from "@homework/shared";
-import { Camera, ClipboardList, Plus, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useMe } from "@/components/auth/session-gate";
-import { ComingSoonCard } from "@/components/coming-soon-card";
+import type { HomeworkItem, HomeworkItemList } from "@homework/shared";
+import { Loader2, Plus } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { HomeworkEntryOff } from "@/components/homework/entry-off";
+import { describeHomeworkError } from "@/components/homework/homework-form";
+import { HomeworkList } from "@/components/homework/homework-list";
 import { PageHeader } from "@/components/shell/page-header";
-import { getChildProfile } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { getChildProfile, getMyHomework, setMyDayComplete, updateMyHomework } from "@/lib/api";
 
-/** The child's Homework tab. Stage 1: their real profile, and what stages 2–3 will add. */
+/** The child's Homework tab (ADR 0006): their list, grouped by when things are due. */
 export default function ChildHomeworkPage() {
-  const me = useMe();
-  const [profile, setProfile] = useState<ChildProfile | null>(null);
+  const [entryOn, setEntryOn] = useState<boolean | null>(null);
+  const [list, setList] = useState<HomeworkItemList | null>(null);
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [profile, mine] = await Promise.all([getChildProfile(), getMyHomework()]);
+      setEntryOn(profile.homeworkEntry);
+      setList(mine);
+    } catch (err) {
+      setError(describeHomeworkError(err));
+    }
+  }, []);
 
   useEffect(() => {
-    void getChildProfile()
-      .then(setProfile)
-      .catch(() => setProfile(null));
-  }, []);
+    void load();
+  }, [load]);
+
+  async function toggle(item: HomeworkItem) {
+    setBusyIds((ids) => [...ids, item.id]);
+    setError(null);
+    try {
+      const next = await updateMyHomework(item.id, {
+        status: item.status === "done" ? "todo" : "done",
+      });
+      setList((l) => l && { ...l, items: l.items.map((i) => (i.id === next.id ? next : i)) });
+    } catch (err) {
+      setError(describeHomeworkError(err));
+    } finally {
+      setBusyIds((ids) => ids.filter((id) => id !== item.id));
+    }
+  }
+
+  async function markDay(complete: boolean) {
+    setError(null);
+    try {
+      const today = await setMyDayComplete(complete);
+      setList((l) => l && { ...l, today });
+    } catch (err) {
+      setError(describeHomeworkError(err));
+    }
+  }
 
   return (
     <>
-      <PageHeader title="Homework" />
+      <PageHeader
+        title="Homework"
+        actions={
+          entryOn ? (
+            <Button size="sm" asChild>
+              <Link href="/child/homework/new">
+                <Plus className="h-4 w-4" />
+                Add homework
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
       <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-5 md:px-5">
-        <div className="rounded-lg bg-card px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium" data-testid="child-profile-name">
-                {profile?.displayName ?? me.child?.displayName ?? "…"}
-              </p>
-              <p className="text-[12px] text-muted-foreground">
-                {[profile?.grade, profile?.school].filter(Boolean).join(" · ") ||
-                  `Signed in as ${me.user.email}`}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <ComingSoonCard
-          stage={2}
-          icon={ClipboardList}
-          title="My homework"
-          description="Everything you have to do, by day and by class — with what is due next at the top."
-        />
-        <ComingSoonCard
-          stage={2}
-          icon={Plus}
-          title="Add homework"
-          description="Pick the class, the day it was given and the day it is due, then write what to do."
-          action="Add homework"
-        />
-        <ComingSoonCard
-          stage={3}
-          icon={Camera}
-          title="Start from a screenshot"
-          description="Take a photo of the board or the assignment; Homework reads it and fills in the form for you to check."
-          action="Upload a screenshot"
-        />
+        {error ? (
+          <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[13px] text-destructive">
+            {error}
+          </p>
+        ) : null}
+        {entryOn === null || !list ? (
+          error ? null : (
+            <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />
+          )
+        ) : entryOn ? (
+          <HomeworkList
+            items={list.items}
+            today={list.today}
+            mode="child"
+            itemHref={(i) => `/child/homework/${i.id}`}
+            onToggleDone={(i) => void toggle(i)}
+            onDayComplete={(c) => void markDay(c)}
+            busyIds={busyIds}
+          />
+        ) : (
+          <HomeworkEntryOff />
+        )}
       </div>
     </>
   );

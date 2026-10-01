@@ -8,6 +8,7 @@
 import { type AttentionConfig, type ClassDetails, computeChildAttention } from "@homework/shared";
 import {
   getAllClassDetails,
+  getChildHomeworkItems,
   getGradesForFetchRun,
   getHomeworkForDay,
   getLatestSuccessfulFetchRun,
@@ -38,7 +39,12 @@ export interface HeroLoadResult {
 }
 
 export async function loadHeroStatuses(
-  children: ReadonlyArray<{ id: string; displayName: string; homeworkUrl: string | null }>,
+  children: ReadonlyArray<{
+    id: string;
+    displayName: string;
+    homeworkUrl: string | null;
+    homeworkSource: "page" | "child";
+  }>,
   cfg: AttentionConfig,
   now: Date,
 ): Promise<HeroLoadResult> {
@@ -48,10 +54,20 @@ export async function loadHeroStatuses(
   const perChildHeroCounts = new Map<string, ChildHeroCounts>();
 
   for (const child of children) {
-    const homeworkConfigured = Boolean(child.homeworkUrl);
-    const hwRows = homeworkConfigured ? await getHomeworkForDay(child.id, todayIso) : [];
-    const homeworkForTodayCount = hwRows.filter((r) => r.hwDate === todayIso).length;
-    const homeworkDueTodayCount = hwRows.filter((r) => r.dueDate === todayIso).length;
+    // A child who enters their own homework (ADR 0006) is counted from their items.
+    const enteredByChild = child.homeworkSource === "child";
+    const homeworkConfigured = Boolean(child.homeworkUrl) || enteredByChild;
+    let homeworkForTodayCount = 0;
+    let homeworkDueTodayCount = 0;
+    if (enteredByChild) {
+      const { items } = await getChildHomeworkItems(child.id);
+      homeworkForTodayCount = items.filter((i) => i.assignedOn === todayIso).length;
+      homeworkDueTodayCount = items.filter((i) => i.dueOn === todayIso).length;
+    } else if (homeworkConfigured) {
+      const hwRows = await getHomeworkForDay(child.id, todayIso);
+      homeworkForTodayCount = hwRows.filter((r) => r.hwDate === todayIso).length;
+      homeworkDueTodayCount = hwRows.filter((r) => r.dueDate === todayIso).length;
+    }
 
     const run = await getLatestSuccessfulFetchRun(child.id, "teacherease");
     if (!run) {

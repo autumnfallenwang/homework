@@ -5,6 +5,7 @@ export * from "./accounts.js";
 export * from "./attention-engine.js";
 export * from "./domain.js";
 export * from "./homework-date.js";
+export * from "./homework-entry.js";
 export * from "./records.js";
 export * from "./schedule.js";
 export * from "./trend.js";

@@ -20,6 +20,11 @@ import { digestApp } from "./routes/digest.js";
 import { childFetchApp, fetchRunsApp } from "./routes/fetch-runs.js";
 import { gradesApp } from "./routes/grades.js";
 import { homeworkApp } from "./routes/homework.js";
+import {
+  childHomeworkAdminApp,
+  childHomeworkApp,
+  homeworkItemsApp,
+} from "./routes/homework-entry.js";
 import { childLoginsApp } from "./routes/logins.js";
 import { childAreaApp, meApp } from "./routes/me.js";
 import { publicApp } from "./routes/public.js";
@@ -77,6 +82,7 @@ export function createApp(options: AppOptions = {}) {
   app.route("/api/public", publicApp);
   app.route("/api/me", meApp);
   app.route("/api/child", childAreaApp);
+  app.route("/api/child", childHomeworkApp);
 
   // Computed attention config (not under /settings/:key).
   app.get("/api/attention-config", async (c) => c.json(await q.getAttentionConfig(db)));
@@ -88,6 +94,8 @@ export function createApp(options: AppOptions = {}) {
   app.route("/api/children", homeworkApp);
   app.route("/api/children", childFetchApp);
   app.route("/api/children", childLoginsApp);
+  app.route("/api/children", childHomeworkAdminApp);
+  app.route("/api/homework-items", homeworkItemsApp);
   app.route("/api/fetch-runs", fetchRunsApp);
   app.route("/api/settings", settingsApp);
   app.route("/api/scraper", scraperApp);

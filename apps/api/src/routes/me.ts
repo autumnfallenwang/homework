@@ -54,6 +54,7 @@ childAreaApp.get("/profile", async (c) => {
     displayName: child.displayName,
     grade: child.grade,
     school: child.school,
+    homeworkEntry: child.homeworkSource === "child",
   };
   return c.json(body);
 });
