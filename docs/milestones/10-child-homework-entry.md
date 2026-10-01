@@ -65,7 +65,9 @@ complete"; the Review tab lists everything she entered, read only, with the phot
   the message), Save and add another, edits, deletes, ticks done, marks the day → parent Today,
   hero counts, Review list and item detail with the photo; Fetch now skips the homework page while
   on and fetches it again when off; child sees "entry off" on the list and the Add page.
-- [ ] Released to the cluster: migrate job completed, pages and API healthy, existing data intact.
+- [x] Released to the cluster (2fb48f7): 4 migrations applied by the hook; Ivy's profile on `page`
+  until switched; 648 fetch runs / 757 homework / 2 logins / 3 sessions intact; every page 200;
+  the new child and parent routes answer 401 without a session; no error lines after the rollout.
 - [ ] *(you)* Turn on the switch for Ivy, set her classes, send her an invite link.
 
 ## Decisions
