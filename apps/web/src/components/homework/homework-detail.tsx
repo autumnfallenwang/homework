@@ -46,14 +46,13 @@ export function HomeworkDetail({
             {item.kind === "test" ? "Test day" : "Due"} {formatShortDay(item.dueOn)}
           </span>
           <span aria-hidden="true">·</span>
-          {item.hasSolution ? (
+          {item.submittedAt ? (
             <span className="flex items-center gap-1 text-meeting">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Solution
-              {item.solution.savedAt ? ` · ${formatAddedAt(item.solution.savedAt)}` : ""}
+              Done · submitted {formatAddedAt(item.submittedAt)}
             </span>
           ) : (
-            <span>No solution yet</span>
+            <span>Not submitted yet</span>
           )}
           {item.edited ? <EditedBadge /> : null}
         </div>
@@ -112,16 +111,15 @@ export function HomeworkDetail({
               className="text-xl font-medium"
               style={{ fontFamily: "var(--font-heading)" }}
             >
-              Changes
+              History
             </h3>
             <p className="text-[12px] text-muted-foreground">
-              Recorded after the first day, from {formatAddedAt(item.firstDayEndsAt)}.
+              Every submit, and changes made after the first day (
+              {formatAddedAt(item.firstDayEndsAt)}).
             </p>
           </div>
           {history.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground italic">
-              No changes after the first day.
-            </p>
+            <p className="text-[13px] text-muted-foreground italic">Nothing recorded yet.</p>
           ) : (
             <ol className="space-y-2">
               {history.map((entry) => (
@@ -190,9 +188,12 @@ function showValue(field: string, value: string | null): string {
   return `“${value}”`;
 }
 
-/** One recorded change in words: "Due: Mon 10/5 → Tue 10/6", "Removed a solution photo". */
+/** One record in words: "Submitted", "Due: Mon 10/5 → Tue 10/6", "Removed a solution photo". */
 function HistoryLine({ itemId, entry }: { itemId: string; entry: HomeworkHistoryEntry }) {
   const viewer = usePhotoViewer();
+  if (entry.action === "submitted") {
+    return <span className="min-w-0 font-medium text-meeting">Submitted</span>;
+  }
   if (entry.action === "edited") {
     return (
       <span className="min-w-0 space-y-0.5">

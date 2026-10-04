@@ -50,6 +50,7 @@ export type HomeworkEntryErrorCode =
   | "too_many_photos"
   | "given_on_locked"
   | "delete_locked"
+  | "nothing_to_submit"
   | HomeworkDateProblem;
 
 export class HomeworkEntryError extends Error {
@@ -243,7 +244,7 @@ async function record(
     itemId: string;
     actorId: string;
     section: "homework" | "solution";
-    action: "edited" | "photo_added" | "photo_removed";
+    action: "edited" | "photo_added" | "photo_removed" | "submitted";
     changes?: HistoryChanges;
     photoId?: string;
   },
@@ -260,10 +261,6 @@ async function record(
 
 // --- Items ------------------------------------------------------------------
 
-/** A solution note, or a solution photo the child still sees. */
-const hasSolutionSql = () =>
-  sql<boolean>`(${homeworkItems.solutionNote} is not null or exists (select 1 from homework_photos p where p.item_id = ${homeworkItems.id} and p.kind = 'solution' and p.removed_at is null))`;
-
 const itemColumns = {
   id: homeworkItems.id,
   childId: homeworkItems.childId,
@@ -276,6 +273,7 @@ const itemColumns = {
   dueOn: homeworkItems.dueOn,
   solutionNote: homeworkItems.solutionNote,
   solutionSavedAt: homeworkItems.solutionSavedAt,
+  submittedAt: homeworkItems.submittedAt,
   createdAt: homeworkItems.createdAt,
   updatedAt: homeworkItems.updatedAt,
   createdByName: users.name,
@@ -297,6 +295,7 @@ type ItemRow = {
   dueOn: string;
   solutionNote: string | null;
   solutionSavedAt: Date | null;
+  submittedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   createdByName: string | null;
@@ -327,6 +326,7 @@ function toItem(row: ItemRow, photos: ItemPhotos | undefined): HomeworkItem {
       savedAt: row.solutionSavedAt?.toISOString() ?? null,
     },
     hasSolution: row.solutionNote !== null || solutionPhotos.length > 0,
+    submittedAt: row.submittedAt?.toISOString() ?? null,
     firstDayEndsAt: firstDayEndsAt(row.createdAt).toISOString(),
     edited: row.edited,
   };
@@ -364,7 +364,7 @@ function selectItems(db: Database | Tx) {
     .leftJoin(users, eq(users.id, homeworkItems.createdBy));
 }
 
-/** Every item without a solution, and done items due within the last 30 days. */
+/** Every item not submitted, and done (submitted) items due within the last 30 days. */
 export async function listItems(
   db: Database,
   childId: string,
@@ -375,7 +375,7 @@ export async function listItems(
     .where(
       and(
         eq(homeworkItems.childId, childId),
-        or(sql`not ${hasSolutionSql()}`, gte(homeworkItems.dueOn, since)),
+        or(isNull(homeworkItems.submittedAt), gte(homeworkItems.dueOn, since)),
       ),
     )
     .orderBy(asc(homeworkItems.dueOn), asc(homeworkItems.createdAt));
@@ -587,6 +587,35 @@ export async function saveSolution(
   return item;
 }
 
+/**
+ * Submit (ADR 0011): marks the item done at `now` and records it — every time,
+ * even on the first day. Needs a saved solution note; editing afterwards keeps it
+ * done, and Submit again moves the time.
+ */
+export async function submitItem(
+  db: Database,
+  childId: string,
+  userId: string,
+  itemId: string,
+  now: Date = new Date(),
+): Promise<HomeworkItem> {
+  await db.transaction(async (tx) => {
+    await assertEntryOn(tx, childId);
+    const current = await ownItem(tx, childId, itemId);
+    if (current.solutionNote === null) {
+      throw new HomeworkEntryError("nothing_to_submit", "Write a note and save the solution first");
+    }
+    await tx
+      .update(homeworkItems)
+      .set({ submittedAt: now, updatedAt: now })
+      .where(eq(homeworkItems.id, itemId));
+    await record(tx, { itemId, actorId: userId, section: "solution", action: "submitted" });
+  });
+  const item = await getItem(db, itemId);
+  if (!item) throw new HomeworkEntryError("item_not_found", "Homework not found");
+  return item;
+}
+
 /** Only on the first day; after it an item stays. */
 export async function deleteItem(
   db: Database,
@@ -664,11 +693,6 @@ export function sniffPhotoType(bytes: Uint8Array): HomeworkPhotoType | null {
   return null;
 }
 
-const PHOTO_LIMIT: Record<HomeworkPhotoKind, number> = {
-  sheet: HOMEWORK_LIMITS.photosPerItem,
-  solution: HOMEWORK_LIMITS.solutionPhotosPerItem,
-};
-
 const PHOTO_SECTION: Record<HomeworkPhotoKind, "homework" | "solution"> = {
   sheet: "homework",
   solution: "solution",
@@ -704,10 +728,10 @@ export async function addPhoto(
           isNull(homeworkPhotos.removedAt),
         ),
       );
-    if ((count?.n ?? 0) >= PHOTO_LIMIT[kind]) {
+    if ((count?.n ?? 0) >= HOMEWORK_LIMITS.photosPerSection) {
       throw new HomeworkEntryError(
         "too_many_photos",
-        `${kind === "sheet" ? "The homework" : "A solution"} can have up to ${PHOTO_LIMIT[kind]} photos`,
+        `${kind === "sheet" ? "The homework" : "A solution"} can have up to ${HOMEWORK_LIMITS.photosPerSection} photos`,
       );
     }
     const [row] = await tx

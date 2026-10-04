@@ -53,6 +53,7 @@ describe("the access matrix", () => {
       `/api/child/homework/${ID}`,
       `/api/child/homework/${ID}/photos/${ID}`,
       `/api/child/homework/${ID}/solution`,
+      `/api/child/homework/${ID}/submit`,
       "/api/child/homework-classes",
     ]) {
       expect(childOnly).toContain(path);

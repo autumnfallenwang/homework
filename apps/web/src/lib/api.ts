@@ -463,6 +463,11 @@ export function saveMyHomeworkSolution(
   return put(`/api/child/homework/${itemId}/solution`, input);
 }
 
+/** Submit (ADR 0011): done, recorded for the parent; again later is fine. */
+export function submitMyHomework(itemId: string): Promise<HomeworkItem> {
+  return post(`/api/child/homework/${itemId}/submit`);
+}
+
 /** Upload one (already shrunk) photo of the sheet or the solution as the raw request body. */
 export function uploadMyHomeworkPhoto(
   itemId: string,

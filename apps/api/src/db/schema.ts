@@ -334,6 +334,8 @@ export const homeworkItems = pgTable(
     // Either one makes the item done.
     solutionNote: text(),
     solutionSavedAt: timestamp({ withTimezone: true }),
+    // The last Submit (ADR 0011): set = done. Editing afterwards keeps it.
+    submittedAt: timestamp({ withTimezone: true }),
     createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -393,7 +395,7 @@ export const homeworkItemEvents = pgTable(
     check("homework_item_events_section_valid", sql`${table.section} IN ('homework', 'solution')`),
     check(
       "homework_item_events_action_valid",
-      sql`${table.action} IN ('edited', 'photo_added', 'photo_removed')`,
+      sql`${table.action} IN ('edited', 'photo_added', 'photo_removed', 'submitted')`,
     ),
   ],
 );

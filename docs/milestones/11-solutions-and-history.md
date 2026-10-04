@@ -118,3 +118,21 @@ shows her solution and a history: the due move and the photos, including one she
 
 - Design page: https://claude.ai/artifact/PpZPyotJqjkw8Gpckn5cCj
 - Depends on: M10 (child homework entry, incl. review round 4 / ADR 0007)
+- 2026-10-04: Submit (founder's review, ADR 0011): Save solution is a draft; Submit (next to it)
+  saves and marks done (`submitted_at`, migration 0007 backfills items that had a solution); editing
+  after keeps it done; Submit again moves the time; every Submit is recorded (also on the first
+  day) and shown as "Submitted" in the parent's History, with only the latest content kept. Done in
+  lists / Today / digest = submitted. Also: the child's pages now scroll (the child layout had no
+  scroll area under the overflow-hidden body, so Save solution could fall off a short screen).
+  Tests: API 151 (new Submit test; drafts are not done), shared 98, web 17. Dev e2e: empty Submit
+  refused, Save not done, Submit → Done, edit keeps Done, Submit again, parent page "Done ·
+  submitted 4:53 PM" + two Submitted lines; scrolling checked at 1280×700 and 390×760.
+- 2026-10-04: buttons (founder's review): Delete sits next to Save homework, in red (first day
+  only); Save solution is the same primary green as Save homework; Submit only enables once a
+  solution is saved with no unsaved changes (hover hint "Save the solution first"), and submits
+  what is saved.
+- 2026-10-04: photos and note (founder's review): no visible photo limits or "n of max" — one
+  background cap of 20 per section (homework photos, solution photos; `photosPerSection`), the Add
+  tile just goes away at it; the solution note is required to save (red `*`, "Write a note" on
+  Save, API `min(1)`) and Submit needs a saved note. Tests: API 152 (20-photo caps, required note,
+  photos alone can't be submitted).

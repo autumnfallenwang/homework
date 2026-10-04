@@ -39,6 +39,7 @@ import {
   listItems,
   replaceClasses,
   saveSolution,
+  submitItem,
   updateItem,
 } from "../services/homework-entry.js";
 
@@ -55,6 +56,7 @@ const ERROR_STATUS: Record<HomeworkEntryErrorCode, ContentfulStatusCode> = {
   due_before_given: 400,
   given_on_locked: 409,
   delete_locked: 409,
+  nothing_to_submit: 400,
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -148,6 +150,18 @@ childHomeworkApp.put("/homework/:itemId/solution", async (c) => {
   }
   try {
     return c.json(await saveSolution(db, childId, c.get("user").id, itemId, parsed.data));
+  } catch (err) {
+    return refuse(c, err);
+  }
+});
+
+// Submit (ADR 0011): done, recorded for the parent; again later is fine.
+childHomeworkApp.post("/homework/:itemId/submit", async (c) => {
+  const childId = sessionChild(c);
+  const itemId = c.req.param("itemId");
+  if (!childId || !UUID.test(itemId)) return notFound(c);
+  try {
+    return c.json(await submitItem(db, childId, c.get("user").id, itemId));
   } catch (err) {
     return refuse(c, err);
   }

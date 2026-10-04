@@ -92,7 +92,7 @@ function HomeworkRow({
   href: string;
   showEdited: boolean;
 }) {
-  const done = item.hasSolution;
+  const done = item.submittedAt !== null;
   const late = !done && item.dueOn < today;
   const photoCount = item.photos.length + item.solution.photos.length;
   return (
@@ -107,7 +107,7 @@ function HomeworkRow({
               ? "border-meeting bg-meeting text-white"
               : "border-dashed border-muted-foreground/70"
           }`}
-          title={done ? "Has a solution" : "No solution yet"}
+          title={done ? "Submitted" : "Not submitted yet"}
         >
           {done ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
         </span>

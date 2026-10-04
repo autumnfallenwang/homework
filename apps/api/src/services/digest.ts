@@ -188,7 +188,7 @@ export function enteredItemAsRecord(item: HomeworkItem): HomeworkRecord {
     childId: item.childId,
     hwDate: item.assignedOn,
     subject,
-    content: item.hasSolution ? `${content} (done)` : content,
+    content: item.submittedAt ? `${content} (done)` : content,
     dueDate: item.dueOn,
     dueDateInferred: false,
     scrapedAt: item.createdAt,

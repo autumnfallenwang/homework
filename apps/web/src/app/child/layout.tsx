@@ -29,12 +29,17 @@ export default function ChildLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : (
+        // Viewport-tall with its own scroll area, like the parent's shell: <body>
+        // is overflow-hidden, so a page taller than the screen (a long item page)
+        // must scroll here. min-h-0 lets it shrink under the phone's top bar.
         <div
           className="flex flex-col md:flex-row"
-          style={{ minHeight: "calc(100vh / var(--font-scale, 1))" }}
+          style={{ height: "calc(100vh / var(--font-scale, 1))" }}
         >
           <ChildSidebar />
-          <main className="flex flex-1 flex-col overflow-x-hidden">{children}</main>
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
+            <main className="flex flex-1 flex-col overflow-x-hidden">{children}</main>
+          </div>
         </div>
       )}
     </SessionGate>

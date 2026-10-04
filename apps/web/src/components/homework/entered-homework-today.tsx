@@ -105,7 +105,7 @@ function Section({
                   <p className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium">
                     {item.className}
                     <KindBadge kind={item.kind} />
-                    {item.hasSolution ? (
+                    {item.submittedAt ? (
                       <span className="flex items-center gap-0.5 text-[11px] font-medium text-meeting">
                         <Check className="h-3 w-3" />
                         Done

@@ -114,7 +114,7 @@ function ItemPage({
               style={{ fontFamily: "var(--font-heading)" }}
             >
               Solution
-              {item.hasSolution ? (
+              {item.submittedAt ? (
                 <span className="flex items-center gap-1 font-sans text-[12px] font-medium text-meeting">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Done

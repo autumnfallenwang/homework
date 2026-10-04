@@ -114,9 +114,9 @@ export function usePhotoDraft(initial: HomeworkPhotoRef[], limit: number) {
 export type PhotoDraft = ReturnType<typeof usePhotoDraft>;
 
 /**
- * A section's photo card: "n of max", a drop zone while empty, then the photos
- * as tiles (a click opens the viewer) with an Add tile at the end. Dropping
- * photos anywhere on the card adds them.
+ * A section's photo card: a drop zone while empty, then the photos as tiles (a
+ * click opens the viewer) with an Add tile at the end — gone at the background
+ * cap, which is not shown. Dropping photos anywhere on the card adds them.
  */
 export function PhotoPanel({
   title,
@@ -160,14 +160,9 @@ export function PhotoPanel({
         dragging ? "ring-2 ring-primary/60" : ""
       }`}
     >
-      <div className="flex items-baseline justify-between">
-        <p className="text-[13px] font-semibold">
-          {title} <span className="font-normal text-muted-foreground">(optional)</span>
-        </p>
-        <span className="text-[12px] tabular-nums text-muted-foreground">
-          {count} of {draft.limit}
-        </span>
-      </div>
+      <p className="text-[13px] font-semibold">
+        {title} <span className="font-normal text-muted-foreground">(optional)</span>
+      </p>
       {count === 0 ? (
         <div
           className={`flex flex-col items-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-6 text-center text-[13px] text-muted-foreground ${

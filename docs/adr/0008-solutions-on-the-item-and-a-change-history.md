@@ -1,6 +1,6 @@
 # 0008 — Solutions live on the homework item; free edits until 7 AM, then a change history
 
-- **Status:** accepted
+- **Status:** accepted — amended by [0011](./0011-submit-marks-homework-done.md) (done = Submit; Save is a draft)
 - **Date:** 2026-10-04
 - **Deciders:** project founder
 

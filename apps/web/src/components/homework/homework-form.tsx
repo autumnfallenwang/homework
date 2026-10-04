@@ -102,7 +102,7 @@ export function HomeworkForm({
   const [details, setDetails] = useState(item?.details ?? "");
   const [assignedOn, setAssignedOn] = useState(item?.assignedOn ?? today);
   const [dueOn, setDueOn] = useState(item?.dueOn ?? nextSchoolDay(today));
-  const photos = usePhotoDraft(item?.photos ?? [], HOMEWORK_LIMITS.photosPerItem);
+  const photos = usePhotoDraft(item?.photos ?? [], HOMEWORK_LIMITS.photosPerSection);
   const [attempted, setAttempted] = useState(false);
   const [serverDateProblem, setServerDateProblem] = useState<HomeworkDateProblem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -376,6 +376,17 @@ export function HomeworkForm({
                 Save and add another
               </Button>
             )}
+            {itemId && !locked ? (
+              <Button
+                type="button"
+                size="lg"
+                variant="destructive"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={busy}
+              >
+                Delete
+              </Button>
+            ) : null}
           </>
         )}
         <span className="flex-1 text-[13px]" role="status">
@@ -394,17 +405,6 @@ export function HomeworkForm({
             <span className="text-meeting">{notice}</span>
           ) : null}
         </span>
-        {itemId && !locked && !confirmingDelete ? (
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={() => setConfirmingDelete(true)}
-            disabled={busy}
-          >
-            Delete
-          </Button>
-        ) : null}
       </div>
     </form>
   );

@@ -31,9 +31,11 @@ export const HOMEWORK_LIMITS = {
   classesMax: 30,
   titleMax: 120,
   detailsMax: 2000,
-  /** Photos of the sheet per item. */
-  photosPerItem: 4,
-  solutionPhotosPerItem: 8,
+  /**
+   * A background safety cap per section (photos of the homework, photos of the
+   * solution) — not shown to the child; the Add tile just goes away at the cap.
+   */
+  photosPerSection: 20,
   solutionNoteMax: 2000,
   /** The first day of an item ends at this hour the next morning (server TZ). */
   firstDayEndsAtHour: 7,
@@ -213,9 +215,12 @@ export const updateHomeworkItemSchema = z
   });
 export type UpdateHomeworkItemInput = z.infer<typeof updateHomeworkItemSchema>;
 
-/** PUT /api/child/homework/:id/solution — the solution's note (photos go up one by one). */
+/**
+ * PUT /api/child/homework/:id/solution — the solution's note, required (photos are
+ * optional and go up one by one).
+ */
 export const saveHomeworkSolutionSchema = z.object({
-  note: z.string().trim().max(HOMEWORK_LIMITS.solutionNoteMax).nullable(),
+  note: z.string().trim().min(1).max(HOMEWORK_LIMITS.solutionNoteMax),
 });
 export type SaveHomeworkSolutionInput = z.infer<typeof saveHomeworkSolutionSchema>;
 
@@ -253,8 +258,13 @@ export interface HomeworkItem {
   /** Photos of the sheet. */
   photos: HomeworkPhotoRef[];
   solution: HomeworkSolution;
-  /** Done = there is a solution (a note or a photo). */
+  /** There is something to submit: a solution note or a solution photo. */
   hasSolution: boolean;
+  /**
+   * The last time the child pressed Submit; set = done (ADR 0011). Editing
+   * afterwards keeps it; submitting again moves it.
+   */
+  submittedAt: string | null;
   /**
    * Until then (the next 7 AM after it was added, server TZ) the child may change
    * or delete anything and nothing is recorded; after it, Given on is locked, the
@@ -271,14 +281,15 @@ export interface HomeworkHistoryEntry {
   at: string;
   actorName: string | null;
   section: "homework" | "solution";
-  action: "edited" | "photo_added" | "photo_removed";
+  /** `submitted` is recorded on every Submit, even on the first day. */
+  action: "edited" | "photo_added" | "photo_removed" | "submitted";
   /** Field → [old, new], for `edited`. Class is by name. */
   changes: Record<string, [string | null, string | null]>;
   /** The photo, for photo events (the parent can open removed ones). */
   photo: (HomeworkPhotoRef & { removed: boolean }) | null;
 }
 
-/** GET of a child's list: every item without a solution, done items due in the last 30 days. */
+/** GET of a child's list: every item not submitted, done items due in the last 30 days. */
 export interface HomeworkItemList {
   items: HomeworkItem[];
   /** The server's local day, which the list is grouped against. */
@@ -311,14 +322,14 @@ function byDueThenTestsFirst(a: HomeworkItem, b: HomeworkItem): number {
 }
 
 /**
- * Open items (no solution yet) by when they are due (empty groups left out),
- * earliest first and tests first within a day; done items (with a solution)
- * newest due first. "This week" runs to Sunday.
+ * Open items (not submitted) by when they are due (empty groups left out),
+ * earliest first and tests first within a day; done items (submitted) newest
+ * due first. "This week" runs to Sunday.
  */
 export function groupHomeworkItems(items: readonly HomeworkItem[], today: string): HomeworkGroups {
   const tomorrow = addDaysIso(today, 1);
   const endOfWeek = addDaysIso(today, (7 - weekdayOfIso(today)) % 7);
-  const open = items.filter((i) => !i.hasSolution).sort(byDueThenTestsFirst);
+  const open = items.filter((i) => i.submittedAt === null).sort(byDueThenTestsFirst);
   const keyOf = (dueOn: string): HomeworkGroupKey => {
     if (dueOn < today) return "overdue";
     if (dueOn === today) return "today";
@@ -331,7 +342,7 @@ export function groupHomeworkItems(items: readonly HomeworkItem[], today: string
     .map((key) => ({ key, items: open.filter((i) => keyOf(i.dueOn) === key) }))
     .filter((g) => g.items.length > 0);
   const done = items
-    .filter((i) => i.hasSolution)
+    .filter((i) => i.submittedAt !== null)
     .sort((a, b) => (a.dueOn === b.dueOn ? 0 : a.dueOn < b.dueOn ? 1 : -1));
   return { open: groups, done };
 }

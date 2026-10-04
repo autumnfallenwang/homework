@@ -29,6 +29,7 @@ function item(id: string, dueOn: string, overrides: Partial<HomeworkItem> = {}):
     photos: [],
     solution: { note: null, photos: [], savedAt: null },
     hasSolution: false,
+    submittedAt: null,
     firstDayEndsAt: "2026-09-29T11:00:00Z",
     edited: false,
     ...overrides,
@@ -71,8 +72,8 @@ describe("groupHomeworkItems", () => {
         item("friday", "2026-10-02"),
         item("sunday", "2026-10-04"),
         item("monday", "2026-10-05"),
-        item("done-old", "2026-09-20", { hasSolution: true }),
-        item("done-new", "2026-09-30", { hasSolution: true }),
+        item("done-old", "2026-09-20", { submittedAt: "2026-09-20T20:00:00Z" }),
+        item("done-new", "2026-09-30", { submittedAt: "2026-09-30T20:00:00Z" }),
       ],
       "2026-09-30",
     );

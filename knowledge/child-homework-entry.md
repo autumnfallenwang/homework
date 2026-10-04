@@ -31,7 +31,10 @@ and re-checks live after the first try. A server date refusal lands under the sa
 **Solution + first day (ADR 0008, M11).** One item page, two forms: `HomeworkForm` (Save homework)
 and `SolutionForm` (Save solution), each with its own "Unsaved changes"; photo handling is shared
 (`photo-panel.tsx`: `usePhotoDraft` + `PhotoPanel`). No done tick: `hasSolution` = solution note or
-an active `kind='solution'` photo (also the SQL `hasSolutionSql` the list window uses). First day =
+an active `kind='solution'` photo — it only says there is something to submit. Done =
+`submitted_at` set by `POST …/submit` (ADR 0011; needs a saved note — the note is required to
+save a solution — `nothing_to_submit` otherwise;
+every Submit recorded as a `submitted` event, even on the first day; editing after keeps it done). First day =
 `firstDayEndsAt(createdAt)`: the next 07:00 in the server TZ (`setHours` on a local Date, DST-safe);
 the item carries it as ISO so the web needn't know the TZ. Inside it: hard deletes, no events.
 After it: `given_on_locked` / `delete_locked` (409), photo DELETE sets `removed_at` (child 404,
@@ -48,7 +51,8 @@ so `open()` rolls through sheet then solution without re-rendering on every regi
 Tests simulate "after the first day" by moving `homework_items.created_at` back.
 
 **Photos.** Raw request body (not multipart), `bodyLimit` 2 MB, type sniffed from bytes
-(JPEG/PNG/WebP), ≤ 4 per item under a `FOR UPDATE` lock on the item; served with
+(JPEG/PNG/WebP), ≤ 20 per section (`photosPerSection`, a hidden cap — no counter in the UI)
+under a `FOR UPDATE` lock on the item; served with
 `Cache-Control: private, max-age=31536000, immutable`. The web shrinks first
 (`lib/photo-shrink.ts`: ≤ 1600 px, JPEG, EXIF dropped; HEIC → a "save it as JPEG" message).
 `<img src>` to the API host works because web and API are same-site (cookie sent).

@@ -304,7 +304,7 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     expect((await send("GET", `/api/child/homework/${item.id}`)).status).toBe(404);
   });
 
-  it("takes up to four real photos of at most 2 MB and serves them to the child and the parent", async () => {
+  it("takes up to 20 real photos of at most 2 MB and serves them to the child and the parent", async () => {
     await turnOn(ivyId);
     asIvy();
     const item = await addItem({ classId: null, title: "Worksheet" });
@@ -314,14 +314,14 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     expect((await upload(path, Buffer.alloc(2 * 1024 * 1024 + 1, 0xff))).status).toBe(413);
 
     const ids: string[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 20; i++) {
       const res = await upload(path, JPEG);
       expect(res.status).toBe(201);
       ids.push(((await res.json()) as { id: string }).id);
     }
-    const fifth = await upload(path, JPEG);
-    expect(fifth.status).toBe(409);
-    expect(((await fifth.json()) as { code: string }).code).toBe("too_many_photos");
+    const over = await upload(path, JPEG);
+    expect(over.status).toBe(409);
+    expect(((await over.json()) as { code: string }).code).toBe("too_many_photos");
 
     const got = await send("GET", `${path}/${ids[0]}`);
     expect(got.status).toBe(200);
@@ -407,7 +407,7 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     expect((await send("PUT", "/api/child/homework-day")).status).toBe(404);
   });
 
-  it("keeps the solution on the item: a note or a photo makes it done, up to 8 solution photos", async () => {
+  it("keeps the solution on the item: a note and up to 20 solution photos, saved as a draft", async () => {
     await turnOn(ivyId);
     asIvy();
     const item = await addItem({ classId: null, title: "Worksheet" });
@@ -423,38 +423,103 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
         };
       };
 
-    let res = await send("PUT", `${path}/solution`, { note: "  Read ch. 6  " });
+    const res = await send("PUT", `${path}/solution`, { note: "  Read ch. 6  " });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ hasSolution: true, solution: { note: "Read ch. 6" } });
     expect((await read()).solution.savedAt).not.toBeNull();
-    res = await send("PUT", `${path}/solution`, { note: "   " });
-    expect(((await res.json()) as { hasSolution: boolean }).hasSolution).toBe(false);
-    expect((await send("PUT", `${path}/solution`, { note: "x".repeat(2001) })).status).toBe(400);
+    // The note is required: blank, missing or too long is refused.
+    for (const bad of [{ note: "   " }, { note: null }, {}, { note: "x".repeat(2001) }]) {
+      expect((await send("PUT", `${path}/solution`, bad)).status).toBe(400);
+    }
+    expect((await read()).solution.note).toBe("Read ch. 6");
 
     // A photo of the work alone makes it done; sheet and solution photos stay apart.
     expect((await upload(`${path}/photos?kind=answer`, JPEG)).status).toBe(400);
     await upload(`${path}/photos`, JPEG);
     const ids: string[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 20; i++) {
       const up = await upload(`${path}/photos?kind=solution`, JPEG);
       expect(up.status).toBe(201);
       const ref = (await up.json()) as { id: string; kind: string };
       expect(ref.kind).toBe("solution");
       ids.push(ref.id);
     }
-    const ninth = await upload(`${path}/photos?kind=solution`, JPEG);
-    expect(ninth.status).toBe(409);
-    expect(((await ninth.json()) as { code: string }).code).toBe("too_many_photos");
+    const over = await upload(`${path}/photos?kind=solution`, JPEG);
+    expect(over.status).toBe(409);
+    expect(((await over.json()) as { code: string }).code).toBe("too_many_photos");
     const now = await read();
     expect(now.hasSolution).toBe(true);
     expect(now.photos.map((p) => p.kind)).toEqual(["sheet"]);
     expect(now.solution.photos.map((p) => p.id)).toEqual(ids);
 
-    // The list counts it as done (it leaves the open groups).
+    // Saving is a draft: not done until Submit (ADR 0011).
     const list = (await (await send("GET", "/api/child/homework")).json()) as {
-      items: { id: string; hasSolution: boolean }[];
+      items: { id: string; hasSolution: boolean; submittedAt: string | null }[];
     };
-    expect(list.items.find((i) => i.id === item.id)?.hasSolution).toBe(true);
+    expect(list.items.find((i) => i.id === item.id)).toMatchObject({
+      hasSolution: true,
+      submittedAt: null,
+    });
+  });
+
+  it("Submit marks it done and is recorded every time; editing after keeps it done", async () => {
+    await turnOn(ivyId);
+    asIvy();
+    const item = await addItem({ classId: null, title: "Worksheet" });
+    const path = `/api/child/homework/${item.id}`;
+    const history = async () => {
+      asParent();
+      const res = await send("GET", `/api/homework-items/${item.id}/history`);
+      asIvy();
+      return (await res.json()) as { action: string; section: string }[];
+    };
+
+    // Nothing to submit yet.
+    let res = await send("POST", `${path}/submit`);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { code: string }).code).toBe("nothing_to_submit");
+
+    // A note is enough; the first-day Submit is still recorded.
+    await send("PUT", `${path}/solution`, { note: "Read ch. 6" });
+    res = await send("POST", `${path}/submit`);
+    expect(res.status).toBe(200);
+    const first = (await res.json()) as { submittedAt: string | null };
+    expect(first.submittedAt).not.toBeNull();
+    expect((await history()).map((e) => `${e.section}:${e.action}`)).toEqual([
+      "solution:submitted",
+    ]);
+
+    // Editing after Submit keeps it done (first day: the edit itself is not recorded).
+    await send("PUT", `${path}/solution`, { note: "Read ch. 6 and 7" });
+    const edited = (await (await send("GET", path)).json()) as { submittedAt: string | null };
+    expect(edited.submittedAt).toBe(first.submittedAt);
+
+    // Submit again: a second record, a later time.
+    await new Promise((r) => setTimeout(r, 10));
+    const again = (await (await send("POST", `${path}/submit`)).json()) as {
+      submittedAt: string;
+    };
+    expect(again.submittedAt > (first.submittedAt ?? "")).toBe(true);
+    expect((await history()).filter((e) => e.action === "submitted")).toHaveLength(2);
+
+    // Done in the list; the parent sees it too.
+    const list = (await (await send("GET", "/api/child/homework")).json()) as {
+      items: { id: string; submittedAt: string | null }[];
+    };
+    expect(list.items.find((i) => i.id === item.id)?.submittedAt).toBe(again.submittedAt);
+    // The note can't be cleared (it is required), so a submitted item keeps one.
+    expect((await send("PUT", `${path}/solution`, { note: null })).status).toBe(400);
+  });
+
+  it("Submit needs a saved note — photos alone are not enough", async () => {
+    await turnOn(ivyId);
+    asIvy();
+    const item = await addItem({ classId: null, title: "Worksheet" });
+    const path = `/api/child/homework/${item.id}`;
+    await upload(`${path}/photos?kind=solution`, JPEG);
+    const res = await send("POST", `${path}/submit`);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { code: string }).code).toBe("nothing_to_submit");
   });
 
   it("first day: anything goes, nothing recorded; after 7 AM: Given on locked, changes recorded, no delete", async () => {
@@ -552,8 +617,10 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     const oldTodo = await addItem({ classId: null, title: "old to do", ...due(-60) });
     const oldDone = await addItem({ classId: null, title: "old done", ...due(-60) });
     const recentDone = await addItem({ classId: null, title: "recent done", ...due(-3) });
-    await send("PUT", `/api/child/homework/${oldDone.id}/solution`, { note: "Done" });
-    await send("PUT", `/api/child/homework/${recentDone.id}/solution`, { note: "Done" });
+    for (const done of [oldDone, recentDone]) {
+      await send("PUT", `/api/child/homework/${done.id}/solution`, { note: "Done" });
+      await send("POST", `/api/child/homework/${done.id}/submit`);
+    }
     const list = (await (await send("GET", "/api/child/homework")).json()) as {
       items: { id: string }[];
     };
@@ -607,6 +674,7 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     // An item with a solution reads as done.
     const [first] = ivyDigest?.homeworkDueNext ?? [];
     await send("PUT", `/api/child/homework/${first?.id}/solution`, { note: "Studied" });
+    await send("POST", `/api/child/homework/${first?.id}/submit`);
     const after = await buildDigestFromDb(db, new Date());
     expect(
       after.children.find((c) => c.childId === ivyId)?.homeworkDueNext.map((h) => h.content),
