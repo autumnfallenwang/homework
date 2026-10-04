@@ -55,7 +55,8 @@ shows her solution and a history: the due move and the photos, including one she
   the note "Marked done" (its done time as the solution time); a to-do item stays without one.
 - [x] End to end on the dev servers in a browser: the goal story above, from both sides, with
   "after the first day" simulated by moving the item's `created_at` back.
-- [ ] *(you)* Review, then commit and release.
+- [x] *(you)* Review, then commit and release — reviewed in dev, released as c18830d (no backup
+  taken, founder's call).
 
 ## Decisions
 
@@ -86,6 +87,11 @@ shows her solution and a history: the due move and the photos, including one she
   page — tiles with ✕ / Add, a solution tile opens at 2 / 3 with "Solution · photo 1 of 2", ←
   reaches the unsaved sheet photo "(not saved yet)", Esc closes; parent page — tiles without ✕,
   viewer 1 / 2 with arrows and strip, the removed photo opens alone; phone width checked.
+- 2026-10-04: released to the cluster (c18830d, one commit with the ADR 0007 round): CI green, Argo
+  rolled api + web to c18830d, the migrate hook Job on that image completed (0004–0006), pods Ready;
+  every page 200, `/child/solutions` 404, child + parent homework routes incl. the new history 401
+  without a session; no error lines in the api or web logs after the rollout (the only warn lines
+  are those three 401 probes).
 
 ## References
 
