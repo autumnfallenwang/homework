@@ -23,11 +23,12 @@ Milestones 01–07 are the port itself; 08+ are post-migration improvements. Eac
 | 09 | [Accounts and roles](09-accounts-and-roles.md) | Stage 1 of child homework: Better Auth logins, parent + child roles, invite links (ADR 0004), placeholder cards for stages 2–4 | 08 |
 | 10 | [Child homework entry](10-child-homework-entry.md) | Stage 2: per-child source switch, parent-owned class list, the child's list + Add/Edit pages with photos, parent Review + Today (ADR 0006) | 09 |
 | 11 | [Solutions and change history](11-solutions-and-history.md) | The solution on the item page (Save homework / Save solution), free edits until 7 AM next morning, then a change history the parent views (ADR 0008) | 10 |
+| 12 | [Credentials encrypted at rest](12-credentials-at-rest.md) | TeacherEase and SMTP passwords sealed with AES-256-GCM in the API, key derived from BETTER_AUTH_SECRET (ADR 0010) | 09 |
 
 ## Cross-cutting decisions (locked)
 
 - **Stack:** Turborepo + pnpm · Hono + Zod · Next.js App Router · Postgres + Drizzle · Vitest + Biome (follows homenews/homecal exactly).
-- **Credentials at rest:** plaintext in Postgres (1:1 with desktop; LAN-only single-user). App-level encryption deferred to a future milestone.
+- **Credentials at rest:** plaintext in Postgres (1:1 with desktop; LAN-only single-user). App-level encryption deferred to a future milestone. *(Done in M12 / ADR 0010: sealed with AES-256-GCM.)*
 - **Feature cuts** (desktop-only, removed in M06): auto-updater, autostart + system tray, OS notifications.
 - **i18n:** KEPT (fully-implemented pure module; cheaper to keep than remove) — see M06 if reconsidering.
 - **No auth** — single-user, LAN-only. *(Superseded by M09 / ADR 0004: parent + child logins.)*

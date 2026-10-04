@@ -33,6 +33,6 @@ The system follows the established house pattern of the sibling projects `homene
 
 ## Open questions
 
-- **Encryption at rest** for TeacherEase portal and SMTP passwords. Today they are plaintext in Postgres (M02: per-child rows for portal logins, the global `settings` table for SMTP), behind the parent login since M09. The only cluster Secret is `homework-secrets` (`DATABASE_URL`, `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`); Sealed Secrets are not wired.
+- *(None open.)*
 
-Answered: the fetch scheduler runs inside the API process as a node-cron singleton (M05; the api Deployment is `Recreate`, one replica).
+Answered: the fetch scheduler runs inside the API process as a node-cron singleton (M05; the api Deployment is `Recreate`, one replica). Encryption at rest for the TeacherEase and SMTP passwords: sealed in the API with AES-256-GCM, key derived from `BETTER_AUTH_SECRET` (M12, [ADR 0010](adr/0010-credentials-encrypted-at-rest.md)).

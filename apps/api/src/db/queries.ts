@@ -23,6 +23,7 @@ import {
   type StatusHistoryEntry,
 } from "@homework/shared";
 import { and, asc, desc, eq, like, sql } from "drizzle-orm";
+import { CREDENTIAL_SETTING_KEYS, openCredential, sealCredential } from "../lib/credentials.js";
 import type { Database } from "./index.js";
 import {
   assignments,
@@ -119,12 +120,13 @@ export async function getChild(db: Database, id: string): Promise<ChildRecord | 
   return row ? toChildRecord(row) : null;
 }
 
+/** The child's TeacherEase password, opened from its sealed form (ADR 0010). */
 export async function getChildPassword(db: Database, id: string): Promise<string | null> {
   const [row] = await db
     .select({ portalPassword: children.portalPassword })
     .from(children)
     .where(eq(children.id, id));
-  return row ? row.portalPassword : null;
+  return row?.portalPassword == null ? null : openCredential(row.portalPassword);
 }
 
 export async function addChild(db: Database, params: AddChildInput): Promise<string> {
@@ -134,7 +136,7 @@ export async function addChild(db: Database, params: AddChildInput): Promise<str
       displayName: params.displayName,
       baseUrl: params.baseUrl,
       username: params.username,
-      portalPassword: params.password,
+      portalPassword: sealCredential(params.password),
       grade: params.grade ?? null,
       school: params.school ?? null,
       homeworkUrl: params.homeworkUrl ?? null,
@@ -172,7 +174,10 @@ export async function updateChildPassword(
   id: string,
   password: string,
 ): Promise<void> {
-  await db.update(children).set({ portalPassword: password }).where(eq(children.id, id));
+  await db
+    .update(children)
+    .set({ portalPassword: sealCredential(password) })
+    .where(eq(children.id, id));
 }
 
 export async function setHomeworkUrl(db: Database, id: string, url: string | null): Promise<void> {
@@ -412,19 +417,23 @@ export async function getHomeworkMonths(db: Database, childId: string): Promise<
 
 // --- Settings -------------------------------------------------------------
 
+/** A setting's value; credential keys (the SMTP password) are opened from their sealed form. */
 export async function getSetting(db: Database, key: string): Promise<string | null> {
   const [row] = await db
     .select({ value: settings.value })
     .from(settings)
     .where(eq(settings.key, key));
-  return row ? row.value : null;
+  if (!row) return null;
+  return CREDENTIAL_SETTING_KEYS.has(key) ? openCredential(row.value) : row.value;
 }
 
+/** Store a setting; credential keys are sealed first (ADR 0010). */
 export async function setSetting(db: Database, key: string, value: string): Promise<void> {
+  const stored = CREDENTIAL_SETTING_KEYS.has(key) ? sealCredential(value) : value;
   await db
     .insert(settings)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } });
+    .values({ key, value: stored })
+    .onConflictDoUpdate({ target: settings.key, set: { value: stored, updatedAt: new Date() } });
 }
 
 export async function getAttentionConfig(db: Database): Promise<AttentionConfig> {

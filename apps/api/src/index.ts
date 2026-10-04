@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { closeDb, db } from "./db/index.js";
 import { seedSettings } from "./db/seed-settings.js";
 import { log } from "./lib/logger.js";
+import { sealStoredCredentials } from "./services/credentials.js";
 import { drainScheduler, startScheduler } from "./services/scheduler.js";
 
 // ★ A crash is one JSON line at `fatal`, not a stack printed across dozens of
@@ -37,6 +38,17 @@ if (!config.betterAuthSecret) {
 try {
   // Ensure default settings exist (idempotent).
   await seedSettings(db);
+  // Credentials at rest (ADR 0010): seal plaintext left from before, then check
+  // every stored one opens with this key (a changed BETTER_AUTH_SECRET would not).
+  const creds = await sealStoredCredentials(db);
+  const credFields = {
+    event: "credentials.ready",
+    sealed_now: creds.sealedNow,
+    stored: creds.stored,
+    unreadable: creds.unreadable,
+  };
+  if (creds.unreadable > 0) log.error(credFields, "stored credentials cannot be opened");
+  else log.info(credFields, "stored credentials sealed");
   // Arm the fetch + notify schedulers (skip under test so cron doesn't fire).
   if (process.env.NODE_ENV !== "test") {
     await startScheduler(db);

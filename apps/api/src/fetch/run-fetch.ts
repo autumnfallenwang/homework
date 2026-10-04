@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { type Database, db as defaultDb } from "../db/index.js";
 import { toChildRecord } from "../db/queries.js";
 import { children } from "../db/schema.js";
+import { openCredential } from "../lib/credentials.js";
 import { log } from "../lib/logger.js";
 import { createNodeFetch } from "../scraper/transport.js";
 import type { FetchImpl } from "../scraper/types.js";
@@ -41,8 +42,11 @@ export async function runFetch(
   const child = toChildRecord(row);
 
   const fetchImpl = options.fetchImpl ?? createNodeFetch();
+  // Stored sealed (ADR 0010); the scraper gets the plaintext.
   const getPassword =
-    options.getPassword ?? (async (id: string) => (id === row.id ? row.portalPassword : null));
+    options.getPassword ??
+    (async (id: string) =>
+      id === row.id && row.portalPassword !== null ? openCredential(row.portalPassword) : null);
 
   const sources = [new TeacherEaseSource(db, getPassword), new HomeworkSource(db)];
   const deps: FetchRunnerDeps = {

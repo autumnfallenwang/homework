@@ -1,6 +1,6 @@
 # 0004 — Accounts and roles: parent-managed profiles, invite-only child logins
 
-- **Status:** accepted — amended by [0005](./0005-email-sign-in-for-everyone.md) (email is the only sign-in; no usernames)
+- **Status:** accepted — amended by [0005](./0005-email-sign-in-for-everyone.md) (email is the only sign-in; no usernames) and [0010](./0010-credentials-encrypted-at-rest.md) (portal/SMTP passwords encrypted at rest)
 - **Date:** 2026-09-29
 - **Deciders:** project founder
 
