@@ -28,10 +28,15 @@ The TeacherEase portal passwords and the SMTP password stop being plaintext in P
   plaintext, a changed portal password and a changed SMTP password (Settings → Notifications,
   "Save & send test email" to a local Mailpit) are stored sealed; unseal script then boot
   re-seal rehearsed.
-- [ ] Released: the prod boot line shows the existing credentials sealed and none unreadable.
+- [x] Released: the prod boot line shows the existing credentials sealed and none unreadable
+  (1dbdaf3: `credentials.ready` sealed_now 2, stored 2, unreadable 0).
 
 ## Progress
 
 - 2026-10-04: built and tested in dev (see exit criteria). The children-settings Save was not
   clicked in dev: it validates the login against the real TeacherEase site, and the dev profiles
   have fake logins — the same server routes were driven from the parent session instead.
+- 2026-10-04: released (1dbdaf3). CI green, Argo rolled api + web; the first prod boot sealed the
+  2 stored credentials (the TeacherEase password and the SMTP password) with 0 unreadable before
+  the port opened; every page 200, no error lines. First real use of the opened values: the next
+  scheduled TeacherEase fetch (weekdays 07:00 / 15:00 / 23:00) and the 15:15 digest.
