@@ -7,7 +7,9 @@ import {
   homeworkClassListSchema,
   homeworkDateProblem,
   isoDaySchema,
+  nextDueDay,
   nextSchoolDay,
+  relativeDueDay,
 } from "./homework-entry.js";
 
 function item(id: string, dueOn: string, overrides: Partial<HomeworkItem> = {}): HomeworkItem {
@@ -40,6 +42,14 @@ describe("dates", () => {
     expect(nextSchoolDay("2026-09-30")).toBe("2026-10-01"); // Wed → Thu
     expect(nextSchoolDay("2026-10-02")).toBe("2026-10-05"); // Fri → Mon
     expect(nextSchoolDay("2026-10-03")).toBe("2026-10-05"); // Sat → Mon
+  });
+
+  it("names the next hand-in day: tomorrow on school nights, Monday from Friday", () => {
+    expect(nextDueDay("2026-10-01")).toBe("2026-10-02"); // Thu → Fri
+    expect(relativeDueDay(nextDueDay("2026-10-01"), "2026-10-01")).toBe("tomorrow");
+    expect(nextDueDay("2026-10-02")).toBe("2026-10-05"); // Fri → Mon
+    expect(relativeDueDay(nextDueDay("2026-10-02"), "2026-10-02")).toBe("Mon 10/5");
+    expect(relativeDueDay(nextDueDay("2026-10-04"), "2026-10-04")).toBe("tomorrow"); // Sun → Mon
   });
 
   it("accepts real calendar days only", () => {

@@ -1,15 +1,22 @@
 // Per-child hero data loader. Shared by the Today-tab StatusHero render.
 // Queries (via api.ts): getLatestSuccessfulFetchRun, getGradesForFetchRun,
-// getAllClassDetails, getHomeworkForDay. Pure per-child aggregation around
+// getAllClassDetails, getHomeworkForDay, getHomeworkDueOn. Pure per-child aggregation around
 // those calls — caller owns `now` + `cfg` for testability. Ported from the
 // desktop app; ids are uuid strings and `computeChildAttention` comes from
 // @homework/shared.
 
-import { type AttentionConfig, type ClassDetails, computeChildAttention } from "@homework/shared";
+import {
+  type AttentionConfig,
+  type ClassDetails,
+  computeChildAttention,
+  nextDueDay,
+  relativeDueDay,
+} from "@homework/shared";
 import {
   getAllClassDetails,
   getChildHomeworkItems,
   getGradesForFetchRun,
+  getHomeworkDueOn,
   getHomeworkForDay,
   getLatestSuccessfulFetchRun,
 } from "./api.js";
@@ -29,7 +36,10 @@ export interface ChildStatus {
   attentionClassNames: string[];
   homeworkConfigured: boolean;
   homeworkForTodayCount: number;
-  homeworkDueTodayCount: number;
+  /** Due on the next hand-in day, named by `homeworkDueLabel`. */
+  homeworkDueNextCount: number;
+  /** "tomorrow", or "Mon 10/5" from a Friday. */
+  homeworkDueLabel: string;
 }
 
 export interface HeroLoadResult {
@@ -49,6 +59,8 @@ export async function loadHeroStatuses(
   now: Date,
 ): Promise<HeroLoadResult> {
   const todayIso = toLocalIso(now);
+  const dueDay = nextDueDay(todayIso);
+  const homeworkDueLabel = relativeDueDay(dueDay, todayIso);
   const statuses: ChildStatus[] = [];
   const perChildDetails = new Map<string, ClassDetails[]>();
   const perChildHeroCounts = new Map<string, ChildHeroCounts>();
@@ -58,15 +70,18 @@ export async function loadHeroStatuses(
     const enteredByChild = child.homeworkSource === "child";
     const homeworkConfigured = Boolean(child.homeworkUrl) || enteredByChild;
     let homeworkForTodayCount = 0;
-    let homeworkDueTodayCount = 0;
+    let homeworkDueNextCount = 0;
     if (enteredByChild) {
       const { items } = await getChildHomeworkItems(child.id);
       homeworkForTodayCount = items.filter((i) => i.assignedOn === todayIso).length;
-      homeworkDueTodayCount = items.filter((i) => i.dueOn === todayIso).length;
+      homeworkDueNextCount = items.filter((i) => i.dueOn === dueDay).length;
     } else if (homeworkConfigured) {
-      const hwRows = await getHomeworkForDay(child.id, todayIso);
-      homeworkForTodayCount = hwRows.filter((r) => r.hwDate === todayIso).length;
-      homeworkDueTodayCount = hwRows.filter((r) => r.dueDate === todayIso).length;
+      const [posted, due] = await Promise.all([
+        getHomeworkForDay(child.id, todayIso),
+        getHomeworkDueOn(child.id, dueDay),
+      ]);
+      homeworkForTodayCount = posted.filter((r) => r.hwDate === todayIso).length;
+      homeworkDueNextCount = due.length;
     }
 
     const run = await getLatestSuccessfulFetchRun(child.id, "teacherease");
@@ -80,7 +95,8 @@ export async function loadHeroStatuses(
         attentionClassNames: [],
         homeworkConfigured,
         homeworkForTodayCount,
-        homeworkDueTodayCount,
+        homeworkDueNextCount,
+        homeworkDueLabel,
       });
       perChildDetails.set(child.id, []);
       perChildHeroCounts.set(child.id, { meetingCount: 0, notAssessedCount: 0 });
@@ -109,7 +125,8 @@ export async function loadHeroStatuses(
       attentionClassNames: attnClasses,
       homeworkConfigured,
       homeworkForTodayCount,
-      homeworkDueTodayCount,
+      homeworkDueNextCount,
+      homeworkDueLabel,
     });
     perChildDetails.set(child.id, cd);
     perChildHeroCounts.set(child.id, { meetingCount, notAssessedCount });

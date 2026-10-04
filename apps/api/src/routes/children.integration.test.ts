@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { closeDb, db } from "../db/index.js";
-import { children, fetchRuns } from "../db/schema.js";
+import { children, fetchRuns, homework } from "../db/schema.js";
 import { seedSettings } from "../db/seed-settings.js";
 import { asParent } from "../test/sessions.js";
 
@@ -115,5 +115,45 @@ describe.skipIf(!url)("children routes (live DB)", () => {
 
     const cfg = await app.request("/api/attention-config");
     expect(((await cfg.json()) as { forgivenessWeeks: number }).forgivenessWeeks).toBe(3);
+  });
+
+  it("finds class-page homework by the day it is due, whenever it was posted", async () => {
+    const created = await postJson("/api/children", VALID_CHILD);
+    const { id } = (await created.json()) as { id: string };
+    await db.insert(homework).values([
+      {
+        childId: id,
+        hwDate: "2026-10-01",
+        subject: "Math",
+        content: "Ch. 3",
+        dueDate: "2026-10-05",
+      },
+      {
+        childId: id,
+        hwDate: "2026-10-02",
+        subject: "Art",
+        content: "Sketch",
+        dueDate: "2026-10-05",
+      },
+      {
+        childId: id,
+        hwDate: "2026-10-02",
+        subject: "Music",
+        content: "Scales",
+        dueDate: "2026-10-06",
+      },
+    ]);
+    const due = await app.request(`/api/children/${id}/homework?due=2026-10-05`);
+    expect(due.status).toBe(200);
+    expect(((await due.json()) as { subject: string }[]).map((h) => h.subject)).toEqual([
+      "Art",
+      "Math",
+    ]);
+    // ?date= is still "posted that day".
+    const posted = await app.request(`/api/children/${id}/homework?date=2026-10-02`);
+    expect(((await posted.json()) as { subject: string }[]).map((h) => h.subject)).toEqual([
+      "Art",
+      "Music",
+    ]);
   });
 });

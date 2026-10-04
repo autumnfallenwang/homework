@@ -51,7 +51,7 @@ function ChildRow({
                 {`${status.homeworkForTodayCount} homework for today`}
               </p>
               <p className="text-[12px] text-muted-foreground">
-                {`${status.homeworkDueTodayCount} homework due today`}
+                {`${status.homeworkDueNextCount} homework due ${status.homeworkDueLabel}`}
               </p>
             </>
           )}

@@ -59,4 +59,10 @@ describe("request validation (400, no DB)", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it("rejects a malformed due day, and due mixed with another filter", async () => {
+    const base = "/api/children/00000000-0000-0000-0000-000000000000/homework";
+    expect((await app.request(`${base}?due=nope`)).status).toBe(400);
+    expect((await app.request(`${base}?due=2026-10-05&date=2026-10-04`)).status).toBe(400);
+  });
 });

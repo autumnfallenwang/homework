@@ -372,7 +372,7 @@ export async function getHomeworkForDay(
   return rows.map(toHomeworkRecord);
 }
 
-/** Homework whose resolved due date falls on `iso` ("due today"). */
+/** Homework whose resolved due date falls on `iso` (Today and the digest: the next hand-in day). */
 export async function getHomeworkDueOnDay(
   db: Database,
   childId: string,

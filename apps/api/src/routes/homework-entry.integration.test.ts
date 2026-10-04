@@ -2,6 +2,7 @@
 // switch, the parent-owned class list, the child's items and photos, the day,
 // what the parent reads, the digest, and who can touch whose rows.
 
+import { nextDueDay, relativeDueDay } from "@homework/shared";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
@@ -586,28 +587,32 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     expect(await res.json()).toEqual({ names: [] });
   });
 
-  it("puts entered items in the digest by given-on day, and stops fetching the homework page", async () => {
+  it("puts entered items in the digest: given today, and due on the next hand-in day", async () => {
     await turnOn(ivyId);
     const [math] = await setClasses(ivyId, [{ name: "Math" }]);
     asIvy();
-    await addItem({ classId: math?.id, kind: "test", title: "Ch. 2 test", dueOn: TODAY });
-    // Entered today but given yesterday: due today, not today's homework.
-    await addItem({ classId: math?.id, title: "Worksheet", assignedOn: day(-1), dueOn: TODAY });
+    const dueNext = nextDueDay(TODAY);
+    await addItem({ classId: math?.id, kind: "test", title: "Ch. 2 test", dueOn: dueNext });
+    // Given yesterday: due next, but not today's homework.
+    await addItem({ classId: math?.id, title: "Worksheet", assignedOn: day(-1), dueOn: dueNext });
+    // Due today: neither list any more (Today shows what is due next).
+    await addItem({ classId: math?.id, title: "Old sheet", assignedOn: day(-1), dueOn: TODAY });
 
     const digest = await buildDigestFromDb(db, new Date());
+    expect(digest.dueNextOn).toBe(dueNext);
     const ivyDigest = digest.children.find((c) => c.childId === ivyId);
     expect(ivyDigest).toMatchObject({ homeworkConfigured: true, homeworkEnteredByChild: true });
     expect(ivyDigest?.homeworkForToday.map((h) => h.subject)).toEqual(["Math · Test"]);
-    expect(ivyDigest?.homeworkDueToday.map((h) => h.content)).toEqual(["Ch. 2 test", "Worksheet"]);
+    expect(ivyDigest?.homeworkDueNext.map((h) => h.content)).toEqual(["Ch. 2 test", "Worksheet"]);
     // An item with a solution reads as done.
-    const [first] = ivyDigest?.homeworkDueToday ?? [];
-    asIvy();
+    const [first] = ivyDigest?.homeworkDueNext ?? [];
     await send("PUT", `/api/child/homework/${first?.id}/solution`, { note: "Studied" });
     const after = await buildDigestFromDb(db, new Date());
     expect(
-      after.children.find((c) => c.childId === ivyId)?.homeworkDueToday.map((h) => h.content),
+      after.children.find((c) => c.childId === ivyId)?.homeworkDueNext.map((h) => h.content),
     ).toEqual(["Ch. 2 test (done)", "Worksheet"]);
-    const email = renderDigestEmail(digest);
+    const email = renderDigestEmail(after);
+    expect(email.textBody).toContain(`Homework due ${relativeDueDay(dueNext, TODAY)}:`);
     expect(email.textBody).not.toContain("marked today");
     const samDigest = digest.children.find((c) => c.childId === samId);
     expect(samDigest?.homeworkEnteredByChild).toBe(false);

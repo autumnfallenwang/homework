@@ -120,14 +120,12 @@ export type PhotoDraft = ReturnType<typeof usePhotoDraft>;
  */
 export function PhotoPanel({
   title,
-  hint,
   section,
   draft,
   itemId,
   disabled,
 }: {
   title: string;
-  hint: string;
   section: PhotoSection;
   draft: PhotoDraft;
   itemId: string | null;
@@ -181,7 +179,6 @@ export function PhotoPanel({
           <Button type="button" variant="outline" size="sm" onClick={pick} disabled={disabled}>
             Choose photos
           </Button>
-          <p className="text-[12px]">{hint}</p>
         </div>
       ) : (
         <PhotoGrid

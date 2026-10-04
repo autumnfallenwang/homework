@@ -1,6 +1,11 @@
 "use client";
 
-import type { HomeworkItem, HomeworkItemList } from "@homework/shared";
+import {
+  type HomeworkItem,
+  type HomeworkItemList,
+  nextDueDay,
+  relativeDueDay,
+} from "@homework/shared";
 import { BookOpen, Check, Clock, Target } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -11,16 +16,15 @@ import { KindBadge } from "./kind-badge";
 
 /**
  * Today's homework for a child who enters their own (ADR 0006, 0007): what was
- * given today (by the given-on day the child picked) and what is due today, the
+ * given today (by the given-on day the child picked) and what is due on the next
+ * hand-in day ("due tomorrow", Monday from a Friday), the
  * same two sections the class page fills.
  */
 export function EnteredHomeworkToday({
   childId,
-  childName,
   refreshKey,
 }: {
   childId: string;
-  childName: string;
   refreshKey: number;
 }) {
   const [list, setList] = useState<HomeworkItemList | null>(null);
@@ -38,18 +42,12 @@ export function EnteredHomeworkToday({
 
   if (!list) return null;
   const forToday = list.items.filter((i) => i.assignedOn === list.today);
-  const dueToday = list.items.filter((i) => i.dueOn === list.today);
+  const dueDay = nextDueDay(list.today);
+  const dueLabel = relativeDueDay(dueDay, list.today);
+  const dueNext = list.items.filter((i) => i.dueOn === dueDay);
 
   return (
     <div className="space-y-5" data-testid="entered-homework-today">
-      <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-1 text-[12.5px] text-muted-foreground">
-        <span className="rounded-full bg-primary/10 px-2 py-px text-[11px] font-medium text-primary">
-          Entered by {childName}
-        </span>
-        <Link href="/review" className="ml-auto text-primary underline-offset-4 hover:underline">
-          All homework →
-        </Link>
-      </p>
       <Section
         icon={<BookOpen className="h-4 w-4 text-primary" />}
         title="Homework for today"
@@ -58,9 +56,9 @@ export function EnteredHomeworkToday({
       />
       <Section
         icon={<Target className="h-4 w-4 text-primary" />}
-        title="Due today"
-        items={dueToday}
-        empty="Nothing due today"
+        title={`Due ${dueLabel}`}
+        items={dueNext}
+        empty={`Nothing due ${dueLabel}`}
       />
     </div>
   );

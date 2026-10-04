@@ -16,20 +16,16 @@ export function HomeworkList({
   items,
   today,
   mode,
-  childName,
   itemHref,
 }: {
   items: HomeworkItem[];
   /** The server's local day the groups are counted from. */
   today: string;
   mode: "child" | "parent";
-  /** The child's name, for the parent's lines. */
-  childName?: string;
   itemHref: (item: HomeworkItem) => string;
 }) {
   const [showDone, setShowDone] = useState(false);
   const groups = groupHomeworkItems(items, today);
-  const name = childName ?? "They";
 
   const row = (item: HomeworkItem) => (
     <HomeworkRow
@@ -45,9 +41,7 @@ export function HomeworkList({
     <div className="space-y-4">
       {groups.open.length === 0 && groups.done.length === 0 ? (
         <p className="rounded-lg border border-dashed bg-card/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
-          {mode === "child"
-            ? "No homework yet. Add it when you get some."
-            : `${name} hasn't added any homework yet.`}
+          No homework yet.
         </p>
       ) : null}
 

@@ -77,17 +77,13 @@ export function SolutionForm({
             value={note}
             maxLength={HOMEWORK_LIMITS.solutionNoteMax}
             rows={5}
-            placeholder="What you did, or anything to tell your parent. e.g. Read ch. 6, or Q7 was hard"
+            placeholder="e.g. Read ch. 6, or Q7 was hard"
             onChange={(e) => setNote(e.target.value)}
             className="w-full min-w-0 resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
           />
-          <p className="text-[12px] text-muted-foreground">
-            A photo or a note marks this homework as done.
-          </p>
         </div>
         <PhotoPanel
           title="Photos of your work"
-          hint="Your finished worksheet, pages, anything you made"
           section="solution"
           draft={photos}
           itemId={item.id}

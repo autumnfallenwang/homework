@@ -37,6 +37,11 @@ the item carries it as ISO so the web needn't know the TZ. Inside it: hard delet
 After it: `given_on_locked` / `delete_locked` (409), photo DELETE sets `removed_at` (child 404,
 parent still served), every change → `homework_item_events` (field → [old, new]; class by name).
 History is parent-only (`GET /api/homework-items/:id/history`); `edited` = any event exists.
+Today, the hero and the digest show "Homework for today" (given today: `hwDate` / `assignedOn`)
+and "Due <next hand-in day>" (`nextDueDay(today)` = next school day, `relativeDueDay` → "tomorrow"
+/ "Mon 10/5"); class-page homework due that day comes from `?due=` (never filter the posted-today
+list by due date — that was the old bug). Run the API integration tests against a separate DB
+(`DATABASE_URL=…/homework_test`) when the dev DB holds review data: they wipe users/children.
 Photos everywhere go through `photo-viewer.tsx` (ADR 0009): wrap the page in `PhotoViewerProvider`,
 show tiles with `PhotoGrid section="sheet|solution"`; the provider keeps each grid's photos in a ref
 so `open()` rolls through sheet then solution without re-rendering on every registration.

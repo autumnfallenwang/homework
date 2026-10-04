@@ -2,7 +2,6 @@
 
 import type { ChildRecord, HomeworkItemList } from "@homework/shared";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HomeworkList } from "@/components/homework/homework-list";
 import { PageHeader } from "@/components/shell/page-header";
@@ -44,41 +43,20 @@ export default function ReviewPage() {
         {children === null && !error ? (
           <Loader2 className="mx-auto mt-6 h-5 w-5 animate-spin text-muted-foreground" />
         ) : null}
-        {children && !child ? (
-          <Notice>
-            Add a child in{" "}
-            <Link href="/settings/children" className="text-primary hover:underline">
-              Settings → Children
-            </Link>{" "}
-            first.
-          </Notice>
-        ) : null}
+        {children && !child ? <Notice>Add a child in Settings → Children first.</Notice> : null}
         {child && !entryOn ? (
           <Notice>
-            {`${child.displayName}'s homework comes from the class homework page. To have ${child.displayName} enter it, turn on “Child enters homework” in `}
-            <Link href="/settings/children" className="text-primary hover:underline">
-              Settings → Children
-            </Link>
-            .
+            This homework comes from the class homework page. Turn on “Child enters homework” in
+            Settings → Children to review entered homework here.
           </Notice>
         ) : null}
         {child && entryOn ? (
           <>
-            <div className="flex items-center gap-2.5">
-              <h2
-                className="text-2xl font-medium"
-                style={{ fontFamily: "var(--font-heading)" }}
-              >{`${child.displayName}'s homework`}</h2>
-              <span className="rounded-full bg-muted px-2 py-px text-[11px] text-muted-foreground">
-                View only
-              </span>
-            </div>
             {list ? (
               <HomeworkList
                 items={list.items}
                 today={list.today}
                 mode="parent"
-                childName={child.displayName}
                 itemHref={(i) => `/review/homework/${i.id}`}
               />
             ) : error ? null : (

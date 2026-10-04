@@ -13,6 +13,8 @@ import {
   HOMEWORK_KIND_LABELS,
   type HomeworkItem,
   type HomeworkRecord,
+  nextDueDay,
+  relativeDueDay,
   sortItemsMissingFirst,
 } from "@homework/shared";
 import type { Database } from "../db/index.js";
@@ -43,7 +45,8 @@ export interface ChildDigest {
   readonly attention: AttentionItem[];
   readonly homeworkConfigured: boolean;
   readonly homeworkForToday: HomeworkRecord[];
-  readonly homeworkDueToday: HomeworkRecord[];
+  /** Due on the next hand-in day (`RefreshDigest.dueNextOn`). */
+  readonly homeworkDueNext: HomeworkRecord[];
   /** The child enters their own homework (ADR 0006) — rows are their items. */
   readonly homeworkEnteredByChild: boolean;
 }
@@ -54,13 +57,15 @@ export interface FamilyHero {
   readonly meetingCount: number;
   readonly notAssessedCount: number;
   readonly homeworkForTodayCount: number;
-  readonly homeworkDueTodayCount: number;
+  readonly homeworkDueNextCount: number;
 }
 
 export interface RefreshDigest {
   readonly type: "refreshDigest";
   readonly generatedAt: number;
   readonly todayLocal: string;
+  /** The next hand-in day — the next school day, shown as "tomorrow" or "Mon 10/5". */
+  readonly dueNextOn: string;
   readonly family: FamilyHero;
   readonly children: ChildDigest[];
 }
@@ -74,7 +79,7 @@ export interface BuildRefreshDigestInput {
   readonly children: readonly ChildRecord[];
   readonly perChildDetails: ReadonlyMap<string, readonly ClassDetails[]>;
   readonly perChildHomeworkForToday: ReadonlyMap<string, readonly HomeworkRecord[]>;
-  readonly perChildHomeworkDueToday: ReadonlyMap<string, readonly HomeworkRecord[]>;
+  readonly perChildHomeworkDueNext: ReadonlyMap<string, readonly HomeworkRecord[]>;
   readonly perChildHeroCounts: ReadonlyMap<string, ChildHeroCounts>;
   readonly cfg: AttentionConfig;
   readonly now: Date;
@@ -95,7 +100,7 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
     children,
     perChildDetails,
     perChildHomeworkForToday,
-    perChildHomeworkDueToday,
+    perChildHomeworkDueNext,
     perChildHeroCounts,
     cfg,
     now,
@@ -107,7 +112,7 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
     const homeworkEnteredByChild = child.homeworkSource === "child";
     const homeworkConfigured = Boolean(child.homeworkUrl) || homeworkEnteredByChild;
     const homeworkForToday = [...(perChildHomeworkForToday.get(child.id) ?? [])];
-    const homeworkDueToday = [...(perChildHomeworkDueToday.get(child.id) ?? [])];
+    const homeworkDueNext = [...(perChildHomeworkDueNext.get(child.id) ?? [])];
     const details = perChildDetails.get(child.id) ?? [];
     const eng = computeChildAttention(details, now, cfg);
     const attentionClassNames = eng.perClass
@@ -131,7 +136,7 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
       attention,
       homeworkConfigured,
       homeworkForToday,
-      homeworkDueToday,
+      homeworkDueNext,
       homeworkEnteredByChild,
     };
   });
@@ -140,6 +145,7 @@ export function buildRefreshDigest(input: BuildRefreshDigestInput): RefreshDiges
     type: "refreshDigest",
     generatedAt: now.getTime(),
     todayLocal,
+    dueNextOn: nextDueDay(todayLocal),
     family: rollUpFamily(childDigests),
     children: childDigests,
   };
@@ -150,13 +156,13 @@ function rollUpFamily(children: readonly ChildDigest[]): FamilyHero {
   let meetingCount = 0;
   let notAssessedCount = 0;
   let homeworkForTodayCount = 0;
-  let homeworkDueTodayCount = 0;
+  let homeworkDueNextCount = 0;
   for (const c of children) {
     attentionCount += c.hero.attentionCount;
     meetingCount += c.hero.meetingCount;
     notAssessedCount += c.hero.notAssessedCount;
     homeworkForTodayCount += c.homeworkForToday.length;
-    homeworkDueTodayCount += c.homeworkDueToday.length;
+    homeworkDueNextCount += c.homeworkDueNext.length;
   }
   return {
     childCount: children.length,
@@ -164,7 +170,7 @@ function rollUpFamily(children: readonly ChildDigest[]): FamilyHero {
     meetingCount,
     notAssessedCount,
     homeworkForTodayCount,
-    homeworkDueTodayCount,
+    homeworkDueNextCount,
   };
 }
 
@@ -195,17 +201,19 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
 
   const perChildDetails = new Map<string, readonly ClassDetails[]>();
   const perChildHomeworkForToday = new Map<string, readonly HomeworkRecord[]>();
-  const perChildHomeworkDueToday = new Map<string, readonly HomeworkRecord[]>();
+  const perChildHomeworkDueNext = new Map<string, readonly HomeworkRecord[]>();
   const perChildHeroCounts = new Map<string, ChildHeroCounts>();
 
   const todayIso = toLocalIso(now);
+  // "Due" in Today and the digest = the next hand-in day (Monday from a Friday).
+  const dueNextIso = nextDueDay(todayIso);
 
   for (const child of children) {
     // A child who enters their own homework needs no successful fetch for it.
     if (child.homeworkSource === "child") {
-      const { givenToday, dueToday } = await itemsForDay(db, child.id, todayIso);
+      const { givenToday, dueNext } = await itemsForDay(db, child.id, todayIso, dueNextIso);
       perChildHomeworkForToday.set(child.id, givenToday.map(enteredItemAsRecord));
-      perChildHomeworkDueToday.set(child.id, dueToday.map(enteredItemAsRecord));
+      perChildHomeworkDueNext.set(child.id, dueNext.map(enteredItemAsRecord));
     }
     const run = await getLatestSuccessfulFetchRun(db, child.id, "teacherease");
     if (!run) {
@@ -226,7 +234,7 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
 
     if (child.homeworkSource !== "child") {
       perChildHomeworkForToday.set(child.id, await getHomeworkForDay(db, child.id, todayIso));
-      perChildHomeworkDueToday.set(child.id, await getHomeworkDueOnDay(db, child.id, todayIso));
+      perChildHomeworkDueNext.set(child.id, await getHomeworkDueOnDay(db, child.id, dueNextIso));
     }
   }
 
@@ -234,7 +242,7 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
     children,
     perChildDetails,
     perChildHomeworkForToday,
-    perChildHomeworkDueToday,
+    perChildHomeworkDueNext,
     perChildHeroCounts,
     cfg,
     now,
@@ -304,13 +312,13 @@ function childTitle(c: ChildDigest): string {
   return `${n} ${n === 1 ? "item needs" : "items need"} attention`;
 }
 
-function renderChildHeroRowHtml(c: ChildDigest): string {
+function renderChildHeroRowHtml(c: ChildDigest, dueLabel: string): string {
   const isOk = c.hero.attentionCount === 0;
   const s = isOk ? HERO_OK : HERO_ATTN;
   const meta = [`${c.hero.meetingCount} meeting`];
   if (c.homeworkConfigured) {
     meta.push(`${c.homeworkForToday.length} homework today`);
-    meta.push(`${c.homeworkDueToday.length} due today`);
+    meta.push(`${c.homeworkDueNext.length} due ${dueLabel}`);
   }
   const metaLines = meta
     .map((l) => `<p style="margin:2px 0 0;color:#6b7280;font-size:13px;">${escapeHtml(l)}</p>`)
@@ -395,12 +403,12 @@ function renderHomeworkSectionHtml(
       </ul>`;
 }
 
-function renderChildDetailHtml(c: ChildDigest): string {
+function renderChildDetailHtml(c: ChildDigest, dueLabel: string): string {
   const header = `<h2 style="margin:0 0 10px;font-size:15px;color:#111827;">${escapeHtml(c.childName)}</h2>`;
   const attentionBlock = renderAttentionBlockHtml(c);
   const homeworkBlocks = c.homeworkConfigured
     ? `${renderHomeworkSectionHtml("Homework for today", c.homeworkForToday, "No homework posted for today.", ICON_HW_FOR)}
-      ${renderHomeworkSectionHtml("Homework due today", c.homeworkDueToday, "Nothing due today.", ICON_HW_DUE)}`
+      ${renderHomeworkSectionHtml(`Homework due ${dueLabel}`, c.homeworkDueNext, `Nothing due ${dueLabel}.`, ICON_HW_DUE)}`
     : "";
   return `<section style="margin:0 0 20px;padding:12px 0 0;border-top:1px solid #e5e7eb;">
       ${header}
@@ -412,8 +420,9 @@ function renderChildDetailHtml(c: ChildDigest): string {
 function renderHtml(d: RefreshDigest): string {
   const heroLine = buildHeroLine(d);
   const generated = formatHHmm(new Date(d.generatedAt));
-  const heroRows = d.children.map(renderChildHeroRowHtml).join("\n    ");
-  const detailSections = d.children.map(renderChildDetailHtml).join("\n    ");
+  const dueLabel = relativeDueDay(d.dueNextOn, d.todayLocal);
+  const heroRows = d.children.map((c) => renderChildHeroRowHtml(c, dueLabel)).join("\n    ");
+  const detailSections = d.children.map((c) => renderChildDetailHtml(c, dueLabel)).join("\n    ");
   return `<!doctype html>
 <html>
 <body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;margin:0;padding:24px;background:#f3f4f6;color:#111827;">
@@ -430,7 +439,7 @@ function renderHtml(d: RefreshDigest): string {
 </html>`;
 }
 
-function renderChildText(c: ChildDigest): string[] {
+function renderChildText(c: ChildDigest, dueLabel: string): string[] {
   const lines: string[] = ["---", c.childName, ""];
   if (c.attention.length === 0) {
     lines.push(`  Needs attention: nothing needs ${c.childName}'s attention.`);
@@ -451,7 +460,13 @@ function renderChildText(c: ChildDigest): string[] {
   if (c.homeworkConfigured) {
     lines.push("");
     lines.push(...renderHomeworkText("Homework for today", c.homeworkForToday, "none posted"));
-    lines.push(...renderHomeworkText("Homework due today", c.homeworkDueToday, "nothing due"));
+    lines.push(
+      ...renderHomeworkText(
+        `Homework due ${dueLabel}`,
+        c.homeworkDueNext,
+        `nothing due ${dueLabel}`,
+      ),
+    );
   }
   lines.push("");
   return lines;
@@ -473,11 +488,11 @@ function renderHomeworkText(
   return lines;
 }
 
-function renderHeroRowText(c: ChildDigest): string[] {
+function renderHeroRowText(c: ChildDigest, dueLabel: string): string[] {
   const lines = [`${c.childName}: ${childTitle(c)}`, `  ${c.hero.meetingCount} meeting`];
   if (c.homeworkConfigured) {
     lines.push(`  ${c.homeworkForToday.length} homework today`);
-    lines.push(`  ${c.homeworkDueToday.length} due today`);
+    lines.push(`  ${c.homeworkDueNext.length} due ${dueLabel}`);
   }
   return lines;
 }
@@ -486,11 +501,11 @@ function renderText(d: RefreshDigest): string {
   const generated = formatHHmm(new Date(d.generatedAt));
   const parts: string[] = [`Homework: ${buildHeroLine(d)}`, `Checked at ${generated}`, ""];
   for (const c of d.children) {
-    parts.push(...renderHeroRowText(c));
+    parts.push(...renderHeroRowText(c, relativeDueDay(d.dueNextOn, d.todayLocal)));
     parts.push("");
   }
   for (const c of d.children) {
-    parts.push(...renderChildText(c));
+    parts.push(...renderChildText(c, relativeDueDay(d.dueNextOn, d.todayLocal)));
   }
   return parts.join("\n").trimEnd();
 }

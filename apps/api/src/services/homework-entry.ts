@@ -386,17 +386,21 @@ export async function listItems(
   return { items: rows.map((r) => toItem(r, photos.get(r.id))), today };
 }
 
-/** Items given on or due on `day` — what Today and the digest show. */
+/**
+ * Items given on `givenDay` or due on `dueDay` — what the digest shows ("homework
+ * for today" and "due tomorrow", the next hand-in day).
+ */
 export async function itemsForDay(
   db: Database,
   childId: string,
-  day: string,
-): Promise<{ givenToday: HomeworkItem[]; dueToday: HomeworkItem[] }> {
+  givenDay: string,
+  dueDay: string,
+): Promise<{ givenToday: HomeworkItem[]; dueNext: HomeworkItem[] }> {
   const rows = await selectItems(db)
     .where(
       and(
         eq(homeworkItems.childId, childId),
-        or(eq(homeworkItems.assignedOn, day), eq(homeworkItems.dueOn, day)),
+        or(eq(homeworkItems.assignedOn, givenDay), eq(homeworkItems.dueOn, dueDay)),
       ),
     )
     .orderBy(asc(homeworkItems.createdAt));
@@ -406,8 +410,8 @@ export async function itemsForDay(
   );
   const items = rows.map((r) => toItem(r, photos.get(r.id)));
   return {
-    givenToday: items.filter((i) => i.assignedOn === day),
-    dueToday: items.filter((i) => i.dueOn === day),
+    givenToday: items.filter((i) => i.assignedOn === givenDay),
+    dueNext: items.filter((i) => i.dueOn === dueDay),
   };
 }
 

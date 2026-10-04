@@ -1,7 +1,11 @@
 "use client";
 
-import { computeChildAttention, parseAttentionConfig } from "@homework/shared";
-import Link from "next/link";
+import {
+  computeChildAttention,
+  nextDueDay,
+  parseAttentionConfig,
+  relativeDueDay,
+} from "@homework/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AttentionSection } from "@/components/attention-section";
 import { EmptyState } from "@/components/empty-state";
@@ -19,6 +23,7 @@ import {
   getAllClassDetails,
   getAttentionConfig,
   getChildren,
+  getHomeworkDueOn,
   getHomeworkForDay,
   getLatestFetchRun,
   getLatestSuccessfulFetchRun,
@@ -47,7 +52,8 @@ export function Dashboard() {
     parseAttentionConfig(null, null),
   );
   const [homeworkForToday, setHomeworkForToday] = useState<HomeworkRecord[]>([]);
-  const [homeworkDueToday, setHomeworkDueToday] = useState<HomeworkRecord[]>([]);
+  // Due on the next hand-in day (Monday from a Friday), whenever it was posted.
+  const [homeworkDueNext, setHomeworkDueNext] = useState<HomeworkRecord[]>([]);
   const [heroStatuses, setHeroStatuses] = useState<ChildStatus[]>([]);
   // Bumped on every data refresh so the child-entered homework reloads too.
   const [refreshTick, setRefreshTick] = useState(0);
@@ -78,9 +84,12 @@ export function Dashboard() {
       setClassDetails([]);
     }
     const today = toLocalIso(new Date());
-    const rows = await getHomeworkForDay(cId, today);
-    setHomeworkForToday(rows.filter((r) => r.hwDate === today));
-    setHomeworkDueToday(rows.filter((r) => r.dueDate === today));
+    const [posted, due] = await Promise.all([
+      getHomeworkForDay(cId, today),
+      getHomeworkDueOn(cId, nextDueDay(today)),
+    ]);
+    setHomeworkForToday(posted.filter((r) => r.hwDate === today));
+    setHomeworkDueNext(due);
   }, []);
 
   const reloadHero = useCallback(async (children: ChildRecord[]) => {
@@ -133,6 +142,7 @@ export function Dashboard() {
   );
 
   const selectedChild = allChildren.find((c) => c.id === childId);
+  const todayIso = toLocalIso(new Date());
 
   if (childId === null && allChildren.length === 0) {
     return (
@@ -166,23 +176,14 @@ export function Dashboard() {
         />
 
         {selectedChild?.homeworkSource === "child" ? (
-          <EnteredHomeworkToday
-            childId={selectedChild.id}
-            childName={selectedChild.displayName}
-            refreshKey={refreshTick}
-          />
+          <EnteredHomeworkToday childId={selectedChild.id} refreshKey={refreshTick} />
         ) : selectedChild?.homeworkUrl ? (
-          <HomeworkTodaySections forToday={homeworkForToday} dueToday={homeworkDueToday} />
+          <HomeworkTodaySections
+            forToday={homeworkForToday}
+            dueNext={homeworkDueNext}
+            dueLabel={relativeDueDay(nextDueDay(todayIso), todayIso)}
+          />
         ) : null}
-
-        <div className="pt-2 text-center">
-          <Link
-            href="/classes"
-            className="text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            View all classes →
-          </Link>
-        </div>
       </div>
     </>
   );

@@ -8,7 +8,6 @@ import {
   type HomeworkPhotoRef,
 } from "@homework/shared";
 import { CheckCircle2 } from "lucide-react";
-import Link from "next/link";
 import { homeworkPhotoUrl } from "@/lib/api";
 import { formatAddedAt, formatShortDay } from "@/lib/homework-format";
 import { EditedBadge } from "./homework-list";
@@ -27,15 +26,11 @@ export function HomeworkDetail({
   item: HomeworkItem;
   history: HomeworkHistoryEntry[];
 }) {
-  const name = item.createdByName ?? "Your child";
   return (
     <PhotoViewerProvider>
       <div className="mx-auto w-full max-w-4xl px-4 py-5 md:px-6">
-        <Link href="/review" className="text-[13px] text-muted-foreground hover:text-foreground">
-          ← {item.createdByName ? `${item.createdByName}'s homework` : "Homework"}
-        </Link>
         <h2
-          className="mt-2 text-2xl font-medium [overflow-wrap:anywhere]"
+          className="text-2xl font-medium [overflow-wrap:anywhere]"
           style={{ fontFamily: "var(--font-heading)" }}
         >
           {item.title}
@@ -74,10 +69,8 @@ export function HomeworkDetail({
               </dd>
             </div>
             <div className="space-y-1">
-              <dt className="text-[12px] font-semibold">Added by</dt>
-              <dd>
-                {name} · {formatAddedAt(item.createdAt)}
-              </dd>
+              <dt className="text-[12px] font-semibold">Added</dt>
+              <dd>{formatAddedAt(item.createdAt)}</dd>
             </div>
           </dl>
           <Photos itemId={item.id} section="sheet" photos={item.photos} label="Photos" />
@@ -89,7 +82,7 @@ export function HomeworkDetail({
             className="text-xl font-medium"
             style={{ fontFamily: "var(--font-heading)" }}
           >
-            {item.createdByName ? `${item.createdByName}'s solution` : "Solution"}
+            Solution
           </h3>
           {item.hasSolution ? (
             <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
@@ -107,7 +100,7 @@ export function HomeworkDetail({
             </div>
           ) : (
             <p className="rounded-lg border border-dashed px-4 py-5 text-[13px] text-muted-foreground">
-              {name} hasn't added a solution yet.
+              No solution yet.
             </p>
           )}
         </section>
@@ -200,7 +193,6 @@ function showValue(field: string, value: string | null): string {
 /** One recorded change in words: "Due: Mon 10/5 → Tue 10/6", "Removed a solution photo". */
 function HistoryLine({ itemId, entry }: { itemId: string; entry: HomeworkHistoryEntry }) {
   const viewer = usePhotoViewer();
-  const who = entry.actorName ?? "Someone";
   if (entry.action === "edited") {
     return (
       <span className="min-w-0 space-y-0.5">
@@ -210,7 +202,6 @@ function HistoryLine({ itemId, entry }: { itemId: string; entry: HomeworkHistory
             {showValue(field, from)} → {showValue(field, to)}
           </span>
         ))}
-        <span className="block text-[12px] text-muted-foreground">by {who}</span>
       </span>
     );
   }
@@ -237,7 +228,6 @@ function HistoryLine({ itemId, entry }: { itemId: string; entry: HomeworkHistory
           </button>
         </>
       ) : null}
-      <span className="block text-[12px] text-muted-foreground">by {who}</span>
     </span>
   );
 }

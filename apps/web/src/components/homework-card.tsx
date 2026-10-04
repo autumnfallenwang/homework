@@ -97,10 +97,14 @@ function SectionHeading({
 
 interface HomeworkTodaySectionsProps {
   forToday: HomeworkRecord[];
-  dueToday: HomeworkRecord[];
+  /** Due on the next hand-in day. */
+  dueNext: HomeworkRecord[];
+  /** "tomorrow", or "Mon 10/5" from a Friday. */
+  dueLabel: string;
 }
 
-export function HomeworkTodaySections({ forToday, dueToday }: HomeworkTodaySectionsProps) {
+/** Today's two homework sections: what was posted today, and what is due next. */
+export function HomeworkTodaySections({ forToday, dueNext, dueLabel }: HomeworkTodaySectionsProps) {
   return (
     <div className="space-y-5">
       <section className="space-y-3">
@@ -123,14 +127,14 @@ export function HomeworkTodaySections({ forToday, dueToday }: HomeworkTodaySecti
       <section className="space-y-3">
         <SectionHeading
           icon={<Target className="h-4 w-4 text-primary" />}
-          title="Due today"
-          count={dueToday.length}
+          title={`Due ${dueLabel}`}
+          count={dueNext.length}
         />
-        {dueToday.length === 0 ? (
-          <SectionEmpty text="Nothing due today" />
+        {dueNext.length === 0 ? (
+          <SectionEmpty text={`Nothing due ${dueLabel}`} />
         ) : (
           <div className="space-y-1.5">
-            {dueToday.map((entry) => (
+            {dueNext.map((entry) => (
               <HomeworkRow key={`due-${entry.id}`} entry={entry} />
             ))}
           </div>

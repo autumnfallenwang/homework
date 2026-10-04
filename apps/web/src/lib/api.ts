@@ -286,6 +286,11 @@ export function getHomeworkForDay(childId: string, iso: string): Promise<Homewor
   return get<HomeworkRecord[]>(`/api/children/${childId}/homework?date=${iso}`);
 }
 
+/** Homework due on `iso`, whenever it was posted (Today's "due tomorrow"). */
+export function getHomeworkDueOn(childId: string, iso: string): Promise<HomeworkRecord[]> {
+  return get<HomeworkRecord[]>(`/api/children/${childId}/homework?due=${iso}`);
+}
+
 export function getHomeworkByMonth(childId: string, yearMonth: string): Promise<HomeworkRecord[]> {
   return get<HomeworkRecord[]>(`/api/children/${childId}/homework?month=${yearMonth}`);
 }

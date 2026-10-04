@@ -81,7 +81,7 @@ describe("buildRefreshDigest", () => {
       children: [c1, c2],
       perChildDetails: new Map([["c1", [classWithMissing("Math")]]]),
       perChildHomeworkForToday: new Map([["c1", [hw("Math")]]]),
-      perChildHomeworkDueToday: new Map([["c1", [hw("Science")]]]),
+      perChildHomeworkDueNext: new Map([["c1", [hw("Science")]]]),
       perChildHeroCounts: new Map([
         ["c1", { meetingCount: 3, notAssessedCount: 1 }],
         ["c2", { meetingCount: 2, notAssessedCount: 0 }],
@@ -94,8 +94,9 @@ describe("buildRefreshDigest", () => {
     expect(digest.family.attentionCount).toBe(1); // Math flagged on c1
     expect(digest.family.meetingCount).toBe(5);
     expect(digest.family.homeworkForTodayCount).toBe(1);
-    expect(digest.family.homeworkDueTodayCount).toBe(1);
+    expect(digest.family.homeworkDueNextCount).toBe(1);
     expect(digest.todayLocal).toBe("2026-04-16");
+    expect(digest.dueNextOn).toBe("2026-04-17"); // Thursday → Friday
   });
 
   it("gives a never-fetched child a zeroed hero and no attention", () => {
@@ -104,7 +105,7 @@ describe("buildRefreshDigest", () => {
       children: [c],
       perChildDetails: new Map(),
       perChildHomeworkForToday: new Map(),
-      perChildHomeworkDueToday: new Map(),
+      perChildHomeworkDueNext: new Map(),
       perChildHeroCounts: new Map(),
       cfg: CFG,
       now: NOW,
@@ -121,7 +122,7 @@ describe("renderDigestEmail", () => {
       children: [c],
       perChildDetails: new Map([["c1", [classWithMissing("Math")]]]),
       perChildHomeworkForToday: new Map([["c1", [hw("Math")]]]),
-      perChildHomeworkDueToday: new Map(),
+      perChildHomeworkDueNext: new Map(),
       perChildHeroCounts: new Map([["c1", { meetingCount: 2, notAssessedCount: 0 }]]),
       cfg: CFG,
       now: NOW,
@@ -135,13 +136,36 @@ describe("renderDigestEmail", () => {
     expect(rendered.textBody).toContain("Essay");
   });
 
+  it("lists what is due on the next hand-in day: tomorrow, or Monday from a Friday", () => {
+    const build = (now: Date) =>
+      renderDigestEmail(
+        buildRefreshDigest({
+          children: [child("c1")],
+          perChildDetails: new Map(),
+          perChildHomeworkForToday: new Map(),
+          perChildHomeworkDueNext: new Map([["c1", [hw("Science")]]]),
+          perChildHeroCounts: new Map(),
+          cfg: CFG,
+          now,
+        }),
+      );
+    const thursday = build(NOW);
+    expect(thursday.textBody).toContain("1 due tomorrow");
+    expect(thursday.textBody).toContain("Homework due tomorrow:");
+    expect(thursday.htmlBody).toContain("Homework due tomorrow");
+    expect(thursday.textBody).not.toContain("due today");
+    const friday = build(new Date(2026, 3, 17));
+    expect(friday.textBody).toContain("1 due Mon 4/20");
+    expect(friday.textBody).toContain("Homework due Mon 4/20:");
+  });
+
   it("says all caught up when nothing needs attention", () => {
     const c = child("c1");
     const digest = buildRefreshDigest({
       children: [c],
       perChildDetails: new Map(),
       perChildHomeworkForToday: new Map(),
-      perChildHomeworkDueToday: new Map(),
+      perChildHomeworkDueNext: new Map(),
       perChildHeroCounts: new Map([["c1", { meetingCount: 4, notAssessedCount: 0 }]]),
       cfg: CFG,
       now: NOW,

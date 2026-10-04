@@ -166,8 +166,15 @@ export const homeworkQuerySchema = z
       .string()
       .regex(/^\d{4}-\d{2}$/)
       .optional(),
+    /** Homework due that day, whenever it was posted. */
+    due: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   })
-  .refine((q) => !(q.date && q.month), { message: "Provide either date or month, not both" });
+  .refine((q) => [q.date, q.month, q.due].filter(Boolean).length <= 1, {
+    message: "Provide one of date, month or due",
+  });
 export type HomeworkQuery = z.infer<typeof homeworkQuerySchema>;
 
 export const fetchRunsQuerySchema = z.object({

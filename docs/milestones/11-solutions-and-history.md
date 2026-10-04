@@ -92,6 +92,27 @@ shows her solution and a history: the due move and the photos, including one she
   every page 200, `/child/solutions` 404, child + parent homework routes incl. the new history 401
   without a session; no error lines in the api or web logs after the rollout (the only warn lines
   are those three 401 probes).
+- 2026-10-04: due day on Today and in the digest (founder's review): due = the hand-in day
+  everywhere; "Homework for today" stays = given today; "Due today" became **due on the next
+  hand-in day** (`nextDueDay` = next school day, labelled "tomorrow" or "Mon 10/5" by
+  `relativeDueDay`) on Today's sections, the hero and the email. Fixed on the way: Today and the
+  hero fetched only homework *posted* today and filtered it by due date, so class-page homework
+  posted earlier never showed as due (the digest was right) — new `?due=` on
+  `/api/children/:id/homework`. Tests: shared helpers, digest labels (Thursday → "tomorrow",
+  Friday → "Mon 4/20"), `?due=` validation + live-DB lookup, entered-items digest; API suite run
+  against a separate `homework_test` DB so the dev accounts survive. Dev e2e: Ivy (entered) and a
+  seeded class-page child (Math posted Fri, due Mon) on Today and in the hero, and the digest via
+  local Mailpit — all "due tomorrow", nothing "due today".
+- 2026-10-04: clean-up (founder's review): no back links or "→" shortcuts (navigation is the left
+  tabs; "All homework →" and Today's "View all classes →" removed, Review's Settings links now
+  plain text); the child's page shows titles, * / (optional) and placeholders only — the
+  added/first-day line, the locked-Given-on hint, the "a photo or a note marks it done" line and
+  the photo hints are gone, the solution section appears once the homework is saved, and the
+  rules still show as errors on Save; no child names in homework text ("Entered by", "<name>'s
+  homework/solution", "Added by", "by <name>") — entered and class-page homework look the same,
+  switched only by the setting. Kept for now: names on Today's per-child summary cards and in the
+  email (they tell two children apart); the parent page's "Recorded after the first day" line is
+  for a later discussion.
 
 ## References
 

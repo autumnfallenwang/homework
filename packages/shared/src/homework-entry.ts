@@ -82,6 +82,24 @@ export function nextSchoolDay(iso: string): string {
   return next;
 }
 
+const SHORT_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/**
+ * The next hand-in day after `today` — the next school day, so Monday on a
+ * Friday or a weekend. What Today, the hero and the digest show as "due
+ * tomorrow", for scraped and entered homework alike.
+ */
+export function nextDueDay(today: string): string {
+  return nextSchoolDay(today);
+}
+
+/** "tomorrow" when `day` is the day after `today`, else "Mon 10/5". */
+export function relativeDueDay(day: string, today: string): string {
+  if (day === addDaysIso(today, 1)) return "tomorrow";
+  const [, m, d] = day.split("-").map(Number) as [number, number, number];
+  return `${SHORT_WEEKDAYS[weekdayOfIso(day)]} ${m}/${d}`;
+}
+
 // --- Class list (parent-owned) ---------------------------------------------
 
 export interface HomeworkClass {

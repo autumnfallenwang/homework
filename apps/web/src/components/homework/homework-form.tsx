@@ -205,7 +205,7 @@ export function HomeworkForm({
       photos.reset(fresh.photos);
       setBaseline({ ...fieldsNow });
       setAttempted(false);
-      setNotice(created ? "Saved. Add your solution below when it's done." : "Saved.");
+      setNotice("Saved.");
       onSaved(fresh, created);
     } catch (err) {
       const code = err instanceof ApiClientError ? (err.body as { code?: string }).code : null;
@@ -313,16 +313,9 @@ export function HomeworkForm({
                 }}
                 required
                 aria-invalid={problems.assignedOn ? true : undefined}
-                aria-describedby={
-                  problems.assignedOn ? "hw-given-error" : locked ? "hw-given-locked" : undefined
-                }
+                aria-describedby={problems.assignedOn ? "hw-given-error" : undefined}
               />
               <FieldError id="hw-given-error" message={problems.assignedOn} />
-              {locked ? (
-                <p id="hw-given-locked" className="text-[12px] text-muted-foreground">
-                  Can't change after the first day
-                </p>
-              ) : null}
             </div>
             <div className="w-[200px] space-y-2">
               <Label htmlFor={FIELD_IDS.dueOn} className="gap-0 text-[12px] font-semibold">
@@ -347,14 +340,7 @@ export function HomeworkForm({
           </div>
         </div>
 
-        <PhotoPanel
-          title="Photos"
-          hint="The worksheet, the board, your planner"
-          section="sheet"
-          draft={photos}
-          itemId={itemId}
-          disabled={busy}
-        />
+        <PhotoPanel title="Photos" section="sheet" draft={photos} itemId={itemId} disabled={busy} />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4">
