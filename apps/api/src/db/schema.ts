@@ -10,7 +10,6 @@ import {
   integer,
   jsonb,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   unique,
@@ -327,11 +326,14 @@ export const homeworkItems = pgTable(
     kind: text().notNull().default("homework"),
     title: text().notNull(),
     details: text(),
-    // The local day it was entered (server TZ); never edited.
+    // The day it was given: the child picks it (today by default), never after
+    // today and never after the due day.
     assignedOn: date({ mode: "string" }).notNull(),
     dueOn: date({ mode: "string" }).notNull(),
-    status: text().notNull().default("todo"),
-    completedAt: timestamp({ withTimezone: true }),
+    // The child's finished work (ADR 0008): a note and/or solution photos.
+    // Either one makes the item done.
+    solutionNote: text(),
+    solutionSavedAt: timestamp({ withTimezone: true }),
     createdBy: uuid().references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -342,11 +344,13 @@ export const homeworkItems = pgTable(
       "homework_items_kind_valid",
       sql`${table.kind} IN ('homework', 'test', 'project', 'other')`,
     ),
-    check("homework_items_status_valid", sql`${table.status} IN ('todo', 'done')`),
+    check("homework_items_given_by_due", sql`${table.assignedOn} <= ${table.dueOn}`),
   ],
 );
 
 // Photos of an item, shrunk in the browser (JPEG ≤ 1600 px). Never read by lists.
+// `kind`: the homework sheet or the child's solution. Removed after the item's
+// first day = hidden from the child, kept for the parent's history (ADR 0008).
 export const homeworkPhotos = pgTable(
   "homework_photos",
   {
@@ -354,26 +358,44 @@ export const homeworkPhotos = pgTable(
     itemId: uuid()
       .notNull()
       .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    kind: text().notNull().default("sheet"),
     contentType: text().notNull(),
     byteSize: integer().notNull(),
     bytes: bytea().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp({ withTimezone: true }),
   },
-  (table) => [index("homework_photos_item_idx").on(table.itemId)],
+  (table) => [
+    index("homework_photos_item_idx").on(table.itemId),
+    check("homework_photos_kind_valid", sql`${table.kind} IN ('sheet', 'solution')`),
+  ],
 );
 
-// "That's everything for today", per child and local day.
-export const homeworkDays = pgTable(
-  "homework_days",
+// Every change a child makes after an item's first day (ADR 0008). Append-only;
+// goes only with its item.
+export const homeworkItemEvents = pgTable(
+  "homework_item_events",
   {
-    childId: uuid()
+    id: uuid().primaryKey().defaultRandom(),
+    itemId: uuid()
       .notNull()
-      .references(() => children.id, { onDelete: "cascade" }),
-    day: date({ mode: "string" }).notNull(),
-    completedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    completedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+      .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    actorId: uuid().references(() => users.id, { onDelete: "set null" }),
+    section: text().notNull(),
+    action: text().notNull(),
+    // Field → [old, new] for `edited`.
+    changes: jsonb().$type<Record<string, [string | null, string | null]>>().notNull().default({}),
+    photoId: uuid().references(() => homeworkPhotos.id, { onDelete: "set null" }),
   },
-  (table) => [primaryKey({ columns: [table.childId, table.day] })],
+  (table) => [
+    index("homework_item_events_item_idx").on(table.itemId, table.at),
+    check("homework_item_events_section_valid", sql`${table.section} IN ('homework', 'solution')`),
+    check(
+      "homework_item_events_action_valid",
+      sql`${table.action} IN ('edited', 'photo_added', 'photo_removed')`,
+    ),
+  ],
 );
 
 // Relations — used by the Drizzle relational query builder in M04.

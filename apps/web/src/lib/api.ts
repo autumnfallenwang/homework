@@ -19,15 +19,17 @@ import type {
   HomeworkClass,
   HomeworkClassListInput,
   HomeworkClassSuggestions,
-  HomeworkDay,
+  HomeworkHistoryEntry,
   HomeworkItem,
   HomeworkItemList,
   HomeworkMonth,
+  HomeworkPhotoKind,
   HomeworkPhotoRef,
   HomeworkRecord,
   HomeworkSource,
   InvitePurpose,
   IssuedInvite,
+  SaveHomeworkSolutionInput,
   StatusHistoryEntry,
   UpdateHomeworkItemInput,
 } from "@homework/shared";
@@ -414,6 +416,11 @@ export function getHomeworkItem(itemId: string): Promise<HomeworkItem> {
   return get(`/api/homework-items/${itemId}`);
 }
 
+/** Changes recorded after the item's first day (ADR 0008). */
+export function getHomeworkItemHistory(itemId: string): Promise<HomeworkHistoryEntry[]> {
+  return get(`/api/homework-items/${itemId}/history`);
+}
+
 export function homeworkPhotoUrl(itemId: string, photoId: string): string {
   return `${apiBaseUrl()}/api/homework-items/${itemId}/photos/${photoId}`;
 }
@@ -443,9 +450,21 @@ export function deleteMyHomework(itemId: string): Promise<void> {
   return del(`/api/child/homework/${itemId}`);
 }
 
-/** Upload one (already shrunk) photo as the raw request body. */
-export function uploadMyHomeworkPhoto(itemId: string, photo: Blob): Promise<HomeworkPhotoRef> {
-  return request(`/api/child/homework/${itemId}/photos`, {
+/** The solution's note; its photos go up with `kind: "solution"`. */
+export function saveMyHomeworkSolution(
+  itemId: string,
+  input: SaveHomeworkSolutionInput,
+): Promise<HomeworkItem> {
+  return put(`/api/child/homework/${itemId}/solution`, input);
+}
+
+/** Upload one (already shrunk) photo of the sheet or the solution as the raw request body. */
+export function uploadMyHomeworkPhoto(
+  itemId: string,
+  photo: Blob,
+  kind: HomeworkPhotoKind = "sheet",
+): Promise<HomeworkPhotoRef> {
+  return request(`/api/child/homework/${itemId}/photos?kind=${kind}`, {
     method: "POST",
     body: photo,
     headers: { "Content-Type": photo.type || "image/jpeg" },
@@ -462,9 +481,4 @@ export function myHomeworkPhotoUrl(itemId: string, photoId: string): string {
 
 export function getMyHomeworkClasses(): Promise<HomeworkClass[]> {
   return get("/api/child/homework-classes");
-}
-
-/** "That's everything for today" — or take it back. */
-export function setMyDayComplete(complete: boolean): Promise<HomeworkDay> {
-  return complete ? put("/api/child/homework-day") : del("/api/child/homework-day");
 }

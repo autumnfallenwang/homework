@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Settings, Upload } from "lucide-react";
+import { ClipboardList, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
@@ -12,10 +12,9 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
-/** The child's whole app: two tabs (ADR 0004 / stage plan)… */
+/** The child's whole app: their homework, solutions on each item (ADR 0008)… */
 export const CHILD_NAV: readonly NavItem[] = [
   { href: "/child", label: "Homework", icon: ClipboardList },
-  { href: "/child/solutions", label: "Solutions", icon: Upload },
 ];
 
 /** …and their own settings, at the bottom like the parent's. */

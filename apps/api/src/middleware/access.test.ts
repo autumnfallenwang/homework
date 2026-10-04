@@ -40,6 +40,7 @@ describe("the access matrix", () => {
       `/api/children/${ID}/homework-items`,
       `/api/children/${ID}/homework-classes`,
       `/api/homework-items/${ID}/photos/${ID}`,
+      `/api/homework-items/${ID}/history`,
     ]) {
       expect(parentOnly).toContain(path);
     }
@@ -51,8 +52,8 @@ describe("the access matrix", () => {
       "/api/child/homework",
       `/api/child/homework/${ID}`,
       `/api/child/homework/${ID}/photos/${ID}`,
+      `/api/child/homework/${ID}/solution`,
       "/api/child/homework-classes",
-      "/api/child/homework-day",
     ]) {
       expect(childOnly).toContain(path);
     }

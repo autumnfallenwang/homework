@@ -22,6 +22,7 @@ Milestones 01–07 are the port itself; 08+ are post-migration improvements. Eac
 | 08 | [Logging house standard](08-logging-house-standard.md) | One JSON line per event (ADR 0003): level words, request/run context, crash + shutdown lines, web error line | 07 |
 | 09 | [Accounts and roles](09-accounts-and-roles.md) | Stage 1 of child homework: Better Auth logins, parent + child roles, invite links (ADR 0004), placeholder cards for stages 2–4 | 08 |
 | 10 | [Child homework entry](10-child-homework-entry.md) | Stage 2: per-child source switch, parent-owned class list, the child's list + Add/Edit pages with photos, parent Review + Today (ADR 0006) | 09 |
+| 11 | [Solutions and change history](11-solutions-and-history.md) | The solution on the item page (Save homework / Save solution), free edits until 7 AM next morning, then a change history the parent views (ADR 0008) | 10 |
 
 ## Cross-cutting decisions (locked)
 

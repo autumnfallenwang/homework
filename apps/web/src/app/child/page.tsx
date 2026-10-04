@@ -1,6 +1,6 @@
 "use client";
 
-import type { HomeworkItem, HomeworkItemList } from "@homework/shared";
+import type { HomeworkItemList } from "@homework/shared";
 import { Loader2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -9,13 +9,12 @@ import { describeHomeworkError } from "@/components/homework/homework-form";
 import { HomeworkList } from "@/components/homework/homework-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
-import { getChildProfile, getMyHomework, setMyDayComplete, updateMyHomework } from "@/lib/api";
+import { getChildProfile, getMyHomework } from "@/lib/api";
 
 /** The child's Homework tab (ADR 0006): their list, grouped by when things are due. */
 export default function ChildHomeworkPage() {
   const [entryOn, setEntryOn] = useState<boolean | null>(null);
   const [list, setList] = useState<HomeworkItemList | null>(null);
-  const [busyIds, setBusyIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -31,31 +30,6 @@ export default function ChildHomeworkPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function toggle(item: HomeworkItem) {
-    setBusyIds((ids) => [...ids, item.id]);
-    setError(null);
-    try {
-      const next = await updateMyHomework(item.id, {
-        status: item.status === "done" ? "todo" : "done",
-      });
-      setList((l) => l && { ...l, items: l.items.map((i) => (i.id === next.id ? next : i)) });
-    } catch (err) {
-      setError(describeHomeworkError(err));
-    } finally {
-      setBusyIds((ids) => ids.filter((id) => id !== item.id));
-    }
-  }
-
-  async function markDay(complete: boolean) {
-    setError(null);
-    try {
-      const today = await setMyDayComplete(complete);
-      setList((l) => l && { ...l, today });
-    } catch (err) {
-      setError(describeHomeworkError(err));
-    }
-  }
 
   return (
     <>
@@ -88,9 +62,6 @@ export default function ChildHomeworkPage() {
             today={list.today}
             mode="child"
             itemHref={(i) => `/child/homework/${i.id}`}
-            onToggleDone={(i) => void toggle(i)}
-            onDayComplete={(c) => void markDay(c)}
-            busyIds={busyIds}
           />
         ) : (
           <HomeworkEntryOff />

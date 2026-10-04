@@ -5,6 +5,7 @@ import {
   groupHomeworkItems,
   type HomeworkItem,
   homeworkClassListSchema,
+  homeworkDateProblem,
   isoDaySchema,
   nextSchoolDay,
 } from "./homework-entry.js";
@@ -20,12 +21,14 @@ function item(id: string, dueOn: string, overrides: Partial<HomeworkItem> = {}):
     details: null,
     assignedOn: "2026-09-28",
     dueOn,
-    status: "todo",
-    completedAt: null,
     createdAt: `2026-09-28T10:00:0${id.length}Z`,
     updatedAt: "2026-09-28T10:00:00Z",
     createdByName: "Ivy",
     photos: [],
+    solution: { note: null, photos: [], savedAt: null },
+    hasSolution: false,
+    firstDayEndsAt: "2026-09-29T11:00:00Z",
+    edited: false,
     ...overrides,
   };
 }
@@ -58,8 +61,8 @@ describe("groupHomeworkItems", () => {
         item("friday", "2026-10-02"),
         item("sunday", "2026-10-04"),
         item("monday", "2026-10-05"),
-        item("done-old", "2026-09-20", { status: "done" }),
-        item("done-new", "2026-09-30", { status: "done" }),
+        item("done-old", "2026-09-20", { hasSolution: true }),
+        item("done-new", "2026-09-30", { hasSolution: true }),
       ],
       "2026-09-30",
     );
@@ -94,13 +97,48 @@ describe("input schemas", () => {
     }
   });
 
-  it("needs a title and a real due date for a new item", () => {
-    const base = { classId: null, kind: "test", title: "Ch. 2", dueOn: "2026-10-01" };
+  it("needs a title, a given-on day and a real due date for a new item", () => {
+    const base = {
+      classId: null,
+      kind: "test",
+      title: "Ch. 2",
+      assignedOn: "2026-09-30",
+      dueOn: "2026-10-01",
+    };
     expect(createHomeworkItemSchema.safeParse(base).success).toBe(true);
     expect(createHomeworkItemSchema.safeParse({ ...base, title: "   " }).success).toBe(false);
+    expect(createHomeworkItemSchema.safeParse({ ...base, assignedOn: undefined }).success).toBe(
+      false,
+    );
     expect(createHomeworkItemSchema.safeParse({ ...base, dueOn: "tomorrow" }).success).toBe(false);
     expect(createHomeworkItemSchema.safeParse({ ...base, title: "x".repeat(121) }).success).toBe(
       false,
+    );
+  });
+});
+
+describe("homeworkDateProblem", () => {
+  const today = "2026-10-03";
+  it("allows given on or before today and on or before the due day", () => {
+    expect(homeworkDateProblem({ assignedOn: today, dueOn: today }, today)).toBeNull();
+    expect(
+      homeworkDateProblem({ assignedOn: "2026-10-02", dueOn: "2026-10-05" }, today),
+    ).toBeNull();
+    // Overdue items are fine: given and due both in the past.
+    expect(
+      homeworkDateProblem({ assignedOn: "2026-09-28", dueOn: "2026-09-30" }, today),
+    ).toBeNull();
+  });
+
+  it("refuses a given-on day after today", () => {
+    expect(homeworkDateProblem({ assignedOn: "2026-10-04", dueOn: "2026-10-05" }, today)).toBe(
+      "given_after_today",
+    );
+  });
+
+  it("refuses a due day before the given-on day", () => {
+    expect(homeworkDateProblem({ assignedOn: "2026-10-02", dueOn: "2026-10-01" }, today)).toBe(
+      "due_before_given",
     );
   });
 });

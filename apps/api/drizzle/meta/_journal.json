@@ -29,6 +29,27 @@
       "when": 1790825421587,
       "tag": "0003_child_homework_entry",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791083952062,
+      "tag": "0004_given_on_replaces_day_marks",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791087889283,
+      "tag": "0005_solutions_and_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791087907354,
+      "tag": "0006_done_is_a_solution",
+      "breakpoints": true
     }
   ]
 }

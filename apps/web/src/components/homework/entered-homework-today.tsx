@@ -10,9 +10,9 @@ import { formatShortDay } from "@/lib/homework-format";
 import { KindBadge } from "./kind-badge";
 
 /**
- * Today's homework for a child who enters their own (ADR 0006): what they added
- * today and what is due today, the same two sections the class page fills, plus
- * whether they marked the day complete.
+ * Today's homework for a child who enters their own (ADR 0006, 0007): what was
+ * given today (by the given-on day the child picked) and what is due today, the
+ * same two sections the class page fills.
  */
 export function EnteredHomeworkToday({
   childId,
@@ -37,15 +37,8 @@ export function EnteredHomeworkToday({
   }, [childId, refreshKey]);
 
   if (!list) return null;
-  const today = list.today.date;
-  const forToday = list.items.filter((i) => i.assignedOn === today);
-  const dueToday = list.items.filter((i) => i.dueOn === today);
-  const completedAt = list.today.completedAt
-    ? new Date(list.today.completedAt).toLocaleTimeString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : null;
+  const forToday = list.items.filter((i) => i.assignedOn === list.today);
+  const dueToday = list.items.filter((i) => i.dueOn === list.today);
 
   return (
     <div className="space-y-5" data-testid="entered-homework-today">
@@ -53,20 +46,6 @@ export function EnteredHomeworkToday({
         <span className="rounded-full bg-primary/10 px-2 py-px text-[11px] font-medium text-primary">
           Entered by {childName}
         </span>
-        {completedAt ? (
-          <span className="flex items-center gap-1 text-meeting">
-            <Check className="h-3.5 w-3.5" />
-            {forToday.length > 0
-              ? `${childName} marked today complete at ${completedAt}`
-              : `${childName} marked no homework today (${completedAt})`}
-          </span>
-        ) : (
-          <span>
-            {forToday.length > 0
-              ? `${childName} has added ${forToday.length} today and hasn't marked the day complete`
-              : `${childName} hasn't added anything today`}
-          </span>
-        )}
         <Link href="/review" className="ml-auto text-primary underline-offset-4 hover:underline">
           All homework →
         </Link>
@@ -75,7 +54,7 @@ export function EnteredHomeworkToday({
         icon={<BookOpen className="h-4 w-4 text-primary" />}
         title="Homework for today"
         items={forToday}
-        empty="Nothing added today"
+        empty="Nothing given today"
       />
       <Section
         icon={<Target className="h-4 w-4 text-primary" />}
@@ -128,7 +107,7 @@ function Section({
                   <p className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium">
                     {item.className}
                     <KindBadge kind={item.kind} />
-                    {item.status === "done" ? (
+                    {item.hasSolution ? (
                       <span className="flex items-center gap-0.5 text-[11px] font-medium text-meeting">
                         <Check className="h-3 w-3" />
                         Done

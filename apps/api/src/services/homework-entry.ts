@@ -1,21 +1,27 @@
-// Child-entered homework (ADR 0006): the parent-owned class list, the child's
-// items with their photos, and "that's everything for today". Every function
+// Child-entered homework (ADR 0006, 0007, 0008): the parent-owned class list, the
+// child's items with their photos and solutions, and the history of changes made
+// after an item's first day. Every function
 // takes the child id it acts for — from the session for a child, from the URL
 // (parent-only routes) for a parent — and never touches another child's rows.
 
 import {
   addDaysIso,
   type CreateHomeworkItemInput,
+  HOMEWORK_DATE_PROBLEMS,
   HOMEWORK_LIMITS,
   type HomeworkClass,
   type HomeworkClassListInput,
-  type HomeworkDay,
+  type HomeworkDateProblem,
+  type HomeworkHistoryEntry,
   type HomeworkItem,
   type HomeworkItemList,
   type HomeworkKind,
+  type HomeworkPhotoKind,
   type HomeworkPhotoRef,
   type HomeworkPhotoType,
+  homeworkDateProblem,
   OTHER_CLASS_LABEL,
+  type SaveHomeworkSolutionInput,
   type UpdateHomeworkItemInput,
 } from "@homework/shared";
 import { and, asc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
@@ -25,7 +31,7 @@ import {
   childClasses,
   children,
   grades,
-  homeworkDays,
+  homeworkItemEvents,
   homeworkItems,
   homeworkPhotos,
   users,
@@ -41,7 +47,10 @@ export type HomeworkEntryErrorCode =
   | "photo_not_found"
   | "photo_type"
   | "photo_too_large"
-  | "too_many_photos";
+  | "too_many_photos"
+  | "given_on_locked"
+  | "delete_locked"
+  | HomeworkDateProblem;
 
 export class HomeworkEntryError extends Error {
   constructor(
@@ -51,6 +60,12 @@ export class HomeworkEntryError extends Error {
     super(message);
     this.name = "HomeworkEntryError";
   }
+}
+
+/** Given on or before the due day, never after today (the CHECK backs the first). */
+function assertDates(dates: { assignedOn: string; dueOn: string }, today: string): void {
+  const problem = homeworkDateProblem(dates, today);
+  if (problem) throw new HomeworkEntryError(problem, HOMEWORK_DATE_PROBLEMS[problem]);
 }
 
 // --- The switch -------------------------------------------------------------
@@ -202,7 +217,52 @@ async function assertActiveClass(db: Database | Tx, childId: string, classId: st
   if (!row) throw new HomeworkEntryError("class_not_found", "Pick one of the classes");
 }
 
+// --- The first day (ADR 0008) -------------------------------------------------
+
+/**
+ * When an item's first day ends: the next 7:00 AM (server TZ) after it was added.
+ * Until then the child may change or delete anything and nothing is recorded;
+ * after it Given on is locked, the item stays and every change is recorded.
+ */
+export function firstDayEndsAt(createdAt: Date): Date {
+  const end = new Date(createdAt);
+  end.setHours(HOMEWORK_LIMITS.firstDayEndsAtHour, 0, 0, 0);
+  if (end <= createdAt) end.setDate(end.getDate() + 1);
+  return end;
+}
+
+function inFirstDay(createdAt: Date, now: Date): boolean {
+  return now < firstDayEndsAt(createdAt);
+}
+
+type HistoryChanges = Record<string, [string | null, string | null]>;
+
+async function record(
+  tx: Tx,
+  event: {
+    itemId: string;
+    actorId: string;
+    section: "homework" | "solution";
+    action: "edited" | "photo_added" | "photo_removed";
+    changes?: HistoryChanges;
+    photoId?: string;
+  },
+): Promise<void> {
+  await tx.insert(homeworkItemEvents).values({
+    itemId: event.itemId,
+    actorId: event.actorId,
+    section: event.section,
+    action: event.action,
+    changes: event.changes ?? {},
+    photoId: event.photoId ?? null,
+  });
+}
+
 // --- Items ------------------------------------------------------------------
+
+/** A solution note, or a solution photo the child still sees. */
+const hasSolutionSql = () =>
+  sql<boolean>`(${homeworkItems.solutionNote} is not null or exists (select 1 from homework_photos p where p.item_id = ${homeworkItems.id} and p.kind = 'solution' and p.removed_at is null))`;
 
 const itemColumns = {
   id: homeworkItems.id,
@@ -214,11 +274,15 @@ const itemColumns = {
   details: homeworkItems.details,
   assignedOn: homeworkItems.assignedOn,
   dueOn: homeworkItems.dueOn,
-  status: homeworkItems.status,
-  completedAt: homeworkItems.completedAt,
+  solutionNote: homeworkItems.solutionNote,
+  solutionSavedAt: homeworkItems.solutionSavedAt,
   createdAt: homeworkItems.createdAt,
   updatedAt: homeworkItems.updatedAt,
   createdByName: users.name,
+  edited:
+    sql<boolean>`exists (select 1 from homework_item_events e where e.item_id = ${homeworkItems.id})`.as(
+      "edited",
+    ),
 };
 
 type ItemRow = {
@@ -231,14 +295,18 @@ type ItemRow = {
   details: string | null;
   assignedOn: string;
   dueOn: string;
-  status: string;
-  completedAt: Date | null;
+  solutionNote: string | null;
+  solutionSavedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   createdByName: string | null;
+  edited: boolean;
 };
 
-function toItem(row: ItemRow, photos: HomeworkPhotoRef[]): HomeworkItem {
+type ItemPhotos = { sheet: HomeworkPhotoRef[]; solution: HomeworkPhotoRef[] };
+
+function toItem(row: ItemRow, photos: ItemPhotos | undefined): HomeworkItem {
+  const solutionPhotos = photos?.solution ?? [];
   return {
     id: row.id,
     childId: row.childId,
@@ -249,37 +317,46 @@ function toItem(row: ItemRow, photos: HomeworkPhotoRef[]): HomeworkItem {
     details: row.details,
     assignedOn: row.assignedOn,
     dueOn: row.dueOn,
-    status: row.status === "done" ? "done" : "todo",
-    completedAt: row.completedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     createdByName: row.createdByName,
-    photos,
+    photos: photos?.sheet ?? [],
+    solution: {
+      note: row.solutionNote,
+      photos: solutionPhotos,
+      savedAt: row.solutionSavedAt?.toISOString() ?? null,
+    },
+    hasSolution: row.solutionNote !== null || solutionPhotos.length > 0,
+    firstDayEndsAt: firstDayEndsAt(row.createdAt).toISOString(),
+    edited: row.edited,
   };
 }
 
-async function photosFor(db: Database, itemIds: string[]) {
-  const byItem = new Map<string, HomeworkPhotoRef[]>();
+/** The photos the child still sees, by item and kind. */
+async function photosFor(db: Database | Tx, itemIds: string[]) {
+  const byItem = new Map<string, ItemPhotos>();
   if (itemIds.length === 0) return byItem;
   const rows = await db
     .select({
       id: homeworkPhotos.id,
       itemId: homeworkPhotos.itemId,
+      kind: homeworkPhotos.kind,
       contentType: homeworkPhotos.contentType,
       byteSize: homeworkPhotos.byteSize,
     })
     .from(homeworkPhotos)
-    .where(inArray(homeworkPhotos.itemId, itemIds))
+    .where(and(inArray(homeworkPhotos.itemId, itemIds), isNull(homeworkPhotos.removedAt)))
     .orderBy(asc(homeworkPhotos.createdAt), asc(homeworkPhotos.id));
   for (const r of rows) {
-    const list = byItem.get(r.itemId) ?? [];
-    list.push({ id: r.id, contentType: r.contentType, byteSize: r.byteSize });
-    byItem.set(r.itemId, list);
+    const entry = byItem.get(r.itemId) ?? { sheet: [], solution: [] };
+    const kind = r.kind === "solution" ? "solution" : "sheet";
+    entry[kind].push({ id: r.id, kind, contentType: r.contentType, byteSize: r.byteSize });
+    byItem.set(r.itemId, entry);
   }
   return byItem;
 }
 
-function selectItems(db: Database) {
+function selectItems(db: Database | Tx) {
   return db
     .select(itemColumns)
     .from(homeworkItems)
@@ -287,15 +364,7 @@ function selectItems(db: Database) {
     .leftJoin(users, eq(users.id, homeworkItems.createdBy));
 }
 
-export async function getDay(db: Database, childId: string, day: string): Promise<HomeworkDay> {
-  const [row] = await db
-    .select({ completedAt: homeworkDays.completedAt })
-    .from(homeworkDays)
-    .where(and(eq(homeworkDays.childId, childId), eq(homeworkDays.day, day)));
-  return { date: day, completedAt: row?.completedAt.toISOString() ?? null };
-}
-
-/** Every to-do item, and done items due within the last 30 days. */
+/** Every item without a solution, and done items due within the last 30 days. */
 export async function listItems(
   db: Database,
   childId: string,
@@ -306,7 +375,7 @@ export async function listItems(
     .where(
       and(
         eq(homeworkItems.childId, childId),
-        or(eq(homeworkItems.status, "todo"), gte(homeworkItems.dueOn, since)),
+        or(sql`not ${hasSolutionSql()}`, gte(homeworkItems.dueOn, since)),
       ),
     )
     .orderBy(asc(homeworkItems.dueOn), asc(homeworkItems.createdAt));
@@ -314,10 +383,7 @@ export async function listItems(
     db,
     rows.map((r) => r.id),
   );
-  return {
-    items: rows.map((r) => toItem(r, photos.get(r.id) ?? [])),
-    today: await getDay(db, childId, today),
-  };
+  return { items: rows.map((r) => toItem(r, photos.get(r.id))), today };
 }
 
 /** Items given on or due on `day` — what Today and the digest show. */
@@ -338,7 +404,7 @@ export async function itemsForDay(
     db,
     rows.map((r) => r.id),
   );
-  const items = rows.map((r) => toItem(r, photos.get(r.id) ?? []));
+  const items = rows.map((r) => toItem(r, photos.get(r.id)));
   return {
     givenToday: items.filter((i) => i.assignedOn === day),
     dueToday: items.filter((i) => i.dueOn === day),
@@ -347,7 +413,7 @@ export async function itemsForDay(
 
 /** One item; with `childId`, only if it belongs to that child. */
 export async function getItem(
-  db: Database,
+  db: Database | Tx,
   itemId: string,
   scope: { childId?: string } = {},
 ): Promise<HomeworkItem | null> {
@@ -358,11 +424,11 @@ export async function getItem(
   );
   if (!row) return null;
   const photos = await photosFor(db, [row.id]);
-  return toItem(row, photos.get(row.id) ?? []);
+  return toItem(row, photos.get(row.id));
 }
 
-function cleanDetails(details: string | null | undefined): string | null {
-  return details?.trim() ? details.trim() : null;
+function cleanText(text: string | null | undefined): string | null {
+  return text?.trim() ? text.trim() : null;
 }
 
 export async function createItem(
@@ -374,6 +440,7 @@ export async function createItem(
 ): Promise<HomeworkItem> {
   const id = await db.transaction(async (tx) => {
     await assertEntryOn(tx, childId);
+    assertDates(input, today);
     if (input.classId) await assertActiveClass(tx, childId, input.classId);
     const [row] = await tx
       .insert(homeworkItems)
@@ -382,8 +449,8 @@ export async function createItem(
         classId: input.classId,
         kind: input.kind,
         title: input.title,
-        details: cleanDetails(input.details),
-        assignedOn: today,
+        details: cleanText(input.details),
+        assignedOn: input.assignedOn,
         dueOn: input.dueOn,
         createdBy: userId,
       })
@@ -396,53 +463,185 @@ export async function createItem(
   return item;
 }
 
+/** The child's own item, locked for the rest of the transaction. */
+async function ownItem(tx: Tx, childId: string, itemId: string) {
+  const [row] = await tx
+    .select({
+      classId: homeworkItems.classId,
+      kind: homeworkItems.kind,
+      title: homeworkItems.title,
+      details: homeworkItems.details,
+      assignedOn: homeworkItems.assignedOn,
+      dueOn: homeworkItems.dueOn,
+      solutionNote: homeworkItems.solutionNote,
+      createdAt: homeworkItems.createdAt,
+    })
+    .from(homeworkItems)
+    .where(and(eq(homeworkItems.id, itemId), eq(homeworkItems.childId, childId)))
+    .for("update");
+  if (!row) throw new HomeworkEntryError("item_not_found", "Homework not found");
+  return row;
+}
+
+async function className(tx: Tx, classId: string | null): Promise<string> {
+  if (!classId) return OTHER_CLASS_LABEL;
+  const [row] = await tx
+    .select({ name: childClasses.name })
+    .from(childClasses)
+    .where(eq(childClasses.id, classId));
+  return row?.name ?? OTHER_CLASS_LABEL;
+}
+
+/** The homework section. After the first day Given on is locked and changes are recorded. */
 export async function updateItem(
   db: Database,
   childId: string,
+  userId: string,
   itemId: string,
   input: UpdateHomeworkItemInput,
+  today: string,
+  now: Date = new Date(),
 ): Promise<HomeworkItem> {
   await db.transaction(async (tx) => {
     await assertEntryOn(tx, childId);
-    const [current] = await tx
-      .select({ classId: homeworkItems.classId, status: homeworkItems.status })
-      .from(homeworkItems)
-      .where(and(eq(homeworkItems.id, itemId), eq(homeworkItems.childId, childId)));
-    if (!current) throw new HomeworkEntryError("item_not_found", "Homework not found");
+    const current = await ownItem(tx, childId, itemId);
+    const firstDay = inFirstDay(current.createdAt, now);
+    if (!firstDay && input.assignedOn !== undefined && input.assignedOn !== current.assignedOn) {
+      throw new HomeworkEntryError("given_on_locked", "Given on can't change after the first day");
+    }
+    if (input.assignedOn !== undefined || input.dueOn !== undefined) {
+      assertDates(
+        { assignedOn: input.assignedOn ?? current.assignedOn, dueOn: input.dueOn ?? current.dueOn },
+        today,
+      );
+    }
     // Keeping an archived class is fine; moving onto one is not.
     if (input.classId && input.classId !== current.classId) {
       await assertActiveClass(tx, childId, input.classId);
     }
-    const now = new Date();
+
+    const next = {
+      classId: input.classId === undefined ? current.classId : input.classId,
+      kind: input.kind ?? current.kind,
+      title: input.title ?? current.title,
+      details: input.details === undefined ? current.details : cleanText(input.details),
+      assignedOn: input.assignedOn ?? current.assignedOn,
+      dueOn: input.dueOn ?? current.dueOn,
+    };
+    const changes: HistoryChanges = {};
+    if (next.classId !== current.classId) {
+      changes.class = [await className(tx, current.classId), await className(tx, next.classId)];
+    }
+    for (const field of ["kind", "title", "details", "assignedOn", "dueOn"] as const) {
+      if (next[field] !== current[field]) changes[field] = [current[field], next[field]];
+    }
+    if (Object.keys(changes).length === 0) return;
+
     await tx
       .update(homeworkItems)
-      .set({
-        ...(input.classId !== undefined && { classId: input.classId }),
-        ...(input.kind !== undefined && { kind: input.kind }),
-        ...(input.title !== undefined && { title: input.title }),
-        ...(input.details !== undefined && { details: cleanDetails(input.details) }),
-        ...(input.dueOn !== undefined && { dueOn: input.dueOn }),
-        ...(input.status !== undefined &&
-          input.status !== current.status && {
-            status: input.status,
-            completedAt: input.status === "done" ? now : null,
-          }),
-        updatedAt: now,
-      })
+      .set({ ...next, updatedAt: now })
       .where(eq(homeworkItems.id, itemId));
+    if (!firstDay) {
+      await record(tx, { itemId, actorId: userId, section: "homework", action: "edited", changes });
+    }
   });
   const item = await getItem(db, itemId);
   if (!item) throw new HomeworkEntryError("item_not_found", "Homework not found");
   return item;
 }
 
-export async function deleteItem(db: Database, childId: string, itemId: string): Promise<void> {
-  await assertEntryOn(db, childId);
-  const deleted = await db
-    .delete(homeworkItems)
-    .where(and(eq(homeworkItems.id, itemId), eq(homeworkItems.childId, childId)))
-    .returning({ id: homeworkItems.id });
-  if (deleted.length === 0) throw new HomeworkEntryError("item_not_found", "Homework not found");
+/** The solution's note. After the first day the change is recorded. */
+export async function saveSolution(
+  db: Database,
+  childId: string,
+  userId: string,
+  itemId: string,
+  input: SaveHomeworkSolutionInput,
+  now: Date = new Date(),
+): Promise<HomeworkItem> {
+  await db.transaction(async (tx) => {
+    await assertEntryOn(tx, childId);
+    const current = await ownItem(tx, childId, itemId);
+    const note = cleanText(input.note);
+    if (note === current.solutionNote) return;
+    await tx
+      .update(homeworkItems)
+      .set({ solutionNote: note, solutionSavedAt: now, updatedAt: now })
+      .where(eq(homeworkItems.id, itemId));
+    if (!inFirstDay(current.createdAt, now)) {
+      await record(tx, {
+        itemId,
+        actorId: userId,
+        section: "solution",
+        action: "edited",
+        changes: { note: [current.solutionNote, note] },
+      });
+    }
+  });
+  const item = await getItem(db, itemId);
+  if (!item) throw new HomeworkEntryError("item_not_found", "Homework not found");
+  return item;
+}
+
+/** Only on the first day; after it an item stays. */
+export async function deleteItem(
+  db: Database,
+  childId: string,
+  itemId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await assertEntryOn(tx, childId);
+    const current = await ownItem(tx, childId, itemId);
+    if (!inFirstDay(current.createdAt, now)) {
+      throw new HomeworkEntryError(
+        "delete_locked",
+        "Homework can only be deleted on the day it was added",
+      );
+    }
+    await tx.delete(homeworkItems).where(eq(homeworkItems.id, itemId));
+  });
+}
+
+/** Changes recorded after the first day, oldest first (the parent's view). */
+export async function listHistory(db: Database, itemId: string): Promise<HomeworkHistoryEntry[]> {
+  const rows = await db
+    .select({
+      id: homeworkItemEvents.id,
+      at: homeworkItemEvents.at,
+      actorName: users.name,
+      section: homeworkItemEvents.section,
+      action: homeworkItemEvents.action,
+      changes: homeworkItemEvents.changes,
+      photoId: homeworkPhotos.id,
+      photoKind: homeworkPhotos.kind,
+      photoContentType: homeworkPhotos.contentType,
+      photoByteSize: homeworkPhotos.byteSize,
+      photoRemovedAt: homeworkPhotos.removedAt,
+    })
+    .from(homeworkItemEvents)
+    .leftJoin(users, eq(users.id, homeworkItemEvents.actorId))
+    .leftJoin(homeworkPhotos, eq(homeworkPhotos.id, homeworkItemEvents.photoId))
+    .where(eq(homeworkItemEvents.itemId, itemId))
+    .orderBy(asc(homeworkItemEvents.at), asc(homeworkItemEvents.id));
+  return rows.map((r) => ({
+    id: r.id,
+    at: r.at.toISOString(),
+    actorName: r.actorName,
+    section: r.section === "solution" ? "solution" : "homework",
+    action: r.action as HomeworkHistoryEntry["action"],
+    changes: r.changes,
+    photo:
+      r.photoId && r.photoKind && r.photoContentType && r.photoByteSize !== null
+        ? {
+            id: r.photoId,
+            kind: r.photoKind === "solution" ? "solution" : "sheet",
+            contentType: r.photoContentType,
+            byteSize: r.photoByteSize,
+            removed: r.photoRemovedAt !== null,
+          }
+        : null,
+  }));
 }
 
 // --- Photos -----------------------------------------------------------------
@@ -461,11 +660,24 @@ export function sniffPhotoType(bytes: Uint8Array): HomeworkPhotoType | null {
   return null;
 }
 
+const PHOTO_LIMIT: Record<HomeworkPhotoKind, number> = {
+  sheet: HOMEWORK_LIMITS.photosPerItem,
+  solution: HOMEWORK_LIMITS.solutionPhotosPerItem,
+};
+
+const PHOTO_SECTION: Record<HomeworkPhotoKind, "homework" | "solution"> = {
+  sheet: "homework",
+  solution: "solution",
+};
+
 export async function addPhoto(
   db: Database,
   childId: string,
+  userId: string,
   itemId: string,
   bytes: Buffer,
+  kind: HomeworkPhotoKind = "sheet",
+  now: Date = new Date(),
 ): Promise<HomeworkPhotoRef> {
   if (bytes.length > HOMEWORK_LIMITS.photoBytesMax) {
     throw new HomeworkEntryError("photo_too_large", "The photo is larger than 2 MB");
@@ -476,23 +688,27 @@ export async function addPhoto(
   }
   return db.transaction(async (tx) => {
     await assertEntryOn(tx, childId);
-    // Lock the item so two uploads at once cannot both pass the count check.
-    const [item] = await tx
-      .select({ id: homeworkItems.id })
-      .from(homeworkItems)
-      .where(and(eq(homeworkItems.id, itemId), eq(homeworkItems.childId, childId)))
-      .for("update");
-    if (!item) throw new HomeworkEntryError("item_not_found", "Homework not found");
+    // The lock on the item keeps two uploads at once from both passing the count.
+    const item = await ownItem(tx, childId, itemId);
     const [count] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(homeworkPhotos)
-      .where(eq(homeworkPhotos.itemId, itemId));
-    if ((count?.n ?? 0) >= HOMEWORK_LIMITS.photosPerItem) {
-      throw new HomeworkEntryError("too_many_photos", "An item can have up to 4 photos");
+      .where(
+        and(
+          eq(homeworkPhotos.itemId, itemId),
+          eq(homeworkPhotos.kind, kind),
+          isNull(homeworkPhotos.removedAt),
+        ),
+      );
+    if ((count?.n ?? 0) >= PHOTO_LIMIT[kind]) {
+      throw new HomeworkEntryError(
+        "too_many_photos",
+        `${kind === "sheet" ? "The homework" : "A solution"} can have up to ${PHOTO_LIMIT[kind]} photos`,
+      );
     }
     const [row] = await tx
       .insert(homeworkPhotos)
-      .values({ itemId, contentType, byteSize: bytes.length, bytes })
+      .values({ itemId, kind, contentType, byteSize: bytes.length, bytes })
       .returning({
         id: homeworkPhotos.id,
         contentType: homeworkPhotos.contentType,
@@ -501,13 +717,25 @@ export async function addPhoto(
     if (!row) throw new Error("addPhoto: INSERT returned no id");
     await tx
       .update(homeworkItems)
-      .set({ updatedAt: new Date() })
+      .set({ updatedAt: now, ...(kind === "solution" && { solutionSavedAt: now }) })
       .where(eq(homeworkItems.id, itemId));
-    return row;
+    if (!inFirstDay(item.createdAt, now)) {
+      await record(tx, {
+        itemId,
+        actorId: userId,
+        section: PHOTO_SECTION[kind],
+        action: "photo_added",
+        photoId: row.id,
+      });
+    }
+    return { ...row, kind };
   });
 }
 
-/** A photo's bytes; with `childId`, only if its item belongs to that child. */
+/**
+ * A photo's bytes; with `childId`, only if its item belongs to that child and the
+ * photo was not removed. The parent can open removed photos from the history.
+ */
 export async function getPhoto(
   db: Database,
   itemId: string,
@@ -522,47 +750,53 @@ export async function getPhoto(
       and(
         eq(homeworkPhotos.id, photoId),
         eq(homeworkPhotos.itemId, itemId),
-        ...(scope.childId ? [eq(homeworkItems.childId, scope.childId)] : []),
+        ...(scope.childId
+          ? [eq(homeworkItems.childId, scope.childId), isNull(homeworkPhotos.removedAt)]
+          : []),
       ),
     );
   return row ?? null;
 }
 
+/** On the first day a photo is deleted; after it, hidden from the child and recorded. */
 export async function deletePhoto(
   db: Database,
   childId: string,
+  userId: string,
   itemId: string,
   photoId: string,
+  now: Date = new Date(),
 ): Promise<void> {
-  await assertEntryOn(db, childId);
-  const owned = await getItem(db, itemId, { childId });
-  if (!owned) throw new HomeworkEntryError("item_not_found", "Homework not found");
-  const deleted = await db
-    .delete(homeworkPhotos)
-    .where(and(eq(homeworkPhotos.id, photoId), eq(homeworkPhotos.itemId, itemId)))
-    .returning({ id: homeworkPhotos.id });
-  if (deleted.length === 0) throw new HomeworkEntryError("photo_not_found", "Photo not found");
-}
-
-// --- That's everything for today ---------------------------------------------
-
-export async function setDayComplete(
-  db: Database,
-  childId: string,
-  userId: string,
-  day: string,
-  complete: boolean,
-): Promise<HomeworkDay> {
-  await assertEntryOn(db, childId);
-  if (complete) {
-    await db
-      .insert(homeworkDays)
-      .values({ childId, day, completedBy: userId })
-      .onConflictDoNothing();
-  } else {
-    await db
-      .delete(homeworkDays)
-      .where(and(eq(homeworkDays.childId, childId), eq(homeworkDays.day, day)));
-  }
-  return getDay(db, childId, day);
+  await db.transaction(async (tx) => {
+    await assertEntryOn(tx, childId);
+    const item = await ownItem(tx, childId, itemId);
+    const [photo] = await tx
+      .select({ kind: homeworkPhotos.kind })
+      .from(homeworkPhotos)
+      .where(
+        and(
+          eq(homeworkPhotos.id, photoId),
+          eq(homeworkPhotos.itemId, itemId),
+          isNull(homeworkPhotos.removedAt),
+        ),
+      );
+    if (!photo) throw new HomeworkEntryError("photo_not_found", "Photo not found");
+    const kind: HomeworkPhotoKind = photo.kind === "solution" ? "solution" : "sheet";
+    if (inFirstDay(item.createdAt, now)) {
+      await tx.delete(homeworkPhotos).where(eq(homeworkPhotos.id, photoId));
+    } else {
+      await tx.update(homeworkPhotos).set({ removedAt: now }).where(eq(homeworkPhotos.id, photoId));
+      await record(tx, {
+        itemId,
+        actorId: userId,
+        section: PHOTO_SECTION[kind],
+        action: "photo_removed",
+        photoId,
+      });
+    }
+    await tx
+      .update(homeworkItems)
+      .set({ updatedAt: now, ...(kind === "solution" && { solutionSavedAt: now }) })
+      .where(eq(homeworkItems.id, itemId));
+  });
 }

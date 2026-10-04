@@ -1,6 +1,6 @@
 # 0006 — Child-entered homework: a per-child source switch, a parent-owned class list, photos in Postgres
 
-- **Status:** accepted
+- **Status:** accepted — amended by [0007](./0007-given-on-date-replaces-day-marks.md) (the child picks "given on"; no day mark) and [0008](./0008-solutions-on-the-item-and-a-change-history.md) (solution on the item, no done tick, change history)
 - **Date:** 2026-09-30
 - **Deciders:** project founder
 

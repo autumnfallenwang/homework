@@ -1,16 +1,25 @@
 "use client";
 
 import type { HomeworkClass, HomeworkItem } from "@homework/shared";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { getChildProfile, getMyHomeworkClasses, getMyHomeworkItem } from "@/lib/api";
+import { formatAddedAt } from "@/lib/homework-format";
 import { toLocalIso } from "@/lib/local-date";
 import { HomeworkEntryOff } from "./entry-off";
-import { describeHomeworkError, HomeworkForm } from "./homework-form";
+import { describeHomeworkError, firstDayOver, HomeworkForm } from "./homework-form";
+import { PhotoViewerProvider } from "./photo-viewer";
+import { SolutionForm } from "./solution-form";
 
-/** Loads what the Add / Edit page needs, then shows the form (or why it can't). */
+/**
+ * The child's item page (ADR 0008): the homework with its own Save, and once it
+ * exists, the solution below with its own Save. Loads what the page needs, or
+ * says why it can't.
+ */
 export function ChildHomeworkEditor({ itemId }: { itemId: string | null }) {
+  const [created, setCreated] = useState(false);
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "off" }
@@ -43,7 +52,7 @@ export function ChildHomeworkEditor({ itemId }: { itemId: string | null }) {
 
   return (
     <>
-      <PageHeader title={itemId ? "Edit homework" : "Add homework"} />
+      <PageHeader title={itemId || created ? "Edit homework" : "Add homework"} />
       {state.kind === "loading" ? (
         <Loader2 className="mx-auto mt-10 h-5 w-5 animate-spin text-muted-foreground" />
       ) : state.kind === "off" ? (
@@ -55,8 +64,85 @@ export function ChildHomeworkEditor({ itemId }: { itemId: string | null }) {
           {state.message}
         </p>
       ) : (
-        <HomeworkForm item={state.item} classes={state.classes} today={toLocalIso(new Date())} />
+        <ItemPage
+          initial={state.item}
+          classes={state.classes}
+          onCreated={(item) => {
+            setCreated(true);
+            // Stay on the page (keeping its notice) but give it the item's address.
+            window.history.replaceState(null, "", `/child/homework/${item.id}`);
+          }}
+        />
       )}
     </>
+  );
+}
+
+function ItemPage({
+  initial,
+  classes,
+  onCreated,
+}: {
+  initial: HomeworkItem | null;
+  classes: HomeworkClass[];
+  onCreated: (item: HomeworkItem) => void;
+}) {
+  const [item, setItem] = useState(initial);
+  const locked = firstDayOver(item);
+
+  return (
+    <PhotoViewerProvider>
+      <div className="mx-auto w-full max-w-4xl px-4 py-5 md:px-6">
+        <Link href="/child" className="text-[13px] text-muted-foreground hover:text-foreground">
+          ← Homework
+        </Link>
+        {item ? (
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            Added {formatAddedAt(item.createdAt)} ·{" "}
+            {locked
+              ? "Changes are now saved in a history your parent can see. Given on can't change and this homework can't be deleted."
+              : `You can change or delete it until ${formatAddedAt(item.firstDayEndsAt)}.`}
+          </p>
+        ) : null}
+
+        <section className="mt-4" aria-labelledby="hw-section-homework">
+          <h2 id="hw-section-homework" className="sr-only">
+            Homework
+          </h2>
+          <HomeworkForm
+            item={item}
+            classes={classes}
+            today={toLocalIso(new Date())}
+            onSaved={(saved, created) => {
+              setItem(saved);
+              if (created) onCreated(saved);
+            }}
+          />
+        </section>
+
+        <section className="mt-10" aria-labelledby="hw-section-solution">
+          <h2
+            id="hw-section-solution"
+            className="mb-1 flex items-center gap-2 text-xl font-medium"
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
+            Solution
+            {item?.hasSolution ? (
+              <span className="flex items-center gap-1 font-sans text-[12px] font-medium text-meeting">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Done
+              </span>
+            ) : null}
+          </h2>
+          {item ? (
+            <SolutionForm key={item.id} item={item} onSaved={setItem} />
+          ) : (
+            <p className="rounded-lg border border-dashed bg-card/60 px-4 py-5 text-[13px] text-muted-foreground">
+              Save the homework first, then add your solution here when it's done.
+            </p>
+          )}
+        </section>
+      </div>
+    </PhotoViewerProvider>
   );
 }

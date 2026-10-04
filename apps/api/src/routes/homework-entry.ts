@@ -1,18 +1,20 @@
-// Child-entered homework routes (ADR 0006).
+// Child-entered homework routes (ADR 0006, 0007, 0008).
 //
 // - `childHomeworkApp` (mounted at /api/child, child-only by path): the signed-in
-//   child's own list, items, photos, classes and day — the child id always comes
-//   from the session.
+//   child's own list, items, solutions, photos and classes — the child id always
+//   comes from the session.
 // - `childHomeworkAdminApp` (mounted at /api/children, parent-only): a child's list,
 //   read only, and the parent-owned class list.
-// - `homeworkItemsApp` (mounted at /api/homework-items, parent-only): one item and
-//   its photos, read only.
+// - `homeworkItemsApp` (mounted at /api/homework-items, parent-only): one item, its
+//   photos (removed ones too) and its history, read only.
 
 import {
   createHomeworkItemSchema,
   HOMEWORK_LIMITS,
   type HomeworkClassSuggestions,
   homeworkClassListSchema,
+  homeworkPhotoKindSchema,
+  saveHomeworkSolutionSchema,
   updateHomeworkItemSchema,
 } from "@homework/shared";
 import { type Context, Hono } from "hono";
@@ -33,9 +35,10 @@ import {
   HomeworkEntryError,
   type HomeworkEntryErrorCode,
   listClasses,
+  listHistory,
   listItems,
   replaceClasses,
-  setDayComplete,
+  saveSolution,
   updateItem,
 } from "../services/homework-entry.js";
 
@@ -48,6 +51,10 @@ const ERROR_STATUS: Record<HomeworkEntryErrorCode, ContentfulStatusCode> = {
   photo_type: 415,
   photo_too_large: 413,
   too_many_photos: 409,
+  given_after_today: 400,
+  due_before_given: 400,
+  given_on_locked: 409,
+  delete_locked: 409,
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -124,7 +131,23 @@ childHomeworkApp.patch("/homework/:itemId", async (c) => {
     return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
   }
   try {
-    return c.json(await updateItem(db, childId, itemId, parsed.data));
+    return c.json(await updateItem(db, childId, c.get("user").id, itemId, parsed.data, today()));
+  } catch (err) {
+    return refuse(c, err);
+  }
+});
+
+// The solution's note; its photos go up as `kind=solution` photos.
+childHomeworkApp.put("/homework/:itemId/solution", async (c) => {
+  const childId = sessionChild(c);
+  const itemId = c.req.param("itemId");
+  if (!childId || !UUID.test(itemId)) return notFound(c);
+  const parsed = saveHomeworkSolutionSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
+  }
+  try {
+    return c.json(await saveSolution(db, childId, c.get("user").id, itemId, parsed.data));
   } catch (err) {
     return refuse(c, err);
   }
@@ -142,14 +165,19 @@ childHomeworkApp.delete("/homework/:itemId", async (c) => {
   }
 });
 
-// The photo is the raw request body (the browser sends the shrunk JPEG as is).
+// The photo is the raw request body (the browser sends the shrunk JPEG as is);
+// `?kind=solution` for the child's finished work, the sheet otherwise.
 childHomeworkApp.post("/homework/:itemId/photos", photoBodyLimit, async (c) => {
   const childId = sessionChild(c);
   const itemId = c.req.param("itemId");
   if (!childId || !UUID.test(itemId)) return notFound(c);
+  const kind = homeworkPhotoKindSchema.safeParse(c.req.query("kind") ?? "sheet");
+  if (!kind.success) {
+    return c.json({ error: "Validation failed", details: kind.error.issues }, 400);
+  }
   const bytes = Buffer.from(await c.req.arrayBuffer());
   try {
-    return c.json(await addPhoto(db, childId, itemId, bytes), 201);
+    return c.json(await addPhoto(db, childId, c.get("user").id, itemId, bytes, kind.data), 201);
   } catch (err) {
     return refuse(c, err);
   }
@@ -168,7 +196,7 @@ childHomeworkApp.delete("/homework/:itemId/photos/:photoId", async (c) => {
   const { itemId, photoId } = c.req.param();
   if (!childId || !UUID.test(itemId) || !UUID.test(photoId)) return notFound(c);
   try {
-    await deletePhoto(db, childId, itemId, photoId);
+    await deletePhoto(db, childId, c.get("user").id, itemId, photoId);
     return c.body(null, 204);
   } catch (err) {
     return refuse(c, err);
@@ -179,27 +207,6 @@ childHomeworkApp.get("/homework-classes", async (c) => {
   const childId = sessionChild(c);
   if (!childId) return notFound(c);
   return c.json(await listClasses(db, childId));
-});
-
-// "That's everything for today" — PUT marks today, DELETE takes it back.
-childHomeworkApp.put("/homework-day", async (c) => {
-  const childId = sessionChild(c);
-  if (!childId) return notFound(c);
-  try {
-    return c.json(await setDayComplete(db, childId, c.get("user").id, today(), true));
-  } catch (err) {
-    return refuse(c, err);
-  }
-});
-
-childHomeworkApp.delete("/homework-day", async (c) => {
-  const childId = sessionChild(c);
-  if (!childId) return notFound(c);
-  try {
-    return c.json(await setDayComplete(db, childId, c.get("user").id, today(), false));
-  } catch (err) {
-    return refuse(c, err);
-  }
 });
 
 // --- The parent's view of a child (/api/children/:id/*) -----------------------
@@ -252,6 +259,12 @@ homeworkItemsApp.get("/:itemId", async (c) => {
   if (!UUID.test(itemId)) return notFound(c);
   const item = await getItem(db, itemId);
   return item ? c.json(item) : notFound(c);
+});
+
+homeworkItemsApp.get("/:itemId/history", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId) || !(await getItem(db, itemId))) return notFound(c);
+  return c.json(await listHistory(db, itemId));
 });
 
 homeworkItemsApp.get("/:itemId/photos/:photoId", async (c) => {

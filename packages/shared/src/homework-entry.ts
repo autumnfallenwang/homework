@@ -1,7 +1,8 @@
-// Child-entered homework (ADR 0006): each child profile takes its homework from
-// the class homework page (`page`) or from the child's own entries (`child`).
-// Entries are homework items in a parent-owned class list (or Other), with up
-// to four photos each. Shapes shared by the API and the web.
+// Child-entered homework (ADR 0006, 0007, 0008): each child profile takes its
+// homework from the class homework page (`page`) or from the child's own entries
+// (`child`). Entries are homework items in a parent-owned class list (or Other),
+// with photos of the sheet and, once done, the child's solution. Shapes shared by
+// the API and the web.
 
 import { z } from "zod";
 
@@ -11,8 +12,9 @@ export type HomeworkSource = z.infer<typeof homeworkSourceSchema>;
 export const homeworkKindSchema = z.enum(["homework", "test", "project", "other"]);
 export type HomeworkKind = z.infer<typeof homeworkKindSchema>;
 
-export const homeworkStatusSchema = z.enum(["todo", "done"]);
-export type HomeworkStatus = z.infer<typeof homeworkStatusSchema>;
+/** A photo of the homework sheet, or of the child's finished work. */
+export const homeworkPhotoKindSchema = z.enum(["sheet", "solution"]);
+export type HomeworkPhotoKind = z.infer<typeof homeworkPhotoKindSchema>;
 
 export const HOMEWORK_KIND_LABELS: Record<HomeworkKind, string> = {
   homework: "Homework",
@@ -29,7 +31,12 @@ export const HOMEWORK_LIMITS = {
   classesMax: 30,
   titleMax: 120,
   detailsMax: 2000,
+  /** Photos of the sheet per item. */
   photosPerItem: 4,
+  solutionPhotosPerItem: 8,
+  solutionNoteMax: 2000,
+  /** The first day of an item ends at this hour the next morning (server TZ). */
+  firstDayEndsAtHour: 7,
   /** After the browser shrinks a photo; the API refuses anything larger. */
   photoBytesMax: 2 * 1024 * 1024,
   /** Done items stay on the list this long after their due day. */
@@ -141,12 +148,35 @@ export interface HomeworkClassSuggestions {
 const title = z.string().trim().min(1).max(HOMEWORK_LIMITS.titleMax);
 const details = z.string().trim().max(HOMEWORK_LIMITS.detailsMax).nullable();
 
+/**
+ * The date rules of an item, checked by the form on Save and by the API on
+ * every write (a CHECK constraint backs the second): it was given on or before
+ * the day it is due, and never after today.
+ */
+export type HomeworkDateProblem = "given_after_today" | "due_before_given";
+
+export const HOMEWORK_DATE_PROBLEMS: Record<HomeworkDateProblem, string> = {
+  given_after_today: "Given on can't be after today",
+  due_before_given: "Due can't be before the day it was given",
+};
+
+export function homeworkDateProblem(
+  dates: { assignedOn: string; dueOn: string },
+  today: string,
+): HomeworkDateProblem | null {
+  if (dates.assignedOn > today) return "given_after_today";
+  if (dates.dueOn < dates.assignedOn) return "due_before_given";
+  return null;
+}
+
 export const createHomeworkItemSchema = z.object({
   /** A class from the child's list, or null for Other. */
   classId: z.string().uuid().nullable(),
   kind: homeworkKindSchema,
   title,
   details: details.optional(),
+  /** The day it was given — today unless the child changes it. */
+  assignedOn: isoDaySchema,
   dueOn: isoDaySchema,
 });
 export type CreateHomeworkItemInput = z.infer<typeof createHomeworkItemSchema>;
@@ -157,18 +187,33 @@ export const updateHomeworkItemSchema = z
     kind: homeworkKindSchema.optional(),
     title: title.optional(),
     details: details.optional(),
+    assignedOn: isoDaySchema.optional(),
     dueOn: isoDaySchema.optional(),
-    status: homeworkStatusSchema.optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "At least one field must be provided",
   });
 export type UpdateHomeworkItemInput = z.infer<typeof updateHomeworkItemSchema>;
 
+/** PUT /api/child/homework/:id/solution — the solution's note (photos go up one by one). */
+export const saveHomeworkSolutionSchema = z.object({
+  note: z.string().trim().max(HOMEWORK_LIMITS.solutionNoteMax).nullable(),
+});
+export type SaveHomeworkSolutionInput = z.infer<typeof saveHomeworkSolutionSchema>;
+
 export interface HomeworkPhotoRef {
   id: string;
+  kind: HomeworkPhotoKind;
   contentType: string;
   byteSize: number;
+}
+
+/** The child's finished work. Any note or photo makes the item done. */
+export interface HomeworkSolution {
+  note: string | null;
+  photos: HomeworkPhotoRef[];
+  /** Last time the solution changed. */
+  savedAt: string | null;
 }
 
 export interface HomeworkItem {
@@ -180,28 +225,46 @@ export interface HomeworkItem {
   kind: HomeworkKind;
   title: string;
   details: string | null;
-  /** The local day it was entered. */
+  /** The day it was given (on or before `dueOn`). */
   assignedOn: string;
   dueOn: string;
-  status: HomeworkStatus;
-  completedAt: string | null;
   createdAt: string;
   updatedAt: string;
   /** Name of the login that entered it, if it still exists. */
   createdByName: string | null;
+  /** Photos of the sheet. */
   photos: HomeworkPhotoRef[];
+  solution: HomeworkSolution;
+  /** Done = there is a solution (a note or a photo). */
+  hasSolution: boolean;
+  /**
+   * Until then (the next 7 AM after it was added, server TZ) the child may change
+   * or delete anything and nothing is recorded; after it, Given on is locked, the
+   * item can't be deleted and every change goes into its history (ADR 0008).
+   */
+  firstDayEndsAt: string;
+  /** A change was recorded after the first day. */
+  edited: boolean;
 }
 
-/** "That's everything for today", for one child and one day. */
-export interface HomeworkDay {
-  date: string;
-  completedAt: string | null;
+/** One recorded change, after an item's first day (ADR 0008). */
+export interface HomeworkHistoryEntry {
+  id: string;
+  at: string;
+  actorName: string | null;
+  section: "homework" | "solution";
+  action: "edited" | "photo_added" | "photo_removed";
+  /** Field → [old, new], for `edited`. Class is by name. */
+  changes: Record<string, [string | null, string | null]>;
+  /** The photo, for photo events (the parent can open removed ones). */
+  photo: (HomeworkPhotoRef & { removed: boolean }) | null;
 }
 
-/** GET of a child's list: every to-do item, done items due in the last 30 days. */
+/** GET of a child's list: every item without a solution, done items due in the last 30 days. */
 export interface HomeworkItemList {
   items: HomeworkItem[];
-  today: HomeworkDay;
+  /** The server's local day, which the list is grouped against. */
+  today: string;
 }
 
 // --- Grouping (the list page, both sides) ------------------------------------
@@ -230,14 +293,14 @@ function byDueThenTestsFirst(a: HomeworkItem, b: HomeworkItem): number {
 }
 
 /**
- * Open items by when they are due (empty groups left out), earliest first and
- * tests first within a day; done items newest due first. "This week" runs to
- * Sunday.
+ * Open items (no solution yet) by when they are due (empty groups left out),
+ * earliest first and tests first within a day; done items (with a solution)
+ * newest due first. "This week" runs to Sunday.
  */
 export function groupHomeworkItems(items: readonly HomeworkItem[], today: string): HomeworkGroups {
   const tomorrow = addDaysIso(today, 1);
   const endOfWeek = addDaysIso(today, (7 - weekdayOfIso(today)) % 7);
-  const open = items.filter((i) => i.status !== "done").sort(byDueThenTestsFirst);
+  const open = items.filter((i) => !i.hasSolution).sort(byDueThenTestsFirst);
   const keyOf = (dueOn: string): HomeworkGroupKey => {
     if (dueOn < today) return "overdue";
     if (dueOn === today) return "today";
@@ -250,7 +313,7 @@ export function groupHomeworkItems(items: readonly HomeworkItem[], today: string
     .map((key) => ({ key, items: open.filter((i) => keyOf(i.dueOn) === key) }))
     .filter((g) => g.items.length > 0);
   const done = items
-    .filter((i) => i.status === "done")
+    .filter((i) => i.hasSolution)
     .sort((a, b) => (a.dueOn === b.dueOn ? 0 : a.dueOn < b.dueOn ? 1 : -1));
   return { open: groups, done };
 }

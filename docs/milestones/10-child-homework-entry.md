@@ -77,6 +77,9 @@ complete"; the Review tab lists everything she entered, read only, with the phot
 - **UI** (review rounds 1–3): class and type as the same single-choice chips; the due date is a
   plain date input starting at the next school day; no "given on" field; Add and Edit are one page.
 - **No backups for now** (founder, 2026-09-30) — recorded as a risk in ADR 0006.
+- **Review round 4** (founder, 2026-10-03, [ADR 0007](../adr/0007-given-on-date-replaces-day-marks.md)):
+  the child picks a required "Given on" day (today by default), given ≤ due and ≤ today; no
+  "that's everything for today"; required fields marked `*`; Save never greyed out.
 - The list returns every to-do item and done items due in the last 30 days.
 
 ## Progress
@@ -88,6 +91,17 @@ complete"; the Review tab lists everything she entered, read only, with the phot
   day, 30-day list window, parent read-only, suggestions, digest + fetch), access matrix extended,
   shared grouping/date/schema tests, photo sniff and display helpers. Verified end to end on the
   compose images (see exit criteria). Found on the way: Postgres `text` rejects a NUL temp name.
+- 2026-10-03: review round 4 (ADR 0007): "Given on" field (required, default today, editable);
+  given ≤ due on the form at Save, in the API (400 `due_before_given`) and as a DB CHECK; given ≤
+  today on the form and in the API (400 `given_after_today`); day mark removed (migration 0004
+  drops `homework_days` and pulls `assigned_on` back to `due_on` on rows entered after their due
+  day; day routes, list strip, parent lines and digest line gone); required fields marked `*`, Save
+  marks every problem under its field. Verified: lint, typecheck, fast tests, all API tests with
+  live Postgres (136 passed, 1 skipped = live SMTP); prod images under compose in Playwright (empty
+  Save, both date rules on Add and Edit, Save and add another keeps the dates, the API refusals with
+  a child session, CHECK refuses raw SQL, parent Today/hero/Review/item page by given-on, digest
+  via local Mailpit, 0 error log lines). Not run: 0004's fix-up UPDATE on a prod copy (prod dump
+  not permitted from the agent).
 
 ## References
 

@@ -4,16 +4,16 @@ import {
   HOMEWORK_KIND_LABELS,
   HOMEWORK_LIMITS,
   type HomeworkClass,
+  type HomeworkDateProblem,
   type HomeworkItem,
   type HomeworkKind,
-  type HomeworkPhotoRef,
+  homeworkDateProblem,
   nextSchoolDay,
   OTHER_CLASS_LABEL,
 } from "@homework/shared";
-import { ImageIcon, Loader2, X } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,56 +21,76 @@ import {
   ApiClientError,
   createMyHomework,
   deleteMyHomework,
-  deleteMyHomeworkPhoto,
-  myHomeworkPhotoUrl,
+  getMyHomeworkItem,
   updateMyHomework,
-  uploadMyHomeworkPhoto,
 } from "@/lib/api";
-import { formatAddedAt } from "@/lib/homework-format";
-import { PhotoReadError, shrinkPhoto } from "@/lib/photo-shrink";
-import { type ChipOption, ChoiceChips } from "./choice-chips";
+import { type ChipOption, ChoiceChips, FieldError, RequiredMark } from "./choice-chips";
+import { PhotoPanel, usePhotoDraft } from "./photo-panel";
 
 const OTHER = "__other";
+
+/** The fields Save can stop on, in page order (Save jumps to the first one). */
+type Field = "class" | "title" | "assignedOn" | "dueOn";
+const FIELD_ORDER: Field[] = ["class", "title", "assignedOn", "dueOn"];
+const FIELD_IDS: Record<Field, string> = {
+  class: "hw-class",
+  title: "hw-title",
+  assignedOn: "hw-given",
+  dueOn: "hw-due",
+};
+
+/** Where a broken date rule shows, and what it says under that field. */
+const DATE_RULES: Record<HomeworkDateProblem, { field: Field; message: string }> = {
+  given_after_today: { field: "assignedOn", message: "Can't be after today" },
+  due_before_given: { field: "dueOn", message: "Can't be before the day it was given" },
+};
+
+function isDateProblem(code: unknown): code is HomeworkDateProblem {
+  return code === "given_after_today" || code === "due_before_given";
+}
 
 const KIND_OPTIONS: ChipOption<HomeworkKind>[] = (
   Object.keys(HOMEWORK_KIND_LABELS) as HomeworkKind[]
 ).map((k) => ({ value: k, label: HOMEWORK_KIND_LABELS[k] }));
-
-interface PendingPhoto {
-  key: string;
-  blob: Blob;
-  url: string;
-}
 
 export function describeHomeworkError(err: unknown): string {
   if (err instanceof ApiClientError) {
     const code = (err.body as { code?: string }).code;
     if (code === "entry_off") return "Homework entry is off. Ask a parent to turn it on.";
     if (err.status === 400 && err.body.error === "Validation failed") {
-      return "Check the class, what to do and the due date.";
+      return "Check the class, what to do and the dates.";
     }
     return err.body.error;
   }
   return err instanceof Error ? err.message : "Something went wrong.";
 }
 
+/** Has the item's first day (until the next 7 AM after it was added) ended? ADR 0008. */
+export function firstDayOver(item: HomeworkItem | null): boolean {
+  return item !== null && Date.now() >= Date.parse(item.firstDayEndsAt);
+}
+
 /**
- * The child's Add homework page, and the same page filled in for editing
- * (ADR 0006). Class and type are single-choice chips; the due date is a plain
- * date input starting at the next school day; photos are shrunk in the browser
- * and uploaded after the item is saved.
+ * The homework section of the child's item page — the whole Add page for a new
+ * item (ADR 0006, 0007, 0008). Class and type are single-choice chips; "Given on"
+ * starts at today and the due date at the next school day; photos of the sheet
+ * are shrunk in the browser and uploaded after the item is saved. Save is never
+ * greyed out: it marks every missing field and broken date rule in red and jumps
+ * to the first. After the first day Given on is locked and Delete is gone.
  */
 export function HomeworkForm({
   item,
   classes,
   today,
+  onSaved,
 }: {
   item: HomeworkItem | null;
   classes: HomeworkClass[];
   today: string;
+  /** After a save; `created` when it was a new item (Save, not Save and add another). */
+  onSaved: (item: HomeworkItem, created: boolean) => void;
 }) {
   const router = useRouter();
-  const fileInput = useRef<HTMLInputElement>(null);
   const firstChoice = classes.length === 0 ? OTHER : null;
 
   const [itemId, setItemId] = useState<string | null>(item?.id ?? null);
@@ -80,26 +100,34 @@ export function HomeworkForm({
   const [kind, setKind] = useState<HomeworkKind>(item?.kind ?? "homework");
   const [title, setTitle] = useState(item?.title ?? "");
   const [details, setDetails] = useState(item?.details ?? "");
+  const [assignedOn, setAssignedOn] = useState(item?.assignedOn ?? today);
   const [dueOn, setDueOn] = useState(item?.dueOn ?? nextSchoolDay(today));
-  const [saved, setSaved] = useState<HomeworkPhotoRef[]>(item?.photos ?? []);
-  const [removed, setRemoved] = useState<string[]>([]);
-  const [pending, setPending] = useState<PendingPhoto[]>([]);
-  const [preparing, setPreparing] = useState(0);
+  const photos = usePhotoDraft(item?.photos ?? [], HOMEWORK_LIMITS.photosPerItem);
+  const [attempted, setAttempted] = useState(false);
+  const [serverDateProblem, setServerDateProblem] = useState<HomeworkDateProblem | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [dragging, setDragging] = useState(false);
 
-  // Free the preview URLs of photos never uploaded.
-  const pendingRef = useRef(pending);
-  pendingRef.current = pending;
-  useEffect(
-    () => () => {
-      for (const p of pendingRef.current) URL.revokeObjectURL(p.url);
-    },
-    [],
-  );
+  // What was last saved, to tell the child about unsaved changes.
+  const fieldsNow = {
+    classChoice,
+    kind,
+    title: title.trim(),
+    details: details.trim(),
+    assignedOn,
+    dueOn,
+  };
+  const [baseline, setBaseline] = useState(item ? fieldsNow : null);
+  const dirty =
+    baseline !== null &&
+    (photos.dirty ||
+      (Object.keys(fieldsNow) as (keyof typeof fieldsNow)[]).some(
+        (k) => fieldsNow[k] !== baseline[k],
+      ));
+
+  const locked = firstDayOver(item);
 
   const classOptions: ChipOption<string>[] = classes.map((c) => ({ value: c.id, label: c.name }));
   // An item may still sit in a class the parent has since removed.
@@ -108,83 +136,87 @@ export function HomeworkForm({
   }
   classOptions.push({ value: OTHER, label: OTHER_CLASS_LABEL, fixed: true });
 
-  const keptPhotos = saved.filter((p) => !removed.includes(p.id));
-  const photoCount = keptPhotos.length + pending.length + preparing;
-  const roomForPhotos = HOMEWORK_LIMITS.photosPerItem - photoCount;
-
-  async function addFiles(files: FileList | File[]) {
-    setError(null);
-    const chosen = Array.from(files).slice(0, Math.max(0, roomForPhotos));
-    for (const file of chosen) {
-      setPreparing((n) => n + 1);
-      try {
-        const blob = await shrinkPhoto(file);
-        const key = `${file.name}-${Date.now()}-${Math.random()}`;
-        setPending((list) => [...list, { key, blob, url: URL.createObjectURL(blob) }]);
-      } catch (err) {
-        setError(err instanceof PhotoReadError ? err.message : "That photo couldn't be added.");
-      } finally {
-        setPreparing((n) => n - 1);
-      }
-    }
+  /** What stops Save right now: missing fields first, then the date rules. */
+  function findProblems(): Partial<Record<Field, string>> {
+    const found: Partial<Record<Field, string>> = {};
+    if (!classChoice) found.class = "Pick a class";
+    if (!title.trim()) found.title = "Write what to do";
+    if (!assignedOn) found.assignedOn = "Pick the day it was given";
+    if (!dueOn) found.dueOn = kind === "test" ? "Pick the test day" : "Pick the due date";
+    const rule = assignedOn && dueOn ? homeworkDateProblem({ assignedOn, dueOn }, today) : null;
+    // A locked Given on is the saved one; only the due date can break the rule.
+    const broken = locked && rule === "given_after_today" ? null : (rule ?? serverDateProblem);
+    if (broken) found[DATE_RULES[broken].field] ??= DATE_RULES[broken].message;
+    return found;
   }
 
+  // Shown once Save was tried, and kept live so each one clears as it is fixed.
+  const problems = attempted ? findProblems() : {};
+  const problemCount = Object.keys(problems).length;
+
+  function jumpTo(field: Field) {
+    const el = document.getElementById(FIELD_IDS[field]);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const target = el instanceof HTMLInputElement ? el : el.querySelector("input");
+    target?.focus({ preventScroll: true });
+  }
+
+  /** Ready for the next item; the dates stay (often several from the same day). */
   function resetForNext() {
+    setAttempted(false);
     setItemId(null);
     setClassChoice(firstChoice);
     setKind("homework");
     setTitle("");
     setDetails("");
-    setSaved([]);
-    setRemoved([]);
-    setPending([]);
+    photos.reset([]);
   }
 
   async function save(another: boolean) {
     setError(null);
     setNotice(null);
-    if (!classChoice) return setError("Pick a class.");
-    if (!title.trim()) return setError("Write what to do.");
-    if (!dueOn) return setError("Pick the due date.");
+    setAttempted(true);
+    const found = findProblems();
+    const first = FIELD_ORDER.find((f) => found[f]);
+    if (first) return jumpTo(first);
     setSaving(true);
-    const toRemove = [...removed];
-    const toUpload = [...pending];
     try {
       const input = {
         classId: classChoice === OTHER ? null : classChoice,
         kind,
         title: title.trim(),
         details: details.trim() || null,
+        assignedOn,
         dueOn,
       };
+      const created = itemId === null;
       const current = itemId
         ? await updateMyHomework(itemId, input)
         : await createMyHomework(input);
       setItemId(current.id);
-      while (toRemove.length > 0) {
-        const id = toRemove[0] as string;
-        await deleteMyHomeworkPhoto(current.id, id);
-        toRemove.shift();
-        setSaved((list) => list.filter((p) => p.id !== id));
-      }
-      while (toUpload.length > 0) {
-        const photo = toUpload[0] as PendingPhoto;
-        const ref = await uploadMyHomeworkPhoto(current.id, photo.blob);
-        toUpload.shift();
-        URL.revokeObjectURL(photo.url);
-        setSaved((list) => [...list, ref]);
-        setPending((list) => list.filter((p) => p.key !== photo.key));
-      }
+      await photos.commit(current.id, "sheet");
       if (another) {
         resetForNext();
         setNotice(`Added “${input.title}”. Next one?`);
-      } else {
-        router.push("/child");
+        return;
       }
+      const fresh = await getMyHomeworkItem(current.id);
+      photos.reset(fresh.photos);
+      setBaseline({ ...fieldsNow });
+      setAttempted(false);
+      setNotice(created ? "Saved. Add your solution below when it's done." : "Saved.");
+      onSaved(fresh, created);
     } catch (err) {
-      setError(describeHomeworkError(err));
+      const code = err instanceof ApiClientError ? (err.body as { code?: string }).code : null;
+      if (isDateProblem(code)) {
+        // The server's today ran ahead of or behind this browser's.
+        setServerDateProblem(code);
+        jumpTo(DATE_RULES[code].field);
+      } else {
+        setError(describeHomeworkError(err));
+      }
     } finally {
-      setRemoved(toRemove);
       setSaving(false);
     }
   }
@@ -198,257 +230,196 @@ export function HomeworkForm({
       router.push("/child");
     } catch (err) {
       setError(describeHomeworkError(err));
+      setConfirmingDelete(false);
       setSaving(false);
     }
   }
 
-  const busy = saving || preparing > 0;
+  const busy = saving || photos.preparing > 0;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-5 md:px-6">
-      <Link href="/child" className="text-[13px] text-muted-foreground hover:text-foreground">
-        ← Homework
-      </Link>
-      {item ? (
-        <p className="mt-1 text-[12px] text-muted-foreground">
-          Added {formatAddedAt(item.createdAt)}
-        </p>
-      ) : null}
-
-      <form
-        className="mt-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save(false);
-        }}
-        noValidate
-      >
-        <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_300px] md:items-start">
-          <div className="space-y-5">
-            <ChoiceChips
-              legend="Class"
-              options={classOptions}
-              value={classChoice}
-              onChange={setClassChoice}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save(false);
+      }}
+      noValidate
+      aria-label="Homework"
+    >
+      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_300px] md:items-start">
+        <div className="space-y-5">
+          <ChoiceChips
+            id={FIELD_IDS.class}
+            legend="Class"
+            options={classOptions}
+            value={classChoice}
+            onChange={setClassChoice}
+            required
+            error={problems.class}
+          />
+          <ChoiceChips
+            legend="Type"
+            options={KIND_OPTIONS}
+            value={kind}
+            onChange={setKind}
+            required
+          />
+          <div className="space-y-2">
+            <Label htmlFor={FIELD_IDS.title} className="gap-0 text-[12px] font-semibold">
+              What to do
+              <RequiredMark />
+            </Label>
+            <Input
+              id={FIELD_IDS.title}
+              value={title}
+              maxLength={HOMEWORK_LIMITS.titleMax}
+              placeholder="e.g. Homework #6, or read ch. 6 + worksheet"
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              aria-invalid={problems.title ? true : undefined}
+              aria-describedby={problems.title ? "hw-title-error" : undefined}
             />
-            <ChoiceChips legend="Type" options={KIND_OPTIONS} value={kind} onChange={setKind} />
-            <div className="space-y-2">
-              <Label htmlFor="hw-title" className="text-[12px] font-semibold">
-                What to do
+            <FieldError id="hw-title-error" message={problems.title} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hw-details" className="text-[12px] font-semibold">
+              Details <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <textarea
+              id="hw-details"
+              value={details}
+              maxLength={HOMEWORK_LIMITS.detailsMax}
+              rows={4}
+              placeholder="Page numbers, questions, what to bring"
+              onChange={(e) => setDetails(e.target.value)}
+              className="w-full min-w-0 resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+            />
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-5">
+            <div className="w-[200px] space-y-2">
+              <Label htmlFor={FIELD_IDS.assignedOn} className="gap-0 text-[12px] font-semibold">
+                Given on
+                <RequiredMark />
               </Label>
               <Input
-                id="hw-title"
-                value={title}
-                maxLength={HOMEWORK_LIMITS.titleMax}
-                placeholder="e.g. Homework #6, or read ch. 6 + worksheet"
-                onChange={(e) => setTitle(e.target.value)}
+                id={FIELD_IDS.assignedOn}
+                type="date"
+                value={assignedOn}
+                max={today}
+                disabled={locked}
+                onChange={(e) => {
+                  setAssignedOn(e.target.value);
+                  setServerDateProblem(null);
+                }}
+                required
+                aria-invalid={problems.assignedOn ? true : undefined}
+                aria-describedby={
+                  problems.assignedOn ? "hw-given-error" : locked ? "hw-given-locked" : undefined
+                }
               />
+              <FieldError id="hw-given-error" message={problems.assignedOn} />
+              {locked ? (
+                <p id="hw-given-locked" className="text-[12px] text-muted-foreground">
+                  Can't change after the first day
+                </p>
+              ) : null}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="hw-details" className="text-[12px] font-semibold">
-                Details <span className="font-normal text-muted-foreground">(optional)</span>
-              </Label>
-              <textarea
-                id="hw-details"
-                value={details}
-                maxLength={HOMEWORK_LIMITS.detailsMax}
-                rows={4}
-                placeholder="Page numbers, questions, what to bring"
-                onChange={(e) => setDetails(e.target.value)}
-                className="w-full min-w-0 resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hw-due" className="text-[12px] font-semibold">
+            <div className="w-[200px] space-y-2">
+              <Label htmlFor={FIELD_IDS.dueOn} className="gap-0 text-[12px] font-semibold">
                 {kind === "test" ? "Test day" : "Due"}
+                <RequiredMark />
               </Label>
               <Input
-                id="hw-due"
+                id={FIELD_IDS.dueOn}
                 type="date"
                 value={dueOn}
-                onChange={(e) => setDueOn(e.target.value)}
-                className="w-[200px]"
+                min={assignedOn || undefined}
+                onChange={(e) => {
+                  setDueOn(e.target.value);
+                  setServerDateProblem(null);
+                }}
+                required
+                aria-invalid={problems.dueOn ? true : undefined}
+                aria-describedby={problems.dueOn ? "hw-due-error" : undefined}
               />
+              <FieldError id="hw-due-error" message={problems.dueOn} />
             </div>
-          </div>
-
-          <div className="space-y-3 rounded-lg bg-card p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <div className="flex items-baseline justify-between">
-              <p className="text-[13px] font-semibold">
-                Photos <span className="font-normal text-muted-foreground">(optional)</span>
-              </p>
-              <span className="text-[12px] tabular-nums text-muted-foreground">
-                {photoCount} of {HOMEWORK_LIMITS.photosPerItem}
-              </span>
-            </div>
-            {roomForPhotos > 0 ? (
-              <section
-                aria-label="Add photos"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragging(false);
-                  void addFiles(e.dataTransfer.files);
-                }}
-                className={`flex flex-col items-center gap-2 rounded-lg border-[1.5px] border-dashed text-center text-[13px] text-muted-foreground transition-colors ${
-                  dragging ? "border-primary bg-primary/10" : ""
-                } ${photoCount > 0 ? "p-3" : "px-3 py-6"}`}
-              >
-                {photoCount === 0 ? (
-                  <>
-                    <ImageIcon className="h-6 w-6 text-primary" />
-                    <p>Drop photos here, or</p>
-                  </>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInput.current?.click()}
-                  disabled={busy}
-                >
-                  {photoCount > 0 ? "Add more photos" : "Choose photos"}
-                </Button>
-                {photoCount === 0 ? (
-                  <p className="text-[12px]">The worksheet, the board, your planner</p>
-                ) : null}
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  onChange={(e) => {
-                    if (e.target.files) void addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </section>
-            ) : null}
-            {photoCount > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {keptPhotos.map((p, i) => (
-                  <PhotoThumb
-                    key={p.id}
-                    src={itemId ? myHomeworkPhotoUrl(itemId, p.id) : ""}
-                    index={i + 1}
-                    onRemove={() => setRemoved((list) => [...list, p.id])}
-                    disabled={busy}
-                  />
-                ))}
-                {pending.map((p, i) => (
-                  <PhotoThumb
-                    key={p.key}
-                    src={p.url}
-                    index={keptPhotos.length + i + 1}
-                    onRemove={() => {
-                      URL.revokeObjectURL(p.url);
-                      setPending((list) => list.filter((x) => x.key !== p.key));
-                    }}
-                    disabled={busy}
-                  />
-                ))}
-                {Array.from({ length: preparing }, (_, i) => (
-                  <div
-                    // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity
-                    key={i}
-                    className="flex aspect-[4/3] items-center justify-center rounded-md bg-muted"
-                  >
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4">
-          {confirmingDelete ? (
-            <>
-              <span className="text-[13px]">Delete this homework?</span>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => void remove()}
-                disabled={busy}
-              >
-                Delete
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setConfirmingDelete(false)}>
-                Keep
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button type="submit" size="lg" disabled={busy}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Save
-              </Button>
-              {item ? null : (
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => void save(true)}
-                  disabled={busy}
-                >
-                  Save and add another
-                </Button>
-              )}
-              <Button type="button" size="lg" variant="ghost" asChild>
-                <Link href="/child">Cancel</Link>
-              </Button>
-            </>
-          )}
-          <span className="flex-1 text-[13px]" role="status">
-            {error ? <span className="text-destructive">{error}</span> : null}
-            {notice && !error ? <span className="text-meeting">{notice}</span> : null}
-          </span>
-          {item && !confirmingDelete ? (
+        <PhotoPanel
+          title="Photos"
+          hint="The worksheet, the board, your planner"
+          section="sheet"
+          draft={photos}
+          itemId={itemId}
+          disabled={busy}
+        />
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4">
+        {confirmingDelete ? (
+          <>
+            <span className="text-[13px]">Delete this homework?</span>
             <Button
               type="button"
-              size="lg"
-              variant="outline"
-              onClick={() => setConfirmingDelete(true)}
+              variant="destructive"
+              onClick={() => void remove()}
               disabled={busy}
             >
               Delete
             </Button>
+            <Button type="button" variant="ghost" onClick={() => setConfirmingDelete(false)}>
+              Keep
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="submit" size="lg" disabled={busy}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Save homework
+            </Button>
+            {itemId ? null : (
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={() => void save(true)}
+                disabled={busy}
+              >
+                Save and add another
+              </Button>
+            )}
+          </>
+        )}
+        <span className="flex-1 text-[13px]" role="status">
+          {error ? <span className="text-destructive">{error}</span> : null}
+          {problemCount > 0 && !error ? (
+            <span className="text-destructive">
+              {problemCount === 1
+                ? "Check the field marked in red."
+                : `Check the ${problemCount} fields marked in red.`}
+            </span>
           ) : null}
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function PhotoThumb({
-  src,
-  index,
-  onRemove,
-  disabled,
-}: {
-  src: string;
-  index: number;
-  onRemove: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
-      {/* biome-ignore lint/performance/noImgElement: photos come from the API with the session cookie */}
-      <img src={src} alt={`Attachment ${index}`} className="h-full w-full object-cover" />
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={disabled}
-        aria-label={`Remove photo ${index}`}
-        className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
-    </div>
+          {!error && problemCount === 0 && dirty && !saving ? (
+            <span className="text-amber-700 dark:text-amber-400">Unsaved changes</span>
+          ) : null}
+          {notice && !error && problemCount === 0 && !dirty ? (
+            <span className="text-meeting">{notice}</span>
+          ) : null}
+        </span>
+        {itemId && !locked && !confirmingDelete ? (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={() => setConfirmingDelete(true)}
+            disabled={busy}
+          >
+            Delete
+          </Button>
+        ) : null}
+      </div>
+    </form>
   );
 }

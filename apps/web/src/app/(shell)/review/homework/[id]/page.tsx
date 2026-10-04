@@ -1,24 +1,27 @@
 "use client";
 
-import type { HomeworkItem } from "@homework/shared";
+import type { HomeworkHistoryEntry, HomeworkItem } from "@homework/shared";
 import { Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HomeworkDetail } from "@/components/homework/homework-detail";
 import { PageHeader } from "@/components/shell/page-header";
-import { ApiClientError, getHomeworkItem } from "@/lib/api";
+import { ApiClientError, getHomeworkItem, getHomeworkItemHistory } from "@/lib/api";
 
-/** One item a child entered, read only (ADR 0006). */
+/** One item a child entered, with its solution and history, read only (ADR 0006, 0008). */
 export default function ReviewHomeworkItemPage() {
   const { id } = useParams<{ id: string }>();
-  const [item, setItem] = useState<HomeworkItem | null>(null);
+  const [loaded, setLoaded] = useState<{
+    item: HomeworkItem;
+    history: HomeworkHistoryEntry[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setItem(null);
+    setLoaded(null);
     setError(null);
-    getHomeworkItem(id)
-      .then(setItem)
+    Promise.all([getHomeworkItem(id), getHomeworkItemHistory(id)])
+      .then(([item, history]) => setLoaded({ item, history }))
       .catch((err: unknown) =>
         setError(
           err instanceof ApiClientError && err.status === 404
@@ -31,8 +34,8 @@ export default function ReviewHomeworkItemPage() {
   return (
     <>
       <PageHeader title="Review" />
-      {item ? (
-        <HomeworkDetail item={item} />
+      {loaded ? (
+        <HomeworkDetail item={loaded.item} history={loaded.history} />
       ) : error ? (
         <p className="mx-auto mt-6 w-full max-w-2xl px-5 text-[13px] text-muted-foreground">
           {error}
