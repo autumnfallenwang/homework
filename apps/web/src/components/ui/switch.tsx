@@ -22,7 +22,7 @@ export function Switch({ checked, onChange, disabled, ...rest }: SwitchProps) {
     >
       <span
         className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-[18px]" : "translate-x-[2px]"
+          checked ? "translate-x-[1.125rem]" : "translate-x-[0.125rem]"
         }`}
       />
     </button>

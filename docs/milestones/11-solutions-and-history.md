@@ -152,3 +152,12 @@ shows her solution and a history: the due move and the photos, including one she
   phone) move the due label under the title. Dev e2e: child menu on a first-day item Edit +
   Delete, on an older item Edit only; Keep, Delete (row gone), Escape returns focus to ⋮; parent
   View + Delete on an item past its first day → gone; 390 px for both roles, no sideways scroll.
+- 2026-10-04: ⋮ menus opened away from their button in prod (founder's report): the Appearance
+  font size was CSS `zoom` on `<html>`, which multiplied Radix's on-screen coordinates. 8360bb6
+  un-zoomed the menu wrapper (desktop and Chrome zoom fixed; pinch-zoom + a larger font still
+  wrong); ADR 0013 replaces zoom with a root font size: 235 `text-[Npx]` → rem, row/circle/grid/
+  switch sizes → rem, the seven `calc(100vh / --font-scale)` heights → `100dvh`. Dev e2e: menus at
+  Chrome zoom 80/100/125/150/200% × font 1/1.25/1.5 and pinch 1/2/3× × font 1/1.25/1.5 all open at
+  their button (flipping above when no room below); Appearance → Large gives a 20.8 px root with
+  zoom 1; child item page, child list (phone), parent Today / Classes / Review at Large: no
+  sideways scroll, Settings/About pinned, Submit reachable.

@@ -14,7 +14,7 @@ function Section({ title, content }: { title: string; content: string }) {
       >
         {title}
       </h2>
-      <div className="whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
+      <div className="whitespace-pre-line text-[0.8125rem] leading-relaxed text-muted-foreground">
         {content}
       </div>
     </div>
@@ -45,8 +45,8 @@ export function AboutPage() {
               </span>
             </div>
             <div>
-              <p className="text-[14px] font-medium">{APP_NAME}</p>
-              <p className="text-[12px] text-muted-foreground">{`Version ${appVersion}`}</p>
+              <p className="text-[0.875rem] font-medium">{APP_NAME}</p>
+              <p className="text-[0.75rem] text-muted-foreground">{`Version ${appVersion}`}</p>
             </div>
           </div>
 
@@ -59,7 +59,7 @@ export function AboutPage() {
               href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[12px] text-primary underline-offset-4 hover:underline"
+              className="text-[0.75rem] text-primary underline-offset-4 hover:underline"
             >
               View source on GitHub
             </a>

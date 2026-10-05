@@ -47,7 +47,7 @@ function DeadLink({ status }: { status: "invalid" | "expired" | "used" }) {
   return (
     <AuthCard title="Link not available" subtitle={DEAD[status]}>
       <div className="space-y-3 text-center">
-        <p className="text-[13px] text-muted-foreground">Ask a parent for a new link.</p>
+        <p className="text-[0.8125rem] text-muted-foreground">Ask a parent for a new link.</p>
         <Button asChild variant="outline" className="w-full">
           <Link href="/sign-in">Go to sign in</Link>
         </Button>
@@ -115,7 +115,7 @@ function JoinForm({
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <p className="text-[11px] text-muted-foreground">You will sign in with it.</p>
+            <p className="text-[0.6875rem] text-muted-foreground">You will sign in with it.</p>
           </div>
         ) : null}
         <div className="space-y-1.5">

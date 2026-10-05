@@ -36,7 +36,7 @@ function currentYearMonth(now: Date = new Date()): string {
 function EmptyRow({ text }: { text: string }) {
   return (
     <div className="rounded-lg border border-dashed border-border py-8 text-center">
-      <p className="text-[13px] text-muted-foreground">{text}</p>
+      <p className="text-[0.8125rem] text-muted-foreground">{text}</p>
     </div>
   );
 }
@@ -73,7 +73,7 @@ function HomeworkSection({
     <div className="space-y-6">
       {Array.from(groups.entries()).map(([date, entries]) => (
         <div key={date} className="space-y-2">
-          <p className="px-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+          <p className="px-1 text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
             {formatHomeworkDate(date)}
           </p>
           <div className="space-y-1.5">
@@ -149,14 +149,14 @@ export function HistoryView() {
       <div className="mx-auto w-full max-w-2xl space-y-5 px-5 py-5">
         {months.length > 0 && (
           <div className="flex items-center gap-3">
-            <label htmlFor="history-month" className="text-[13px] font-medium">
+            <label htmlFor="history-month" className="text-[0.8125rem] font-medium">
               Month
             </label>
             <select
               id="history-month"
               value={selectedMonth ?? ""}
               onChange={(e) => setSelectedMonth(e.target.value || null)}
-              className="h-9 rounded-lg border border-input bg-card px-2 text-[13px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="h-9 rounded-lg border border-input bg-card px-2 text-[0.8125rem] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               {months.map((m) => (
                 <option key={m.yearMonth} value={m.yearMonth}>

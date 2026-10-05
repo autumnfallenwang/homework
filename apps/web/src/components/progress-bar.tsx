@@ -18,7 +18,7 @@ export function ProgressBar({ meeting, notMeeting, total }: ProgressBarProps) {
           <div className="bg-attention" style={{ width: `${notMeetingPct}%` }} />
         )}
       </div>
-      <span className="text-[11px] tabular-nums text-muted-foreground">
+      <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
         {meeting}/{total}
       </span>
     </div>

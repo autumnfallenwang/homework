@@ -125,9 +125,13 @@ export function GradesTable({
                   className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium">{grade.className}</span>
+                  <span className="block truncate text-[0.875rem] font-medium">
+                    {grade.className}
+                  </span>
                   {instructor && (
-                    <span className="block text-[11px] text-muted-foreground">{instructor}</span>
+                    <span className="block text-[0.6875rem] text-muted-foreground">
+                      {instructor}
+                    </span>
                   )}
                 </div>
                 {totalTargets > 0 && (

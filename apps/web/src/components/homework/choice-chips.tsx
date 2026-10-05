@@ -43,7 +43,7 @@ export function ChoiceChips<T extends string>({
       disabled={disabled}
       aria-describedby={error ? errorId : undefined}
     >
-      <legend className="mb-2 text-[12px] font-semibold">
+      <legend className="mb-2 text-[0.75rem] font-semibold">
         {legend}
         {required ? <RequiredMark /> : null}
       </legend>
@@ -61,7 +61,7 @@ export function ChoiceChips<T extends string>({
               className="peer sr-only"
             />
             <span
-              className={`inline-block rounded-full border bg-card px-3.5 py-1 text-[13px] transition-colors hover:border-primary/60 peer-checked:border-primary peer-checked:border-solid peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 ${
+              className={`inline-block rounded-full border bg-card px-3.5 py-1 text-[0.8125rem] transition-colors hover:border-primary/60 peer-checked:border-primary peer-checked:border-solid peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 ${
                 o.fixed ? "border-dashed" : ""
               } ${error ? "border-destructive" : ""}`}
             >
@@ -87,7 +87,7 @@ export function RequiredMark() {
 /** The one-line reason under a field that stops Save. */
 export function FieldError({ id, message }: { id: string; message?: string }) {
   return message ? (
-    <p id={id} className="text-[12px] text-destructive">
+    <p id={id} className="text-[0.75rem] text-destructive">
       {message}
     </p>
   ) : null;

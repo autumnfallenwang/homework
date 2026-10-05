@@ -140,9 +140,9 @@ export function SettingsAttention() {
               }
             }}
             aria-label="Forgiveness window in weeks"
-            className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[13px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[0.8125rem] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
-          <span className="text-[12px] text-muted-foreground">
+          <span className="text-[0.75rem] text-muted-foreground">
             weeks (1–12, press Enter to apply)
           </span>
         </div>
@@ -168,9 +168,11 @@ export function SettingsAttention() {
               }
             }}
             aria-label="Low-score threshold"
-            className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[13px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[0.8125rem] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
-          <span className="text-[12px] text-muted-foreground">(0.0–4.0, press Enter to apply)</span>
+          <span className="text-[0.75rem] text-muted-foreground">
+            (0.0–4.0, press Enter to apply)
+          </span>
         </div>
       </SettingsSection>
 
@@ -182,8 +184,8 @@ export function SettingsAttention() {
               <div key={row.label} className="flex items-start gap-3">
                 <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${row.className}`} />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium">{row.label}</p>
-                  <p className="text-[12px] text-muted-foreground">{row.desc}</p>
+                  <p className="text-[0.8125rem] font-medium">{row.label}</p>
+                  <p className="text-[0.75rem] text-muted-foreground">{row.desc}</p>
                 </div>
               </div>
             );

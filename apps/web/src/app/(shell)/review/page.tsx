@@ -39,7 +39,7 @@ export default function ReviewPage() {
     <>
       <PageHeader title="Review" />
       <div className="mx-auto w-full max-w-2xl space-y-4 px-5 py-6">
-        {error ? <p className="text-[13px] text-destructive">{error}</p> : null}
+        {error ? <p className="text-[0.8125rem] text-destructive">{error}</p> : null}
         {children === null && !error ? (
           <Loader2 className="mx-auto mt-6 h-5 w-5 animate-spin text-muted-foreground" />
         ) : null}
@@ -74,7 +74,7 @@ export default function ReviewPage() {
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-lg bg-card px-4 py-4 text-[13px] leading-relaxed text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+    <p className="rounded-lg bg-card px-4 py-4 text-[0.8125rem] leading-relaxed text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       {children}
     </p>
   );

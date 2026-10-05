@@ -246,7 +246,7 @@ export function HomeworkForm({
       noValidate
       aria-label="Homework"
     >
-      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_300px] md:items-start">
+      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_18.75rem] md:items-start">
         <div className="space-y-5">
           <ChoiceChips
             id={FIELD_IDS.class}
@@ -265,7 +265,7 @@ export function HomeworkForm({
             required
           />
           <div className="space-y-2">
-            <Label htmlFor={FIELD_IDS.title} className="gap-0 text-[12px] font-semibold">
+            <Label htmlFor={FIELD_IDS.title} className="gap-0 text-[0.75rem] font-semibold">
               What to do
               <RequiredMark />
             </Label>
@@ -282,7 +282,7 @@ export function HomeworkForm({
             <FieldError id="hw-title-error" message={problems.title} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hw-details" className="text-[12px] font-semibold">
+            <Label htmlFor="hw-details" className="text-[0.75rem] font-semibold">
               Details <span className="font-normal text-muted-foreground">(optional)</span>
             </Label>
             <textarea
@@ -296,8 +296,8 @@ export function HomeworkForm({
             />
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-5">
-            <div className="w-[200px] space-y-2">
-              <Label htmlFor={FIELD_IDS.assignedOn} className="gap-0 text-[12px] font-semibold">
+            <div className="w-[12.5rem] space-y-2">
+              <Label htmlFor={FIELD_IDS.assignedOn} className="gap-0 text-[0.75rem] font-semibold">
                 Given on
                 <RequiredMark />
               </Label>
@@ -317,8 +317,8 @@ export function HomeworkForm({
               />
               <FieldError id="hw-given-error" message={problems.assignedOn} />
             </div>
-            <div className="w-[200px] space-y-2">
-              <Label htmlFor={FIELD_IDS.dueOn} className="gap-0 text-[12px] font-semibold">
+            <div className="w-[12.5rem] space-y-2">
+              <Label htmlFor={FIELD_IDS.dueOn} className="gap-0 text-[0.75rem] font-semibold">
                 {kind === "test" ? "Test day" : "Due"}
                 <RequiredMark />
               </Label>
@@ -346,7 +346,7 @@ export function HomeworkForm({
       <div className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4">
         {confirmingDelete ? (
           <>
-            <span className="text-[13px]">Delete this homework?</span>
+            <span className="text-[0.8125rem]">Delete this homework?</span>
             <Button
               type="button"
               variant="destructive"
@@ -389,7 +389,7 @@ export function HomeworkForm({
             ) : null}
           </>
         )}
-        <span className="flex-1 text-[13px]" role="status">
+        <span className="flex-1 text-[0.8125rem]" role="status">
           {error ? <span className="text-destructive">{error}</span> : null}
           {problemCount > 0 && !error ? (
             <span className="text-destructive">

@@ -142,10 +142,10 @@ export function SettingsAppearance() {
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className={`block text-[13px] ${active ? "font-medium" : ""}`}>
+                  <span className={`block text-[0.8125rem] ${active ? "font-medium" : ""}`}>
                     {PROFILE_LABELS[p]}
                   </span>
-                  <span className="block text-[12px] text-muted-foreground">
+                  <span className="block text-[0.75rem] text-muted-foreground">
                     {PROFILE_DESCRIPTIONS[p]}
                   </span>
                 </span>
@@ -170,7 +170,7 @@ export function SettingsAppearance() {
                 aria-pressed={active}
                 aria-label={opt.label}
                 onClick={() => handleMode(opt.value)}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[0.8125rem] transition-colors ${
                   active
                     ? "bg-secondary font-medium text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -201,7 +201,7 @@ export function SettingsAppearance() {
                   aria-pressed={active}
                   aria-label={label}
                   onClick={() => applyScale(preset.value)}
-                  className={`inline-flex items-center rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+                  className={`inline-flex items-center rounded-md px-3 py-1.5 text-[0.8125rem] transition-colors ${
                     active
                       ? "bg-secondary font-medium text-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -214,7 +214,7 @@ export function SettingsAppearance() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label htmlFor="font-size-custom" className="text-[12px] text-muted-foreground">
+            <label htmlFor="font-size-custom" className="text-[0.75rem] text-muted-foreground">
               Custom
             </label>
             <input
@@ -232,9 +232,9 @@ export function SettingsAppearance() {
                   commitPercentInput();
                 }
               }}
-              className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[13px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="h-8 w-20 rounded-md border border-input bg-card px-2 text-[0.8125rem] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
-            <span className="text-[12px] text-muted-foreground">% (press Enter to apply)</span>
+            <span className="text-[0.75rem] text-muted-foreground">% (press Enter to apply)</span>
           </div>
         </div>
       </SettingsSection>

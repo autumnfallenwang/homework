@@ -96,7 +96,7 @@ export function SettingsEmailSection() {
 
   if (!config) {
     return (
-      <div className="rounded-lg bg-card px-4 py-3 text-[13px] text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="rounded-lg bg-card px-4 py-3 text-[0.8125rem] text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
         Loading…
       </div>
     );
@@ -132,8 +132,8 @@ export function SettingsEmailSection() {
       <div className="divide-y divide-border rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
         <div className={`flex items-center gap-4 px-4 py-3 ${configured ? "" : "opacity-60"}`}>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium">Email digest</p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-[0.8125rem] font-medium">Email digest</p>
+            <p className="text-[0.75rem] text-muted-foreground">
               {configured
                 ? "Send the daily digest through the SMTP server above."
                 : "Set up SMTP above to enable."}
@@ -173,10 +173,15 @@ function SmtpSummaryCard({ config, configured, onEdit }: SmtpSummaryCardProps) {
           <Mail className="h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-medium">{summary}</p>
-          <p className="text-[11px] text-muted-foreground">{detail}</p>
+          <p className="truncate text-[0.875rem] font-medium">{summary}</p>
+          <p className="text-[0.6875rem] text-muted-foreground">{detail}</p>
         </div>
-        <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-[12px]" onClick={onEdit}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1 px-2 text-[0.75rem]"
+          onClick={onEdit}
+        >
           <Pencil className="h-3 w-3" />
           {configured ? "Update" : "Set up email"}
         </Button>
@@ -298,16 +303,16 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
   return (
     <div className="space-y-3 rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div>
-        <h2 className="text-[14px] font-medium">SMTP server</h2>
-        <p className="text-[12px] text-muted-foreground">
+        <h2 className="text-[0.875rem] font-medium">SMTP server</h2>
+        <p className="text-[0.75rem] text-muted-foreground">
           BYO SMTP — we never relay through a server. Password stays on your self-hosted
           infrastructure.
         </p>
       </div>
 
-      <div className="grid grid-cols-[1fr_100px] gap-3">
+      <div className="grid grid-cols-[1fr_6.25rem] gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="smtp-host" className="text-[13px]">
+          <Label htmlFor="smtp-host" className="text-[0.8125rem]">
             Host
           </Label>
           <Input
@@ -318,10 +323,10 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
             aria-invalid={Boolean(errors.host)}
             className="h-9 rounded-lg"
           />
-          {errors.host && <p className="text-[12px] text-destructive">{errors.host}</p>}
+          {errors.host && <p className="text-[0.75rem] text-destructive">{errors.host}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="smtp-port" className="text-[13px]">
+          <Label htmlFor="smtp-port" className="text-[0.8125rem]">
             Port
           </Label>
           <Input
@@ -333,12 +338,12 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
             aria-invalid={Boolean(errors.port)}
             className="h-9 rounded-lg"
           />
-          {errors.port && <p className="text-[12px] text-destructive">{errors.port}</p>}
+          {errors.port && <p className="text-[0.75rem] text-destructive">{errors.port}</p>}
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="smtp-username" className="text-[13px]">
+        <Label htmlFor="smtp-username" className="text-[0.8125rem]">
           Username
         </Label>
         <Input
@@ -349,11 +354,11 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
           aria-invalid={Boolean(errors.username)}
           className="h-9 rounded-lg"
         />
-        {errors.username && <p className="text-[12px] text-destructive">{errors.username}</p>}
+        {errors.username && <p className="text-[0.75rem] text-destructive">{errors.username}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="smtp-password" className="text-[13px]">
+        <Label htmlFor="smtp-password" className="text-[0.8125rem]">
           Password
         </Label>
         <Input
@@ -367,11 +372,11 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
           aria-invalid={Boolean(errors.password)}
           className="h-9 rounded-lg"
         />
-        {errors.password && <p className="text-[12px] text-destructive">{errors.password}</p>}
+        {errors.password && <p className="text-[0.75rem] text-destructive">{errors.password}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="smtp-from" className="text-[13px]">
+        <Label htmlFor="smtp-from" className="text-[0.8125rem]">
           From
         </Label>
         <Input
@@ -383,11 +388,11 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
           aria-invalid={Boolean(errors.from)}
           className="h-9 rounded-lg"
         />
-        {errors.from && <p className="text-[12px] text-destructive">{errors.from}</p>}
+        {errors.from && <p className="text-[0.75rem] text-destructive">{errors.from}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[13px]">To</Label>
+        <Label className="text-[0.8125rem]">To</Label>
         {to.map((row) => (
           <div key={row.id} className="space-y-1">
             <div className="flex items-center gap-2">
@@ -411,14 +416,16 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </Button>
             </div>
-            {toErrors[row.id] && <p className="text-[12px] text-destructive">{toErrors[row.id]}</p>}
+            {toErrors[row.id] && (
+              <p className="text-[0.75rem] text-destructive">{toErrors[row.id]}</p>
+            )}
           </div>
         ))}
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 gap-1 px-2 text-[12px]"
+          className="h-8 gap-1 px-2 text-[0.75rem]"
           onClick={addRecipient}
         >
           <Plus className="h-3 w-3" />
@@ -432,7 +439,7 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
           onChange={setSendTestOnSave}
           aria-label="Send test email after save"
         />
-        <span className="text-[13px]">Send test email after save</span>
+        <span className="text-[0.8125rem]">Send test email after save</span>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -456,11 +463,13 @@ function EmailForm({ initial, onDone, onCancel }: EmailFormProps) {
         <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={inFlight}>
           Cancel
         </Button>
-        {status.kind === "ok" && <p className="text-[12px] text-meeting">{status.message}</p>}
-        {status.kind === "err" && <p className="text-[12px] text-destructive">{status.message}</p>}
+        {status.kind === "ok" && <p className="text-[0.75rem] text-meeting">{status.message}</p>}
+        {status.kind === "err" && (
+          <p className="text-[0.75rem] text-destructive">{status.message}</p>
+        )}
       </div>
 
-      <p className="pt-1 text-[11px] text-muted-foreground">
+      <p className="pt-1 text-[0.6875rem] text-muted-foreground">
         For Gmail, use an App Password (2-step verification required).{" "}
         <Link
           href="/gmail-app-password"

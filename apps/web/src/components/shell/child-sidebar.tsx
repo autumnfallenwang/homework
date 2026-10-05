@@ -27,7 +27,7 @@ function DesktopLink({ item, pathname }: { item: NavItem; pathname: string | nul
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] transition-colors ${
         isActive(pathname, item.href)
           ? "bg-secondary font-medium text-foreground"
           : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -58,7 +58,7 @@ function Brand() {
         </span>
       </div>
       <span
-        className="text-[13px] font-semibold tracking-tight"
+        className="text-[0.8125rem] font-semibold tracking-tight"
         style={{ fontFamily: "var(--font-heading)" }}
       >
         Homework
@@ -74,7 +74,7 @@ export function ChildSidebar() {
     <>
       <aside
         className="hidden w-48 shrink-0 flex-col border-r bg-card/60 md:flex"
-        style={{ height: "calc(100vh / var(--font-scale, 1))" }}
+        style={{ height: "100dvh" }}
       >
         <div className="px-3.5 py-3">
           <Brand />
@@ -102,7 +102,7 @@ export function ChildSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 rounded-md px-3 py-1.5 text-center text-[13px] ${
+              className={`flex-1 rounded-md px-3 py-1.5 text-center text-[0.8125rem] ${
                 isActive(pathname, item.href) ? "bg-secondary font-medium" : "text-muted-foreground"
               }`}
             >

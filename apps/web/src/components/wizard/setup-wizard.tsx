@@ -40,20 +40,23 @@ export function SetupWizard() {
             <Shield className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-[18px] font-medium" style={{ fontFamily: "var(--font-heading)" }}>
+            <h1
+              className="text-[1.125rem] font-medium"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               {`Welcome to ${APP_NAME}`}
             </h1>
-            <p className="text-[12px] text-muted-foreground">A quick note before you start</p>
+            <p className="text-[0.75rem] text-muted-foreground">A quick note before you start</p>
           </div>
         </div>
 
-        <div className="max-h-[50vh] space-y-4 overflow-y-auto rounded-lg border border-border bg-secondary/20 p-4 text-[13px] leading-relaxed">
+        <div className="max-h-[50vh] space-y-4 overflow-y-auto rounded-lg border border-border bg-secondary/20 p-4 text-[0.8125rem] leading-relaxed">
           <DisclaimerBlock title="What this is" body={DISCLAIMER_FULL} />
           <DisclaimerBlock title="Your privacy" body={PRIVACY_NOTICE} />
           <DisclaimerBlock title="Responsible use" body={RESPONSIBLE_USE} />
         </div>
 
-        <p className="text-[12px] text-muted-foreground">
+        <p className="text-[0.75rem] text-muted-foreground">
           <a
             href={QUICKSTART_URL}
             target="_blank"
@@ -77,8 +80,8 @@ export function SetupWizard() {
 function DisclaimerBlock({ title, body }: { title: string; body: string }) {
   return (
     <div>
-      <p className="text-[13px] font-medium">{title}</p>
-      <p className="mt-1 whitespace-pre-line text-[12px] text-muted-foreground">{body}</p>
+      <p className="text-[0.8125rem] font-medium">{title}</p>
+      <p className="mt-1 whitespace-pre-line text-[0.75rem] text-muted-foreground">{body}</p>
     </div>
   );
 }

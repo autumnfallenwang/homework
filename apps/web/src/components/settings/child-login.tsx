@@ -74,7 +74,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
 
   if (!state) {
     return (
-      <div className="mt-2 pl-11 text-[11px] text-muted-foreground">
+      <div className="mt-2 pl-11 text-[0.6875rem] text-muted-foreground">
         {error ?? <Loader2 className="h-3 w-3 animate-spin" />}
       </div>
     );
@@ -85,7 +85,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
 
   return (
     <div className="mt-3 space-y-2 border-t pt-3 pl-11" data-testid="child-login">
-      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+      <div className="flex flex-wrap items-center gap-2 text-[0.75rem]">
         <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
         {state.login ? (
           <span>
@@ -104,7 +104,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
 
       {issued ? (
         <div className="space-y-1.5 rounded-md bg-secondary/60 p-2.5">
-          <p className="text-[12px]">
+          <p className="text-[0.75rem]">
             {issued.purpose === "join"
               ? `Send this link to ${childName}. It creates their login and works once.`
               : `Send this link to ${childName}. It sets a new password and works once.`}
@@ -113,7 +113,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
             <Input
               readOnly
               value={url}
-              className="h-8 font-mono text-[11px]"
+              className="h-8 font-mono text-[0.6875rem]"
               data-testid="invite-url"
               onFocus={(e) => e.currentTarget.select()}
             />
@@ -127,14 +127,14 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             Expires {when(issued.expiresAt)}. It is shown only now — make a new one if it gets lost.
           </p>
         </div>
       ) : null}
 
       {confirmingRemove ? (
-        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+        <div className="flex flex-wrap items-center gap-2 text-[0.75rem]">
           <span>Remove {childName}'s login? Their grades and history stay.</span>
           <Button size="sm" variant="destructive" className="h-7" onClick={remove} disabled={busy}>
             Remove
@@ -155,7 +155,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 gap-1 text-[11px]"
+                className="h-7 gap-1 text-[0.6875rem]"
                 onClick={() => issue("reset")}
                 disabled={busy}
               >
@@ -165,7 +165,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 text-[11px] text-destructive"
+                className="h-7 text-[0.6875rem] text-destructive"
                 onClick={() => setConfirmingRemove(true)}
                 disabled={busy}
               >
@@ -176,7 +176,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
             <Button
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-[11px]"
+              className="h-7 gap-1 text-[0.6875rem]"
               onClick={() => issue("join")}
               disabled={busy}
             >
@@ -186,7 +186,7 @@ export function ChildLoginPanel({ childId, childName }: { childId: string; child
           )}
         </div>
       )}
-      {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-[0.6875rem] text-destructive">{error}</p> : null}
     </div>
   );
 }

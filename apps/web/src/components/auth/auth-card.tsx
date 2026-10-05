@@ -26,7 +26,7 @@ export function AuthCard({
               {title}
             </h1>
             {subtitle ? (
-              <p className="text-[13px] leading-relaxed text-muted-foreground">{subtitle}</p>
+              <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">{subtitle}</p>
             ) : null}
           </div>
         </div>
@@ -40,7 +40,7 @@ export function AuthCard({
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="text-[12px] text-destructive">
+    <p role="alert" className="text-[0.75rem] text-destructive">
       {message}
     </p>
   );

@@ -168,7 +168,7 @@ export function HomeworkEntrySettings({
   return (
     <div className="space-y-2.5" data-testid="homework-entry">
       <div className="flex items-center justify-between gap-3">
-        <span id={`hw-entry-${child.id}`} className="text-[13px] font-medium">
+        <span id={`hw-entry-${child.id}`} className="text-[0.8125rem] font-medium">
           Child enters homework
         </span>
         <Switch
@@ -180,7 +180,7 @@ export function HomeworkEntrySettings({
       </div>
 
       {on && !editing ? (
-        <div className="flex items-start justify-between gap-3 text-[12px]">
+        <div className="flex items-start justify-between gap-3 text-[0.75rem]">
           <p className="min-w-0 text-muted-foreground">
             <span className="font-medium text-foreground">Classes </span>
             {classes === null
@@ -192,7 +192,7 @@ export function HomeworkEntrySettings({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 shrink-0 px-2 text-[11px]"
+            className="h-7 shrink-0 px-2 text-[0.6875rem]"
             onClick={startEditing}
             disabled={classes === null}
           >
@@ -203,7 +203,7 @@ export function HomeworkEntrySettings({
 
       {on && editing ? (
         <div className="space-y-2 rounded-md border bg-background/60 p-3">
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-[0.75rem] text-muted-foreground">
             {`${child.displayName} picks one of these, or ${OTHER_CLASS_LABEL}. Renaming a class renames it on old homework too.`}
           </p>
           <ul className="space-y-1.5">
@@ -218,7 +218,7 @@ export function HomeworkEntrySettings({
                       editing.map((r) => (r.key === row.key ? { ...r, name: e.target.value } : r)),
                     )
                   }
-                  className="h-8 text-[13px]"
+                  className="h-8 text-[0.8125rem]"
                 />
                 <Button
                   variant="ghost"
@@ -262,7 +262,7 @@ export function HomeworkEntrySettings({
               aria-label="New class"
               maxLength={HOMEWORK_LIMITS.classNameMax}
               onChange={(e) => setNewName(e.target.value)}
-              className="h-8 text-[13px]"
+              className="h-8 text-[0.8125rem]"
             />
             <Button type="submit" variant="outline" size="sm" disabled={!newName.trim()}>
               <Plus />
@@ -287,11 +287,11 @@ export function HomeworkEntrySettings({
               Fill from TeacherEase
             </Button>
           </div>
-          {message ? <p className="text-[12px] text-muted-foreground">{message}</p> : null}
+          {message ? <p className="text-[0.75rem] text-muted-foreground">{message}</p> : null}
         </div>
       ) : null}
 
-      {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-[0.75rem] text-destructive">{error}</p> : null}
     </div>
   );
 }

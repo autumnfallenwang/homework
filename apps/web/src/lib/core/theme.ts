@@ -56,7 +56,7 @@ export const FONT_SIZE_PRESETS: ReadonlyArray<{ value: number; label: string }> 
 ];
 
 /**
- * Parse a stored font-size value (stringified zoom factor) into a number
+ * Parse a stored font-size value (stringified scale factor) into a number
  * clamped to [FONT_SIZE_MIN, FONT_SIZE_MAX]. Invalid inputs fall back to
  * FONT_SIZE_DEFAULT.
  */

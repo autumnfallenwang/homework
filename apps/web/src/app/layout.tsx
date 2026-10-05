@@ -16,10 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className="overflow-hidden antialiased"
-        style={{ height: "calc(100vh / var(--font-scale, 1))" }}
-      >
+      <body className="overflow-hidden antialiased" style={{ height: "100dvh" }}>
         <RootTheme />
         {children}
       </body>

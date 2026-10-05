@@ -37,7 +37,7 @@ export default function ReviewHomeworkItemPage() {
       {loaded ? (
         <HomeworkDetail item={loaded.item} history={loaded.history} />
       ) : error ? (
-        <p className="mx-auto mt-6 w-full max-w-2xl px-5 text-[13px] text-muted-foreground">
+        <p className="mx-auto mt-6 w-full max-w-2xl px-5 text-[0.8125rem] text-muted-foreground">
           {error}
         </p>
       ) : (

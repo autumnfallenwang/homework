@@ -38,8 +38,8 @@ export function HomeworkDetail({
         >
           {item.title}
         </h2>
-        <div className="mt-2 mb-6 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] text-muted-foreground">
-          <span className="rounded-full bg-primary/10 px-2 py-px text-[11px] font-medium text-primary">
+        <div className="mt-2 mb-6 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[0.8125rem] text-muted-foreground">
+          <span className="rounded-full bg-primary/10 px-2 py-px text-[0.6875rem] font-medium text-primary">
             {item.className}
           </span>
           <KindBadge kind={item.kind} />
@@ -60,10 +60,10 @@ export function HomeworkDetail({
           {item.edited ? <EditedBadge /> : null}
         </div>
 
-        <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
-          <dl className="space-y-4 text-[14px]">
+        <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_21.25rem] md:items-start">
+          <dl className="space-y-4 text-[0.875rem]">
             <div className="space-y-1">
-              <dt className="text-[12px] font-semibold">Details</dt>
+              <dt className="text-[0.75rem] font-semibold">Details</dt>
               <dd
                 className={`whitespace-pre-line [overflow-wrap:anywhere] ${item.details ? "" : "text-muted-foreground italic"}`}
               >
@@ -71,7 +71,7 @@ export function HomeworkDetail({
               </dd>
             </div>
             <div className="space-y-1">
-              <dt className="text-[12px] font-semibold">Added</dt>
+              <dt className="text-[0.75rem] font-semibold">Added</dt>
               <dd>{formatAddedAt(item.createdAt)}</dd>
             </div>
           </dl>
@@ -87,9 +87,9 @@ export function HomeworkDetail({
             Solution
           </h3>
           {item.hasSolution ? (
-            <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
+            <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_21.25rem] md:items-start">
               <p
-                className={`text-[14px] whitespace-pre-line [overflow-wrap:anywhere] ${item.solution.note ? "" : "text-muted-foreground italic"}`}
+                className={`text-[0.875rem] whitespace-pre-line [overflow-wrap:anywhere] ${item.solution.note ? "" : "text-muted-foreground italic"}`}
               >
                 {item.solution.note ?? "No note"}
               </p>
@@ -101,7 +101,7 @@ export function HomeworkDetail({
               />
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed px-4 py-5 text-[13px] text-muted-foreground">
+            <p className="rounded-lg border border-dashed px-4 py-5 text-[0.8125rem] text-muted-foreground">
               No solution yet.
             </p>
           )}
@@ -116,19 +116,19 @@ export function HomeworkDetail({
             >
               History
             </h3>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-[0.75rem] text-muted-foreground">
               Every submit, and changes made after the first day (
               {formatAddedAt(item.firstDayEndsAt)}).
             </p>
           </div>
           {history.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground italic">Nothing recorded yet.</p>
+            <p className="text-[0.8125rem] text-muted-foreground italic">Nothing recorded yet.</p>
           ) : (
             <ol className="space-y-2">
               {history.map((entry) => (
                 <li
                   key={entry.id}
-                  className="grid gap-x-4 gap-y-0.5 rounded-lg bg-card px-4 py-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:grid-cols-[150px_minmax(0,1fr)]"
+                  className="grid gap-x-4 gap-y-0.5 rounded-lg bg-card px-4 py-2.5 text-[0.8125rem] shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:grid-cols-[9.375rem_minmax(0,1fr)]"
                 >
                   <span className="text-muted-foreground tabular-nums">
                     {formatAddedAt(entry.at)}
@@ -174,7 +174,7 @@ function DeleteItem({ itemId }: { itemId: string }) {
     <div className="mt-10 flex flex-wrap items-center gap-2 border-t pt-4">
       {confirming ? (
         <>
-          <span className="text-[13px]">Delete this homework?</span>
+          <span className="text-[0.8125rem]">Delete this homework?</span>
           <Button
             type="button"
             variant="destructive"
@@ -198,7 +198,7 @@ function DeleteItem({ itemId }: { itemId: string }) {
           Delete
         </Button>
       )}
-      <span className="flex-1 text-[13px] text-destructive" role="status">
+      <span className="flex-1 text-[0.8125rem] text-destructive" role="status">
         {error}
       </span>
     </div>
@@ -219,9 +219,9 @@ function Photos({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-semibold">{label}</p>
+      <p className="text-[0.75rem] font-semibold">{label}</p>
       {photos.length === 0 ? (
-        <p className="rounded-lg border border-dashed px-4 py-5 text-center text-[13px] text-muted-foreground">
+        <p className="rounded-lg border border-dashed px-4 py-5 text-center text-[0.8125rem] text-muted-foreground">
           No photos
         </p>
       ) : (

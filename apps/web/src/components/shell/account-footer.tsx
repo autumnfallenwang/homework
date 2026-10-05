@@ -44,10 +44,13 @@ export function AccountFooter({
           }`}
           data-testid="account-link"
         >
-          <p className="truncate text-[12px] font-medium" data-testid="signed-in-name">
+          <p className="truncate text-[0.75rem] font-medium" data-testid="signed-in-name">
             {me.user.name}
           </p>
-          <p className="truncate text-[11px] text-muted-foreground" data-testid="signed-in-role">
+          <p
+            className="truncate text-[0.6875rem] text-muted-foreground"
+            data-testid="signed-in-role"
+          >
             {ROLE_LABEL[me.user.role]}
           </p>
         </Link>

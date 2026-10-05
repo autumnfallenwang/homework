@@ -160,12 +160,12 @@ export function PhotoPanel({
         dragging ? "ring-2 ring-primary/60" : ""
       }`}
     >
-      <p className="text-[13px] font-semibold">
+      <p className="text-[0.8125rem] font-semibold">
         {title} <span className="font-normal text-muted-foreground">(optional)</span>
       </p>
       {count === 0 ? (
         <div
-          className={`flex flex-col items-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-6 text-center text-[13px] text-muted-foreground ${
+          className={`flex flex-col items-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-6 text-center text-[0.8125rem] text-muted-foreground ${
             dragging ? "border-primary bg-primary/10" : ""
           }`}
         >
@@ -198,7 +198,7 @@ export function PhotoPanel({
                   type="button"
                   onClick={pick}
                   disabled={disabled}
-                  className="flex aspect-[4/3] flex-col items-center justify-center gap-0.5 rounded-md border-[1.5px] border-dashed text-[12px] text-muted-foreground hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+                  className="flex aspect-[4/3] flex-col items-center justify-center gap-0.5 rounded-md border-[1.5px] border-dashed text-[0.75rem] text-muted-foreground hover:border-primary/60 hover:text-foreground disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   Add
@@ -219,7 +219,7 @@ export function PhotoPanel({
           e.target.value = "";
         }}
       />
-      {draft.error ? <p className="text-[12px] text-destructive">{draft.error}</p> : null}
+      {draft.error ? <p className="text-[0.75rem] text-destructive">{draft.error}</p> : null}
     </section>
   );
 }

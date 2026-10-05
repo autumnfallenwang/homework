@@ -104,16 +104,15 @@ export function SettingsSidebar({
 
   return (
     <aside
-      // See sidebar.tsx for why we divide 100vh by --font-scale here instead
-      // of using h-screen directly.
+      // Visible-screen tall, like sidebar.tsx.
       className={`flex shrink-0 flex-col border-r bg-card/60 backdrop-blur-sm transition-[width] duration-200 ${
         collapsed ? "w-14" : "w-14 md:w-48"
       }`}
-      style={{ height: "calc(100vh / var(--font-scale, 1))" }}
+      style={{ height: "100dvh" }}
     >
       <div className="flex items-center justify-between px-2.5 py-3">
         <span
-          className={`pl-1 text-[13px] font-semibold tracking-tight ${label}`}
+          className={`pl-1 text-[0.8125rem] font-semibold tracking-tight ${label}`}
           style={{ fontFamily: "var(--font-heading)" }}
         >
           Settings
@@ -134,7 +133,7 @@ export function SettingsSidebar({
           type="button"
           onClick={handleBack}
           title="Back"
-          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
           <span className={label}>Back</span>
@@ -150,7 +149,7 @@ export function SettingsSidebar({
               key={tab.key}
               href={`${basePath}/${tab.key}`}
               title={tab.label}
-              className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
+              className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] transition-colors ${
                 active
                   ? "bg-secondary font-medium text-foreground"
                   : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"

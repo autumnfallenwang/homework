@@ -59,7 +59,7 @@ export function ChildHomeworkEditor({ itemId }: { itemId: string | null }) {
           <HomeworkEntryOff />
         </div>
       ) : state.kind === "error" ? (
-        <p className="mx-auto mt-6 w-full max-w-2xl px-4 text-[13px] text-destructive">
+        <p className="mx-auto mt-6 w-full max-w-2xl px-4 text-[0.8125rem] text-destructive">
           {state.message}
         </p>
       ) : (
@@ -115,7 +115,7 @@ function ItemPage({
             >
               Solution
               {item.submittedAt ? (
-                <span className="flex items-center gap-1 font-sans text-[12px] font-medium text-meeting">
+                <span className="flex items-center gap-1 font-sans text-[0.75rem] font-medium text-meeting">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Done
                 </span>

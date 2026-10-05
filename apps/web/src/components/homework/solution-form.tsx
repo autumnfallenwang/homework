@@ -100,9 +100,9 @@ export function SolutionForm({
       noValidate
       aria-label="Solution"
     >
-      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_300px] md:items-start">
+      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_18.75rem] md:items-start">
         <div className="space-y-2">
-          <Label htmlFor="hw-solution-note" className="gap-0 text-[12px] font-semibold">
+          <Label htmlFor="hw-solution-note" className="gap-0 text-[0.75rem] font-semibold">
             Note
             <RequiredMark />
           </Label>
@@ -145,7 +145,7 @@ export function SolutionForm({
         >
           Submit
         </Button>
-        <span className="flex-1 text-[13px]" role="status">
+        <span className="flex-1 text-[0.8125rem]" role="status">
           {error ? <span className="text-destructive">{error}</span> : null}
           {!error && noteMissing ? (
             <span className="text-destructive">Check the field marked in red.</span>

@@ -167,7 +167,7 @@ export function SettingsNotifications() {
         <div className="space-y-3">
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="notify-runs-per-day" className="text-[13px]">
+              <Label htmlFor="notify-runs-per-day" className="text-[0.8125rem]">
                 Notifications per day ({NOTIFY_RUNS_PER_DAY_MIN}–{NOTIFY_RUNS_PER_DAY_MAX})
               </Label>
               <Input
@@ -188,7 +188,7 @@ export function SettingsNotifications() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="notify-first-slot" className="text-[13px]">
+              <Label htmlFor="notify-first-slot" className="text-[0.8125rem]">
                 First slot at
               </Label>
               <Input
@@ -209,15 +209,19 @@ export function SettingsNotifications() {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Time slots</p>
+            <p className="text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
+              Time slots
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {slotView.map(({ mins, rollover }) => (
                 <span
                   key={`${mins}-${rollover ? "r" : "t"}`}
-                  className="rounded-full border border-border px-2.5 py-1 text-[12px] tabular-nums text-muted-foreground"
+                  className="rounded-full border border-border px-2.5 py-1 text-[0.75rem] tabular-nums text-muted-foreground"
                 >
                   {formatSlotMinutes(mins)}
-                  {rollover && <span className="ml-1 text-[10px] opacity-70">{rolloverLabel}</span>}
+                  {rollover && (
+                    <span className="ml-1 text-[0.625rem] opacity-70">{rolloverLabel}</span>
+                  )}
                 </span>
               ))}
             </div>
@@ -231,7 +235,7 @@ export function SettingsNotifications() {
               }}
               aria-label="Skip weekends"
             />
-            <span className="text-[13px]">Skip weekends (Sat + Sun)</span>
+            <span className="text-[0.8125rem]">Skip weekends (Sat + Sun)</span>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
@@ -242,7 +246,7 @@ export function SettingsNotifications() {
               }}
               aria-label="Fetch fresh data first"
             />
-            <span className="text-[13px]">Fetch fresh data first</span>
+            <span className="text-[0.8125rem]">Fetch fresh data first</span>
           </div>
         </div>
       </SettingsSection>
@@ -267,7 +271,7 @@ export function SettingsNotifications() {
           </Button>
           {digestResult && (
             <p
-              className={`text-[12px] ${
+              className={`text-[0.75rem] ${
                 digestResult.kind === "ok" ? "text-muted-foreground" : "text-destructive"
               }`}
             >

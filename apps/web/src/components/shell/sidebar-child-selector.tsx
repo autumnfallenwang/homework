@@ -63,7 +63,7 @@ export function SidebarChildSelector({ collapsed }: { collapsed: boolean }) {
     <>
       <div className="mx-3 my-2 h-px bg-border/60" aria-hidden="true" />
       <div className="px-2">
-        <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="px-2 pb-1 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">
           Viewing
         </p>
         <div className="space-y-0.5">
@@ -74,7 +74,7 @@ export function SidebarChildSelector({ collapsed }: { collapsed: boolean }) {
                 key={c.id}
                 type="button"
                 onClick={() => handleSelect(c.id)}
-                className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors ${
+                className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[0.8125rem] transition-colors ${
                   isSelected
                     ? "font-semibold text-foreground"
                     : "text-muted-foreground/60 hover:bg-secondary/50"

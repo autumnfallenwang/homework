@@ -24,7 +24,7 @@ export function EmptyState() {
         >
           Welcome to Homework
         </h2>
-        <p className="mx-auto max-w-[320px] text-[14px] leading-relaxed text-muted-foreground">
+        <p className="mx-auto max-w-[20rem] text-[0.875rem] leading-relaxed text-muted-foreground">
           No children are set up yet. Add your first child and we'll keep track of grades and
           missing assignments — right here on your computer.
         </p>
@@ -38,7 +38,7 @@ export function EmptyState() {
           href={QUICKSTART_URL}
           target="_blank"
           rel="noreferrer noopener"
-          className="text-[12px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className="text-[0.75rem] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           New here? Read the quick start →
         </a>

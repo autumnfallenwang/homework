@@ -11,7 +11,7 @@ export function KindBadge({ kind }: { kind: HomeworkKind }) {
   if (kind === "homework") return null;
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-px text-[11px] font-medium ${STYLE[kind]}`}
+      className={`inline-flex items-center rounded-full px-2 py-px text-[0.6875rem] font-medium ${STYLE[kind]}`}
     >
       {HOMEWORK_KIND_LABELS[kind]}
     </span>

@@ -13,7 +13,7 @@ export function ChildSwitcher({ items, selectedId, onSelect }: ChildSwitcherProp
   return (
     <div className="relative">
       <select
-        className="appearance-none rounded-md border bg-card py-1 pl-2.5 pr-7 text-[13px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
+        className="appearance-none rounded-md border bg-card py-1 pl-2.5 pr-7 text-[0.8125rem] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
         value={selectedId}
         onChange={(e) => onSelect(e.target.value)}
       >

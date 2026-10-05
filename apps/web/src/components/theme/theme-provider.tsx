@@ -5,7 +5,7 @@
 // localStorage (M06 decision: appearance is per-viewer, not shared server state):
 //   - appearance.theme     (light | dark | system)      — toggles `.dark` class
 //   - appearance.profile   (default | solarized | ...)  — applies `.theme-<name>` class
-//   - appearance.fontSize  (stringified zoom factor)    — sets `--font-scale` CSS var
+//   - appearance.fontSize  (stringified scale factor)   — sets `--font-scale` CSS var
 // Listens for OS color-scheme changes when theme is "system" and for the
 // pref-change events emitted by writePref so the Appearance settings tab can
 // trigger an immediate re-resolve without a page reload.

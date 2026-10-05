@@ -92,7 +92,7 @@ function SignInForm() {
         <Button type="submit" className="w-full" disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
         </Button>
-        <p className="text-center text-[12px] text-muted-foreground">
+        <p className="text-center text-[0.75rem] text-muted-foreground">
           Children: no login yet? Ask a parent for your invite link.
         </p>
       </form>

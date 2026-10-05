@@ -36,21 +36,21 @@ function ChildRow({
         )}
         <div className="min-w-0 flex-1">
           <p
-            className={`text-[18px] font-medium leading-tight ${isOk ? "text-meeting" : "text-foreground"}`}
+            className={`text-[1.125rem] font-medium leading-tight ${isOk ? "text-meeting" : "text-foreground"}`}
             style={{ fontFamily: "var(--font-heading)" }}
           >
             {showName ? `${status.name}: ` : ""}
             {attentionBody}
           </p>
-          <p className="mt-1 text-[12px] text-muted-foreground">
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">
             {`${status.meetingCount} meeting standards`}
           </p>
           {status.homeworkConfigured && (
             <>
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-[0.75rem] text-muted-foreground">
                 {`${status.homeworkForTodayCount} homework for today`}
               </p>
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-[0.75rem] text-muted-foreground">
                 {`${status.homeworkDueNextCount} homework due ${status.homeworkDueLabel}`}
               </p>
             </>

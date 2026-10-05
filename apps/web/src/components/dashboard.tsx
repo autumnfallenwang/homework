@@ -161,7 +161,7 @@ export function Dashboard() {
         title="Today"
         actions={
           lastFetchRun?.runAt ? (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[0.6875rem] text-muted-foreground">
               {`Checked ${formatTimeAgo(lastFetchRun.runAt)}`}
             </span>
           ) : null

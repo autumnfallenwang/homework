@@ -51,7 +51,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
 
   return (
     <div className="border-t border-border/30 pt-3">
-      <p className="mb-2 px-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="mb-2 px-1 text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
         Recent activity
       </p>
       <ul className="space-y-1">
@@ -60,7 +60,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
           return (
             <li key={itemKey(item, idx)} className="flex items-center gap-2 px-1 py-1">
               {icon}
-              <span className="text-[12px]">{text}</span>
+              <span className="text-[0.75rem]">{text}</span>
             </li>
           );
         })}
@@ -69,7 +69,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="px-1 pt-1 text-[11px] text-muted-foreground hover:text-foreground"
+          className="px-1 pt-1 text-[0.6875rem] text-muted-foreground hover:text-foreground"
         >
           {showAll ? "Show less" : `Show ${overflow} more`}
         </button>

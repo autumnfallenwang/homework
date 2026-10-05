@@ -40,16 +40,18 @@ export function HomeworkRow({ entry }: { entry: HomeworkRecord }) {
     <div className="rounded-lg border border-border bg-card px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium">{entry.subject}</p>
+          <p className="text-[0.8125rem] font-medium">{entry.subject}</p>
           {isEmptyContent(entry.content) ? (
-            <p className="text-[12px] text-muted-foreground">—</p>
+            <p className="text-[0.75rem] text-muted-foreground">—</p>
           ) : (
-            <p className="whitespace-pre-line text-[12px] text-muted-foreground">{entry.content}</p>
+            <p className="whitespace-pre-line text-[0.75rem] text-muted-foreground">
+              {entry.content}
+            </p>
           )}
         </div>
         {entry.dueDate && (
           <span
-            className={`flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] ${
+            className={`flex shrink-0 items-center gap-1 whitespace-nowrap text-[0.6875rem] ${
               entry.dueDateInferred ? "italic text-muted-foreground/70" : "text-muted-foreground"
             }`}
             title={entry.dueDateInferred ? "Due date inferred from posting date" : undefined}
@@ -65,7 +67,7 @@ export function HomeworkRow({ entry }: { entry: HomeworkRecord }) {
 
 function SectionEmpty({ text }: { text: string }) {
   return (
-    <p className="rounded-lg border border-dashed border-border/80 bg-card/60 px-4 py-2.5 text-[12px] italic text-muted-foreground">
+    <p className="rounded-lg border border-dashed border-border/80 bg-card/60 px-4 py-2.5 text-[0.75rem] italic text-muted-foreground">
       {text}
     </p>
   );
@@ -87,7 +89,7 @@ function SectionHeading({
         {title}
       </h2>
       {count > 0 && (
-        <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+        <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[0.6875rem] font-semibold tabular-nums text-muted-foreground">
           {count}
         </span>
       )}

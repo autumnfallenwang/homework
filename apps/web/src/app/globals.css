@@ -4,32 +4,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Font size is driven by `--font-scale` on <html>, set by ThemeProvider
- * based on the user's `appearance.fontSize` setting (A2). Uses CSS `zoom`
- * rather than `font-size` so hardcoded `text-[Npx]` Tailwind utilities
- * (dominant in this codebase — ~83% of text classes) scale too, not just
- * rem-based ones. `zoom` ripples through spacing/borders/icons as well,
- * which matches user expectations for a global "size" toggle. The 1.0
- * fallback keeps the UI at baseline before the provider reads settings. */
+/* Font size is driven by `--font-scale` on <html>, set by ThemeProvider from
+ * the user's `appearance.fontSize` setting (ADR 0013). It scales the root
+ * font size — `100%` keeps the browser's own font-size preference — and
+ * everything sized in rem follows: text (`text-[…rem]`, never px), Tailwind
+ * spacing and icons. Hairlines (borders, focus rings, shadows) stay px.
+ * Not CSS `zoom`: zoom changes the page's coordinate system and broke
+ * anything positioned from on-screen coordinates (the Radix menus), most of
+ * all combined with a phone's pinch-zoom. */
 html {
-  zoom: var(--font-scale, 1);
+  font-size: calc(100% * var(--font-scale, 1));
   /* Disable WebKit's elastic rubber-band overscroll. Without this, scrolling
    * past the top of any inner scroller in the Tauri webview drags sticky
    * headers (page-header.tsx) down with the bounce. `overscroll-behavior` on
    * the scroller alone isn't enough on macOS WebKit — the propagation has to
    * be cut at the document root. */
   overscroll-behavior: none;
-}
-
-/* Radix menus (ui/dropdown-menu.tsx) place themselves with a translate taken
- * from on-screen coordinates, which the `zoom` above then multiplies again —
- * at 1.25 the menu opens 1.25× as far from the corner as its button. Undo the
- * zoom on the positioning wrapper and put it back on the menu inside. */
-[data-radix-popper-content-wrapper] {
-  zoom: calc(1 / var(--font-scale, 1));
-}
-[data-radix-popper-content-wrapper] > * {
-  zoom: var(--font-scale, 1);
 }
 
 html,

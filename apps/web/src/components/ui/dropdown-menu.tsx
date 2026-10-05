@@ -37,7 +37,7 @@ export function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-[0.8125rem] outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         destructive
           ? "text-destructive focus:bg-destructive/10"
           : "focus:bg-accent focus:text-accent-foreground",

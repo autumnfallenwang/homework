@@ -141,7 +141,7 @@ export function SettingsChildren() {
       >
         {children.length === 0 && !showAdd ? (
           <div className="rounded-lg border border-dashed py-8 text-center">
-            <p className="text-[13px] text-muted-foreground">No children added yet.</p>
+            <p className="text-[0.8125rem] text-muted-foreground">No children added yet.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -208,8 +208,8 @@ function ChildRow({
             <User className="h-4 w-4 text-destructive" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-medium">Remove {child.displayName}?</p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="truncate text-[0.875rem] font-medium">Remove {child.displayName}?</p>
+            <p className="text-[0.75rem] text-muted-foreground">
               Deletes all local grade and homework history. TeacherEase is not affected.
             </p>
           </div>
@@ -257,13 +257,13 @@ function ChildRow({
           <User className="h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-medium">{child.displayName}</p>
-          <p className="truncate text-[12px] text-muted-foreground">{child.username}</p>
+          <p className="truncate text-[0.875rem] font-medium">{child.displayName}</p>
+          <p className="truncate text-[0.75rem] text-muted-foreground">{child.username}</p>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 gap-1 px-2 text-[11px]"
+          className="h-8 gap-1 px-2 text-[0.6875rem]"
           onClick={() => setEditing(true)}
         >
           <Pencil className="h-3 w-3" />
@@ -280,7 +280,7 @@ function ChildRow({
         </Button>
       </div>
 
-      <div className="mt-2 pl-11 text-[11px] text-muted-foreground">
+      <div className="mt-2 pl-11 text-[0.6875rem] text-muted-foreground">
         {child.homeworkUrl
           ? `Homework page: ${child.homeworkUrl}${
               child.homeworkSource === "child"
@@ -347,13 +347,13 @@ function EditChildForm({
       onSubmit={handleSubmit}
       className="space-y-4 rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
     >
-      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
         <Lock className="h-3 w-3" />
         Credentials stored securely on this computer
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor={`edit-name-${child.id}`} className="text-[13px]">
+        <Label htmlFor={`edit-name-${child.id}`} className="text-[0.8125rem]">
           Child's name
         </Label>
         <Input
@@ -364,7 +364,7 @@ function EditChildForm({
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor={`edit-email-${child.id}`} className="text-[13px]">
+        <Label htmlFor={`edit-email-${child.id}`} className="text-[0.8125rem]">
           TeacherEase email
         </Label>
         <Input
@@ -377,7 +377,7 @@ function EditChildForm({
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor={`edit-pass-${child.id}`} className="text-[13px]">
+        <Label htmlFor={`edit-pass-${child.id}`} className="text-[0.8125rem]">
           Password
         </Label>
         <Input
@@ -391,7 +391,7 @@ function EditChildForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor={`edit-homework-${child.id}`} className="text-[13px]">
+        <Label htmlFor={`edit-homework-${child.id}`} className="text-[0.8125rem]">
           Homework page URL
         </Label>
         <Input
@@ -402,11 +402,11 @@ function EditChildForm({
           onChange={(e) => setHomeworkUrlInput(e.target.value)}
           className="h-9 rounded-lg"
         />
-        <p className="text-[11px] text-muted-foreground">Optional — leave blank to skip.</p>
+        <p className="text-[0.6875rem] text-muted-foreground">Optional — leave blank to skip.</p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[13px] text-destructive">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[0.8125rem] text-destructive">
           {error}
         </div>
       )}
@@ -470,13 +470,13 @@ function AddChildForm({ onDone, onCancel }: { onDone: () => Promise<void>; onCan
       onSubmit={handleSubmit}
       className="space-y-4 rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
     >
-      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
         <Lock className="h-3 w-3" />
         Credentials stored securely on this computer
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="add-name" className="text-[13px]">
+        <Label htmlFor="add-name" className="text-[0.8125rem]">
           Child's name
         </Label>
         <Input
@@ -488,7 +488,7 @@ function AddChildForm({ onDone, onCancel }: { onDone: () => Promise<void>; onCan
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="add-email" className="text-[13px]">
+        <Label htmlFor="add-email" className="text-[0.8125rem]">
           TeacherEase email
         </Label>
         <Input
@@ -501,7 +501,7 @@ function AddChildForm({ onDone, onCancel }: { onDone: () => Promise<void>; onCan
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="add-pass" className="text-[13px]">
+        <Label htmlFor="add-pass" className="text-[0.8125rem]">
           Password
         </Label>
         <Input
@@ -515,7 +515,7 @@ function AddChildForm({ onDone, onCancel }: { onDone: () => Promise<void>; onCan
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="add-homework" className="text-[13px]">
+        <Label htmlFor="add-homework" className="text-[0.8125rem]">
           Homework page URL
         </Label>
         <Input
@@ -526,11 +526,11 @@ function AddChildForm({ onDone, onCancel }: { onDone: () => Promise<void>; onCan
           onChange={(e) => setHomeworkUrlInput(e.target.value)}
           className="h-9 rounded-lg"
         />
-        <p className="text-[11px] text-muted-foreground">Optional — leave blank to skip.</p>
+        <p className="text-[0.6875rem] text-muted-foreground">Optional — leave blank to skip.</p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[13px] text-destructive">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[0.8125rem] text-destructive">
           {error}
         </div>
       )}

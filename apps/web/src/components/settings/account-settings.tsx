@@ -85,7 +85,7 @@ function ProfileForm() {
           required
         />
         {nameLocked ? (
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-[0.75rem] text-muted-foreground">
             Your name comes from your profile — ask a parent if it needs to change.
           </p>
         ) : null}
@@ -103,14 +103,14 @@ function ProfileForm() {
           }}
           required
         />
-        <p className="text-[12px] text-muted-foreground">You sign in with it.</p>
+        <p className="text-[0.75rem] text-muted-foreground">You sign in with it.</p>
       </div>
-      <div className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
+      <div className="flex items-baseline justify-between gap-3 py-1.5 text-[0.8125rem]">
         <span className="text-muted-foreground">Role</span>
         <span className="font-medium">{ROLE_LABEL[me.user.role]}</span>
       </div>
       {error ? (
-        <p role="alert" className="text-[12px] text-destructive">
+        <p role="alert" className="text-[0.75rem] text-destructive">
           {error}
         </p>
       ) : null}
@@ -119,7 +119,7 @@ function ProfileForm() {
           {state === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save changes"}
         </Button>
         {state === "saved" ? (
-          <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
+          <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground">
             <Check className="h-3.5 w-3.5" /> Saved
           </span>
         ) : null}
@@ -192,7 +192,7 @@ function PasswordForm() {
         />
       </div>
       {error ? (
-        <p role="alert" className="text-[12px] text-destructive">
+        <p role="alert" className="text-[0.75rem] text-destructive">
           {error}
         </p>
       ) : null}
@@ -201,7 +201,7 @@ function PasswordForm() {
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Change password"}
         </Button>
         {done ? (
-          <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
+          <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground">
             <Check className="h-3.5 w-3.5" /> Password changed. Other devices were signed out.
           </span>
         ) : null}

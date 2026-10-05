@@ -22,11 +22,9 @@ export default function ShellLayout({ children }: { children: ReactNode }) {
   return (
     <SessionGate requiredRole="parent">
       <DisclaimerGate>
-        {/* Height = 100vh / --font-scale — globals.css applies `zoom` to <html>
-          which scales content but not viewport units, so we compensate here
-          and in the sidebars to keep the shell exactly viewport-tall and pin
-          the bottom-aligned utility nav (Settings/About) on screen. */}
-        <div className="flex" style={{ height: "calc(100vh / var(--font-scale, 1))" }}>
+        {/* Exactly as tall as the visible screen (dvh: minus a phone's browser
+          bars), so the bottom-aligned nav (Settings/About) stays on screen. */}
+        <div className="flex" style={{ height: "100dvh" }}>
           {inSettings ? <SettingsSidebar /> : <Sidebar />}
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
             <main className="flex flex-1 flex-col overflow-x-hidden">{children}</main>

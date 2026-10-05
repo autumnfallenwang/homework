@@ -24,7 +24,7 @@ export default function ErrorPage({
         >
           This page could not load
         </h2>
-        <p className="mx-auto max-w-[360px] text-[14px] leading-relaxed text-muted-foreground">
+        <p className="mx-auto max-w-[22.5rem] text-[0.875rem] leading-relaxed text-muted-foreground">
           Grades, homework and the scheduled digests are not affected — they keep running on the
           server.
         </p>

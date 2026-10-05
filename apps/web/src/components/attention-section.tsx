@@ -50,17 +50,17 @@ function AttentionRow({ item }: { item: AttentionItem }) {
         <TrendingDown className={`h-3.5 w-3.5 shrink-0 ${iconClass}`} />
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium">{assignment.name}</p>
-        <p className="text-[11px] text-muted-foreground">{className}</p>
+        <p className="truncate text-[0.8125rem] font-medium">{assignment.name}</p>
+        <p className="text-[0.6875rem] text-muted-foreground">{className}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {!isMissing && assignment.grade && (
-          <span className="text-[12px] font-semibold tabular-nums text-muted-foreground">
+          <span className="text-[0.75rem] font-semibold tabular-nums text-muted-foreground">
             {assignment.grade}
           </span>
         )}
         {assignment.dueDate && (
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
             <Clock className="h-3 w-3" />
             {formatPortalDate(assignment.dueDate)}
           </span>
@@ -85,7 +85,7 @@ export function AttentionSection({ withinWindow, agedOut }: AttentionSectionProp
         <h2 className="text-lg font-medium" style={{ fontFamily: "var(--font-heading)" }}>
           Needs attention
         </h2>
-        <span className="ml-auto rounded-full bg-attention/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-attention-foreground">
+        <span className="ml-auto rounded-full bg-attention/15 px-2 py-0.5 text-[0.6875rem] font-semibold tabular-nums text-attention-foreground">
           {totalCount}
         </span>
       </div>
@@ -93,7 +93,9 @@ export function AttentionSection({ withinWindow, agedOut }: AttentionSectionProp
       {/* Within forgiveness window — expanded by default */}
       {recent.length > 0 && (
         <div className="space-y-1.5">
-          <p className="px-1 text-[11px] uppercase tracking-wider text-muted-foreground">Recent</p>
+          <p className="px-1 text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
+            Recent
+          </p>
           {recent.map((item) => (
             <AttentionRow
               key={`${item.className}-${item.assignment.testNameId}-${item.reason}`}
@@ -108,7 +110,7 @@ export function AttentionSection({ withinWindow, agedOut }: AttentionSectionProp
         <div>
           <button
             type="button"
-            className="flex w-full items-center gap-1 px-1 py-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            className="flex w-full items-center gap-1 px-1 py-1 text-[0.6875rem] uppercase tracking-wider text-muted-foreground hover:text-foreground"
             onClick={() => setOlderExpanded((prev) => !prev)}
           >
             <ChevronRight

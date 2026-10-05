@@ -34,8 +34,8 @@ export function SettingsAdvanced() {
     <div className="space-y-5">
       <SettingsSection title="About" help="The version of the app currently running.">
         <div className="flex items-center justify-between">
-          <p className="text-[13px] font-medium">Current version</p>
-          <p className="text-[12px] text-muted-foreground">v{appVersion}</p>
+          <p className="text-[0.8125rem] font-medium">Current version</p>
+          <p className="text-[0.75rem] text-muted-foreground">v{appVersion}</p>
         </div>
       </SettingsSection>
 
@@ -48,8 +48,10 @@ export function SettingsAdvanced() {
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium">Reset the app to first-install state?</p>
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-[0.8125rem] font-medium">
+                  Reset the app to first-install state?
+                </p>
+                <p className="text-[0.75rem] text-muted-foreground">
                   Wipes all data. Cannot be undone. You'll be returned to setup.
                 </p>
               </div>
@@ -78,8 +80,8 @@ export function SettingsAdvanced() {
         ) : (
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium">Reset app</p>
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-[0.8125rem] font-medium">Reset app</p>
+              <p className="text-[0.75rem] text-muted-foreground">
                 Wipes all app data and returns to first-install state.
               </p>
             </div>

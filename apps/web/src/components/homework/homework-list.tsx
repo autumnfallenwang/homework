@@ -54,7 +54,7 @@ export function HomeworkList({
   return (
     <div className="space-y-4">
       {groups.open.length === 0 && groups.done.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-card/60 px-4 py-6 text-center text-[13px] text-muted-foreground">
+        <p className="rounded-lg border border-dashed bg-card/60 px-4 py-6 text-center text-[0.8125rem] text-muted-foreground">
           No homework yet.
         </p>
       ) : null}
@@ -62,7 +62,7 @@ export function HomeworkList({
       {groups.open.map((g) => (
         <section key={g.key} className="space-y-1.5" aria-label={HOMEWORK_GROUP_TITLES[g.key]}>
           <h2
-            className={`flex justify-between px-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+            className={`flex justify-between px-0.5 text-[0.6875rem] font-semibold uppercase tracking-wider ${
               g.key === "overdue" ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
             }`}
           >
@@ -77,7 +77,7 @@ export function HomeworkList({
         <section className="space-y-1.5" aria-label="Done">
           <button
             type="button"
-            className="flex items-center gap-1 px-0.5 py-1 text-[12px] text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1 px-0.5 py-1 text-[0.75rem] text-muted-foreground hover:text-foreground"
             aria-expanded={showDone}
             onClick={() => setShowDone((v) => !v)}
           >
@@ -148,8 +148,8 @@ function HomeworkRow({
   return (
     <li className="@container rounded-lg bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       {confirming ? (
-        <div className="flex min-h-[58px] flex-wrap items-center gap-2 py-2 pr-2 pl-4">
-          <span className="min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere]">
+        <div className="flex min-h-[3.625rem] flex-wrap items-center gap-2 py-2 pr-2 pl-4">
+          <span className="min-w-0 flex-1 text-[0.8125rem] [overflow-wrap:anywhere]">
             Delete “{item.title}”?
           </span>
           <Button
@@ -179,7 +179,7 @@ function HomeworkRow({
             className="group flex min-w-0 flex-1 items-center gap-3 py-2.5 pr-2 pl-3"
           >
             <span
-              className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] ${
+              className={`flex h-[1.375rem] w-[1.375rem] shrink-0 items-center justify-center rounded-full border-[1.5px] ${
                 done
                   ? "border-meeting bg-meeting text-white"
                   : "border-dashed border-muted-foreground/70"
@@ -190,13 +190,13 @@ function HomeworkRow({
             </span>
             <span className="min-w-0 flex-1">
               <span
-                className={`block text-[14px] font-medium [overflow-wrap:anywhere] group-hover:text-primary ${
+                className={`block text-[0.875rem] font-medium [overflow-wrap:anywhere] group-hover:text-primary ${
                   done ? "text-muted-foreground" : ""
                 }`}
               >
                 {item.title}
               </span>
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.75rem] text-muted-foreground">
                 {/* A narrow row (the parent's sidebar open on a phone) has no room on the right. */}
                 <span className={`@xs:hidden tabular-nums ${dueTone}`}>
                   {dueLabel(item.dueOn, today)}
@@ -216,7 +216,7 @@ function HomeworkRow({
               </span>
             </span>
             <span
-              className={`hidden shrink-0 text-[12px] tabular-nums @xs:block ${dueTone || "text-muted-foreground"}`}
+              className={`hidden shrink-0 text-[0.75rem] tabular-nums @xs:block ${dueTone || "text-muted-foreground"}`}
             >
               {dueLabel(item.dueOn, today)}
             </span>
@@ -256,7 +256,7 @@ function HomeworkRow({
           </DropdownMenu>
         </div>
       )}
-      {error ? <p className="px-4 pb-2.5 text-[12px] text-destructive">{error}</p> : null}
+      {error ? <p className="px-4 pb-2.5 text-[0.75rem] text-destructive">{error}</p> : null}
     </li>
   );
 }
@@ -265,7 +265,7 @@ function HomeworkRow({
 export function EditedBadge() {
   return (
     <span
-      className="rounded px-1.5 py-px text-[11px] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300"
+      className="rounded px-1.5 py-px text-[0.6875rem] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300"
       title="Changed after the first day — see the history"
     >
       Edited

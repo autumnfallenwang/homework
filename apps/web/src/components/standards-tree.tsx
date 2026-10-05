@@ -84,12 +84,12 @@ function AssignmentRow({
   // others put the grade / "Not graded" tag.
   if (assignment.isMissing) {
     const isAgedOut = !attention.withinWindow;
-    const nameClasses = `truncate text-[12px] font-medium ${
+    const nameClasses = `truncate text-[0.75rem] font-medium ${
       isAgedOut ? "text-muted-foreground" : ""
     }`;
     const tagClasses = isAgedOut
-      ? "text-[11px] font-medium text-muted-foreground"
-      : "text-[11px] font-medium text-attention";
+      ? "text-[0.6875rem] font-medium text-muted-foreground"
+      : "text-[0.6875rem] font-medium text-attention";
 
     return (
       <div className="flex items-center justify-between rounded-md px-3 py-1.5">
@@ -99,7 +99,7 @@ function AssignmentRow({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {assignment.dueDate && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
               <Clock className="h-3 w-3" />
               {formatPortalDate(assignment.dueDate)}
             </span>
@@ -116,11 +116,11 @@ function AssignmentRow({
     <div className="flex items-center justify-between rounded-md px-3 py-1.5">
       <div className="flex min-w-0 items-center gap-1.5">
         <Icon className={`h-3 w-3 shrink-0 ${iconClass}`} />
-        <span className="truncate text-[12px] text-foreground/80">{assignment.name}</span>
+        <span className="truncate text-[0.75rem] text-foreground/80">{assignment.name}</span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {assignment.dueDate && (
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
             <Clock className="h-3 w-3" />
             {formatPortalDate(assignment.dueDate)}
           </span>
@@ -128,18 +128,18 @@ function AssignmentRow({
         {hasGrade ? (
           <>
             {assignment.gradeLetter && (
-              <span className="min-w-[2rem] text-right text-[12px] font-medium tabular-nums">
+              <span className="min-w-[2rem] text-right text-[0.75rem] font-medium tabular-nums">
                 {assignment.gradeLetter}
               </span>
             )}
             {assignment.grade && (
-              <span className="text-[11px] tabular-nums text-muted-foreground">
+              <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
                 {assignment.grade}
               </span>
             )}
           </>
         ) : (
-          <span className="text-[11px] italic text-muted-foreground">Not graded</span>
+          <span className="text-[0.6875rem] italic text-muted-foreground">Not graded</span>
         )}
       </div>
     </div>
@@ -178,11 +178,14 @@ function StandardNode({
         <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClass}`} aria-label={iconTitle} role="img">
           <title>{iconTitle}</title>
         </Icon>
-        <span className="text-[13px] font-medium" style={{ fontFamily: "var(--font-heading)" }}>
+        <span
+          className="text-[0.8125rem] font-medium"
+          style={{ fontFamily: "var(--font-heading)" }}
+        >
           {standard.name}
         </span>
         {standard.scoreLetter && (
-          <span className="text-[11px] tabular-nums text-muted-foreground">
+          <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
             {standard.scoreLetter}
           </span>
         )}
@@ -222,7 +225,9 @@ function StandardNode({
       )}
 
       {!hasContent && (
-        <p className="ml-5 py-1 text-[11px] italic text-muted-foreground">(no assignments yet)</p>
+        <p className="ml-5 py-1 text-[0.6875rem] italic text-muted-foreground">
+          (no assignments yet)
+        </p>
       )}
     </div>
   );
@@ -243,7 +248,7 @@ export function StandardsTree({
   if (isLoading) {
     return (
       <div className="px-4 py-4">
-        <p className="text-[12px] text-muted-foreground">Loading details...</p>
+        <p className="text-[0.75rem] text-muted-foreground">Loading details...</p>
       </div>
     );
   }
@@ -252,7 +257,7 @@ export function StandardsTree({
     return (
       <div className="flex items-center gap-2 px-4 py-4">
         <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <p className="text-[12px] text-muted-foreground">No standards data available.</p>
+        <p className="text-[0.75rem] text-muted-foreground">No standards data available.</p>
       </div>
     );
   }
@@ -260,7 +265,7 @@ export function StandardsTree({
   if (detail.standards.length === 0) {
     return (
       <div className="px-4 py-4">
-        <p className="text-[12px] text-muted-foreground">No standards data available.</p>
+        <p className="text-[0.75rem] text-muted-foreground">No standards data available.</p>
       </div>
     );
   }

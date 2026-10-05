@@ -83,13 +83,13 @@ function Section({
           {title}
         </h2>
         {items.length > 0 ? (
-          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[0.6875rem] font-semibold tabular-nums text-muted-foreground">
             {items.length}
           </span>
         ) : null}
       </div>
       {items.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border/80 bg-card/60 px-4 py-2.5 text-[12px] italic text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border/80 bg-card/60 px-4 py-2.5 text-[0.75rem] italic text-muted-foreground">
           {empty}
         </p>
       ) : (
@@ -102,22 +102,22 @@ function Section({
             >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium">
+                  <p className="flex flex-wrap items-center gap-1.5 text-[0.8125rem] font-medium">
                     {item.className}
                     <KindBadge kind={item.kind} />
                     {item.submittedAt ? (
-                      <span className="flex items-center gap-0.5 text-[11px] font-medium text-meeting">
+                      <span className="flex items-center gap-0.5 text-[0.6875rem] font-medium text-meeting">
                         <Check className="h-3 w-3" />
                         Done
                       </span>
                     ) : null}
                   </p>
-                  <p className="text-[12px] text-muted-foreground [overflow-wrap:anywhere]">
+                  <p className="text-[0.75rem] text-muted-foreground [overflow-wrap:anywhere]">
                     {item.title}
                     {item.details ? ` — ${item.details}` : ""}
                   </p>
                 </div>
-                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground">
+                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[0.6875rem] text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {formatShortDay(item.dueOn)}
                 </span>

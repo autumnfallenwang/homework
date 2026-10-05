@@ -34,7 +34,7 @@ export function SettingsSection({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-1.5 px-1">
-        <h2 className="text-[14px] font-medium">{title}</h2>
+        <h2 className="text-[0.875rem] font-medium">{title}</h2>
         {help && (
           <span
             role="img"
