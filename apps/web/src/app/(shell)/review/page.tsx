@@ -10,7 +10,7 @@ import { getChildHomeworkItems, getChildren } from "@/lib/api";
 
 /**
  * The parent's Review tab (ADR 0006): everything the child picked in the sidebar
- * entered, read only. Approving and sending work back arrive in stage 4.
+ * entered. The parent views, and can delete any item (ADR 0012).
  */
 export default function ReviewPage() {
   const { selectedChildId } = useSelectedChild();
@@ -58,6 +58,9 @@ export default function ReviewPage() {
                 today={list.today}
                 mode="parent"
                 itemHref={(i) => `/review/homework/${i.id}`}
+                onDeleted={(id) =>
+                  setList((l) => l && { ...l, items: l.items.filter((i) => i.id !== id) })
+                }
               />
             ) : error ? null : (
               <Loader2 className="mx-auto mt-6 h-5 w-5 animate-spin text-muted-foreground" />

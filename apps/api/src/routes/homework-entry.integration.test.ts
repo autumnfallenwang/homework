@@ -7,7 +7,13 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { closeDb, db } from "../db/index.js";
-import { children, homeworkItems, homeworkPhotos, users } from "../db/schema.js";
+import {
+  children,
+  homeworkItemEvents,
+  homeworkItems,
+  homeworkPhotos,
+  users,
+} from "../db/schema.js";
 import { seedSettings } from "../db/seed-settings.js";
 import { HomeworkSource } from "../fetch/homework-source.js";
 import type { SessionUser } from "../middleware/auth.js";
@@ -154,7 +160,9 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
 
     // Off again: the list stays readable, writes stop.
     asParent();
-    await send("PATCH", `/api/children/${ivyId}`, { homeworkSource: "page" });
+    expect((await send("PATCH", `/api/children/${ivyId}`, { homeworkSource: "page" })).status).toBe(
+      200,
+    );
     asIvy();
     expect((await send("PATCH", `/api/child/homework/${item.id}`, { title: "x" })).status).toBe(
       403,
@@ -627,7 +635,7 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
     expect(list.items.map((i) => i.id).sort()).toEqual([oldTodo.id, recentDone.id].sort());
   });
 
-  it("lets the parent read but never write a child's items", async () => {
+  it("lets the parent read but never write a child's items (delete aside)", async () => {
     await turnOn(ivyId);
     asIvy();
     const item = await addItem({ classId: null, title: "Ivy's" });
@@ -645,6 +653,39 @@ describe.skipIf(!url)("child-entered homework (live DB)", () => {
       (await send("GET", `/api/children/00000000-0000-4000-8000-000000000999/homework-items`))
         .status,
     ).toBe(404);
+  });
+
+  it("lets the parent delete any item for good, past its first day too (ADR 0012)", async () => {
+    await turnOn(ivyId);
+    asIvy();
+    const item = await addItem({ classId: null, title: "Duplicate" });
+    const path = `/api/child/homework/${item.id}`;
+    await upload(`${path}/photos`, JPEG);
+    await db
+      .update(homeworkItems)
+      .set({ createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000) })
+      .where(eq(homeworkItems.id, item.id));
+    expect((await send("PUT", `${path}/solution`, { note: "Done" })).status).toBe(200);
+    expect((await send("POST", `${path}/submit`)).status).toBe(200);
+    expect((await send("DELETE", path)).status).toBe(409); // the child can't any more
+    // …nor through the parent's route.
+    expect((await send("DELETE", `/api/homework-items/${item.id}`)).status).toBe(403);
+
+    asParent();
+    // Entry being off later doesn't matter to the parent.
+    expect((await send("PATCH", `/api/children/${ivyId}`, { homeworkSource: "page" })).status).toBe(
+      200,
+    );
+    expect((await send("DELETE", `/api/homework-items/${item.id}`)).status).toBe(204);
+    expect((await send("GET", `/api/homework-items/${item.id}`)).status).toBe(404);
+    expect(
+      await db.select().from(homeworkPhotos).where(eq(homeworkPhotos.itemId, item.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(homeworkItemEvents).where(eq(homeworkItemEvents.itemId, item.id)),
+    ).toHaveLength(0);
+    expect((await send("DELETE", `/api/homework-items/${item.id}`)).status).toBe(404);
+    expect((await send("DELETE", "/api/homework-items/not-a-uuid")).status).toBe(404);
   });
 
   it("offers the current TeacherEase class names (none without a fetch)", async () => {

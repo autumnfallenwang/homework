@@ -8,7 +8,7 @@ import { HomeworkDetail } from "@/components/homework/homework-detail";
 import { PageHeader } from "@/components/shell/page-header";
 import { ApiClientError, getHomeworkItem, getHomeworkItemHistory } from "@/lib/api";
 
-/** One item a child entered, with its solution and history, read only (ADR 0006, 0008). */
+/** One item a child entered, with its solution and history; the parent can delete it (ADR 0012). */
 export default function ReviewHomeworkItemPage() {
   const { id } = useParams<{ id: string }>();
   const [loaded, setLoaded] = useState<{

@@ -136,3 +136,19 @@ shows her solution and a history: the due move and the photos, including one she
   tile just goes away at it; the solution note is required to save (red `*`, "Write a note" on
   Save, API `min(1)`) and Submit needs a saved note. Tests: API 152 (20-photo caps, required note,
   photos alone can't be submitted).
+- 2026-10-04: parent Delete (founder's review, ADR 0012): the parent's item page has a red Delete
+  at the bottom left with the same inline "Delete this homework?" Delete / Keep as the child's; any
+  item, any time (no first-day rule, entry on or off), for good — photos and history go by FK
+  cascade; `DELETE /api/homework-items/:id` (parent-only, 204/404), logged as `homework.deleted`;
+  then the page goes to Review. Tests: API 153 (parent deletes a submitted item past its first
+  day; the child gets 409 on its own route and 403 on the parent's). Dev e2e: throwaway item past
+  its first day with a photo, a note and a Submit — Keep leaves it, Delete → Review without it,
+  the item URL says "This homework no longer exists.", 0 rows left in items/photos/events; phone
+  width wraps the confirm row with no sideways scroll.
+- 2026-10-04: list actions (founder's review, ADR 0012): a vertical ⋮ menu on each row of the
+  child's Homework list (Edit; Delete on the first day only) and the parent's Review list (View,
+  Delete); Delete confirms inside the row (`Delete “title”?` Delete / Keep, focus on Keep). Parent
+  Edit was offered and declined: view and delete only. Narrow rows (parent sidebar open on a
+  phone) move the due label under the title. Dev e2e: child menu on a first-day item Edit +
+  Delete, on an older item Edit only; Keep, Delete (row gone), Escape returns focus to ⋮; parent
+  View + Delete on an item past its first day → gone; 390 px for both roles, no sideways scroll.

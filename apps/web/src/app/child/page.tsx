@@ -62,6 +62,9 @@ export default function ChildHomeworkPage() {
             today={list.today}
             mode="child"
             itemHref={(i) => `/child/homework/${i.id}`}
+            onDeleted={(id) =>
+              setList((l) => l && { ...l, items: l.items.filter((i) => i.id !== id) })
+            }
           />
         ) : (
           <HomeworkEntryOff />

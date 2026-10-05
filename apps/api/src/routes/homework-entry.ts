@@ -6,7 +6,7 @@
 // - `childHomeworkAdminApp` (mounted at /api/children, parent-only): a child's list,
 //   read only, and the parent-owned class list.
 // - `homeworkItemsApp` (mounted at /api/homework-items, parent-only): one item, its
-//   photos (removed ones too) and its history, read only.
+//   photos (removed ones too) and its history; the parent can delete it (ADR 0012).
 
 import {
   createHomeworkItemSchema,
@@ -22,6 +22,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { db } from "../db/index.js";
 import * as q from "../db/queries.js";
+import { log } from "../lib/logger.js";
 import type { AuthVariables } from "../middleware/auth.js";
 import { toLocalIso } from "../services/digest.js";
 import {
@@ -37,6 +38,7 @@ import {
   listClasses,
   listHistory,
   listItems,
+  parentDeleteItem,
   replaceClasses,
   saveSolution,
   submitItem,
@@ -264,7 +266,7 @@ childHomeworkAdminApp.put("/:id/homework-classes", async (c) => {
   }
 });
 
-// --- One item, read only (/api/homework-items/*) ------------------------------
+// --- One item: view, or delete (/api/homework-items/*) ------------------------
 
 export const homeworkItemsApp = new Hono();
 
@@ -273,6 +275,19 @@ homeworkItemsApp.get("/:itemId", async (c) => {
   if (!UUID.test(itemId)) return notFound(c);
   const item = await getItem(db, itemId);
   return item ? c.json(item) : notFound(c);
+});
+
+// The parent's Delete (ADR 0012): no first-day rule, nothing kept.
+homeworkItemsApp.delete("/:itemId", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId)) return notFound(c);
+  const deleted = await parentDeleteItem(db, itemId);
+  if (!deleted) return notFound(c);
+  log.info(
+    { event: "homework.deleted", item_id: itemId, child_id: deleted.childId, by: "parent" },
+    "homework item deleted",
+  );
+  return c.body(null, 204);
 });
 
 homeworkItemsApp.get("/:itemId/history", async (c) => {

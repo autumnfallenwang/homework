@@ -41,6 +41,7 @@ describe("the access matrix", () => {
       `/api/children/${ID}/homework-classes`,
       `/api/homework-items/${ID}/photos/${ID}`,
       `/api/homework-items/${ID}/history`,
+      `/api/homework-items/${ID}`,
     ]) {
       expect(parentOnly).toContain(path);
     }

@@ -636,6 +636,22 @@ export async function deleteItem(
   });
 }
 
+/**
+ * The parent deletes an item (ADR 0012): any item, any time, for good — its
+ * photos (removed ones too) and its history go with it. Returns the child it
+ * belonged to, or null when there is no such item.
+ */
+export async function parentDeleteItem(
+  db: Database,
+  itemId: string,
+): Promise<{ childId: string } | null> {
+  const [row] = await db
+    .delete(homeworkItems)
+    .where(eq(homeworkItems.id, itemId))
+    .returning({ childId: homeworkItems.childId });
+  return row ?? null;
+}
+
 /** Changes recorded after the first day, oldest first (the parent's view). */
 export async function listHistory(db: Database, itemId: string): Promise<HomeworkHistoryEntry[]> {
   const rows = await db

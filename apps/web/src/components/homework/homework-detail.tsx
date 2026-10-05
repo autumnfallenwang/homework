@@ -7,17 +7,20 @@ import {
   type HomeworkKind,
   type HomeworkPhotoRef,
 } from "@homework/shared";
-import { CheckCircle2 } from "lucide-react";
-import { homeworkPhotoUrl } from "@/lib/api";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ApiClientError, deleteHomeworkItem, homeworkPhotoUrl } from "@/lib/api";
 import { formatAddedAt, formatShortDay } from "@/lib/homework-format";
 import { EditedBadge } from "./homework-list";
 import { KindBadge } from "./kind-badge";
 import { PhotoGrid, type PhotoSection, PhotoViewerProvider, usePhotoViewer } from "./photo-viewer";
 
 /**
- * One item of a child's list, as the parent sees it: read only (ADR 0006, 0008).
- * The homework, the child's solution, when it was added, and every change made
- * after its first day.
+ * One item of a child's list, as the parent sees it (ADR 0006, 0008): the
+ * homework, the child's solution, when it was added, and every change made after
+ * its first day. The parent's one action is Delete, at the bottom (ADR 0012).
  */
 export function HomeworkDetail({
   item,
@@ -136,8 +139,69 @@ export function HomeworkDetail({
             </ol>
           )}
         </section>
+
+        <DeleteItem itemId={item.id} />
       </div>
     </PhotoViewerProvider>
+  );
+}
+
+/** Delete for good, after the same inline "Delete this homework?" as the child's. */
+function DeleteItem({ itemId }: { itemId: string }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteHomeworkItem(itemId);
+      router.push("/review");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError && err.status === 404
+          ? "This homework no longer exists."
+          : "Could not delete this homework.",
+      );
+      setConfirming(false);
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="mt-10 flex flex-wrap items-center gap-2 border-t pt-4">
+      {confirming ? (
+        <>
+          <span className="text-[13px]">Delete this homework?</span>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => void remove()}
+            disabled={deleting}
+          >
+            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Delete
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setConfirming(false)}
+            disabled={deleting}
+          >
+            Keep
+          </Button>
+        </>
+      ) : (
+        <Button type="button" size="lg" variant="destructive" onClick={() => setConfirming(true)}>
+          Delete
+        </Button>
+      )}
+      <span className="flex-1 text-[13px] text-destructive" role="status">
+        {error}
+      </span>
+    </div>
   );
 }
 

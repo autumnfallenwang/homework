@@ -426,6 +426,11 @@ export function getHomeworkItemHistory(itemId: string): Promise<HomeworkHistoryE
   return get(`/api/homework-items/${itemId}/history`);
 }
 
+/** The parent's Delete (ADR 0012): any item, for good. */
+export function deleteHomeworkItem(itemId: string): Promise<void> {
+  return del(`/api/homework-items/${itemId}`);
+}
+
 export function homeworkPhotoUrl(itemId: string, photoId: string): string {
   return `${apiBaseUrl()}/api/homework-items/${itemId}/photos/${photoId}`;
 }

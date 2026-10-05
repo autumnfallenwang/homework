@@ -1,6 +1,6 @@
 ---
 name: child-homework-entry
-description: ADR 0006/0007/0008 (M10, M11) — per-child homework_source switch, parent-owned class list, child items with a child-picked given-on day (≤ due, ≤ today), solution on the item (done = has a solution), free edits until the next 7 AM then recorded changes (homework_item_events), Given on locked + no delete after; photos as bytea (sheet/solution, soft-removed); where each rule lives + pitfalls.
+description: ADR 0006/0007/0008 (M10, M11) — per-child homework_source switch, parent-owned class list, child items with a child-picked given-on day (≤ due, ≤ today), solution on the item (done = has a solution), free edits until the next 7 AM then recorded changes (homework_item_events), Given on locked + no child delete after (the parent can delete any item, ADR 0012); photos as bytea (sheet/solution, soft-removed); where each rule lives + pitfalls.
 metadata:
   type: feedback
 ---
@@ -40,6 +40,13 @@ the item carries it as ISO so the web needn't know the TZ. Inside it: hard delet
 After it: `given_on_locked` / `delete_locked` (409), photo DELETE sets `removed_at` (child 404,
 parent still served), every change → `homework_item_events` (field → [old, new]; class by name).
 History is parent-only (`GET /api/homework-items/:id/history`); `edited` = any event exists.
+The parent's one write (ADR 0012): `DELETE /api/homework-items/:id` (`parentDeleteItem`) — any
+item, any time, entry on or off; a hard delete (photos + events go by FK cascade), logged as
+`homework.deleted`; the page's red Delete (bottom left, inline confirm) then goes to `/review`.
+Lists (`HomeworkList`, both sides): a ⋮ radix `DropdownMenu` per row (`ui/dropdown-menu.tsx`) —
+child Edit + first-day Delete, parent View + Delete; the confirm replaces the row and the page's
+`onDeleted` drops the item. Rows are `@container`: under `@xs` (the parent's sidebar open on a
+phone) the due label moves into the second line, or the title wraps a letter per line.
 Today, the hero and the digest show "Homework for today" (given today: `hwDate` / `assignedOn`)
 and "Due <next hand-in day>" (`nextDueDay(today)` = next school day, `relativeDueDay` → "tomorrow"
 / "Mon 10/5"); class-page homework due that day comes from `?due=` (never filter the posted-today
