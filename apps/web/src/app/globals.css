@@ -21,6 +21,17 @@ html {
   overscroll-behavior: none;
 }
 
+/* Radix menus (ui/dropdown-menu.tsx) place themselves with a translate taken
+ * from on-screen coordinates, which the `zoom` above then multiplies again —
+ * at 1.25 the menu opens 1.25× as far from the corner as its button. Undo the
+ * zoom on the positioning wrapper and put it back on the menu inside. */
+[data-radix-popper-content-wrapper] {
+  zoom: calc(1 / var(--font-scale, 1));
+}
+[data-radix-popper-content-wrapper] > * {
+  zoom: var(--font-scale, 1);
+}
+
 html,
 body {
   /* Belt-and-braces: WebKit historically only respects overscroll-behavior
