@@ -34,7 +34,7 @@ withLogContext({ job: "fetch", run_id: randomUUID() }, () => work()); // every l
 **Web** — no pino. Server errors go through `instrumentation.ts` → `web.request_error` (with the
 `digest` the error page shows). Next's banner + `⨯` stderr stack are the only non-JSON lines left.
 
-**Loki cheat-sheet** (Grafana → Explore, or `curl -G http://loki.arch.internal/loki/api/v1/query_range`):
+**Loki cheat-sheet** (Grafana → Explore, or `curl -G http://loki.observability.svc.cluster.local:3100/loki/api/v1/query_range`):
 - every failure, both containers: `{namespace="homework"} | json | __error__="" | level=~"error|fatal"`
 - one request: `{namespace="homework"} | json | req_id="<id>"` (send `X-Request-Id: <id>` to pick it)
 - one scheduled run: `{namespace="homework", container="api"} | json | run_id="<id>"`
