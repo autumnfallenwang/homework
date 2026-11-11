@@ -1,6 +1,6 @@
 ---
 name: homework-grading
-description: M13–M14 / ADR 0014–0015 — each Submit graded by a vision model via llmgw (sweep every minute, DB is the queue), alerts on low score or retake request, the child sees only the retake request; teacher-grade matching after each fetch; where each rule lives + pitfalls (turbo drops DATABASE_URL, prompt versions, real-data dry runs).
+description: M13–M14 / ADR 0014–0015 — each Submit graded by a vision model via llmgw (sweep every minute, DB is the queue), email only for a low score (retakes → app + digest), the child sees only the retake request; teacher-grade matching after each fetch; where each rule lives + pitfalls (turbo drops DATABASE_URL, prompt versions, real-data dry runs).
 metadata:
   type: feedback
 ---
@@ -16,9 +16,10 @@ sees, digest lines, backfill. `lib/llm.ts` = plain fetch to `LLM_GATEWAY_URL` (d
 - Sweep: node-cron `* * * * *` armed always, checks `grading.enabled` itself; picks `homework_source
   = child` items submitted ≥ 60 s ago and after `grading.enabledAt`; one at a time (module mutex).
   Grade again = in-memory queue emptied first by the next sweep (lost on restart — fine).
-- A retake request can come WITH a score (`retakeReason` on a `graded` row). Alert = retake request
-  or score < `alertBelow`; never for `failed` / `not_gradable`, the parent's Grade again or the
-  backfill (both set `reported_at` at insert so the digest skips them too).
+- A retake request can come WITH a score (`retakeReason` on a `graded` row). Alert email = score <
+  `alertBelow` ONLY (founder, 2026-11-11 — a retake request alone goes to the child in the app and
+  the parent in the digest); never for the parent's Grade again or the backfill (both set
+  `reported_at` at insert so the digest skips them too).
 - The child gets `photoCheck` only (`childPhotoChecks`): the retake request while `dueOn >= today`,
   or `checking`. Never `grade`, score, summary or findings — the integration test greps the raw JSON.
 - llmgw: Sonnet 5.5 always thinks, so llmgw can't force `tool_choice` and asks in words instead;

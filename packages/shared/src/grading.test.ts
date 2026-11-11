@@ -8,25 +8,17 @@ import {
 } from "./grading.js";
 
 describe("gradeNeedsParent", () => {
-  const g = (
-    status: "graded" | "retake" | "not_gradable" | "failed",
-    score: number | null,
-    retakeReason: string | null = null,
-  ) => ({
+  const g = (status: "graded" | "retake" | "not_gradable" | "failed", score: number | null) => ({
     status,
     score,
-    retakeReason,
   });
   it("is true below the alert score and false at or above it", () => {
     expect(gradeNeedsParent(g("graded", 79), 80)).toBe(true);
     expect(gradeNeedsParent(g("graded", 80), 80)).toBe(false);
     expect(gradeNeedsParent(g("graded", 0), 0)).toBe(false);
   });
-  it("is true for any retake request, even with a good score", () => {
-    expect(gradeNeedsParent(g("retake", null, "blurry"), 80)).toBe(true);
-    expect(gradeNeedsParent(g("graded", 99, "photo 2 cut off"), 80)).toBe(true);
-  });
-  it("is false for not gradable and failed", () => {
+  it("is false for a retake, not gradable and failed — retakes go to the app and the digest", () => {
+    expect(gradeNeedsParent(g("retake", null), 80)).toBe(false);
     expect(gradeNeedsParent(g("not_gradable", null), 80)).toBe(false);
     expect(gradeNeedsParent(g("failed", null), 80)).toBe(false);
   });

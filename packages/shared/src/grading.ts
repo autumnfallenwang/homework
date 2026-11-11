@@ -1,6 +1,7 @@
 // Homework grading (ADR 0014): every Submit of a child-entered item is graded by
-// a vision model through llmgw. The parent sees the grade; the child sees only a
-// retake request (which photos, and why). Shapes and rules shared by API and web.
+// a vision model through llmgw. The parent sees the grade (and is emailed for a
+// low score); the child sees only a retake request (which photos, and why).
+// Shapes and rules shared by API and web.
 
 import { z } from "zod";
 
@@ -59,7 +60,7 @@ export interface HomeworkGrade {
   createdAt: string;
   /** Set when an alert email went out for it. */
   alertedAt: string | null;
-  /** Below the alert score, or a retake: the parent is needed. */
+  /** Below the alert score: the parent is needed (and was emailed). */
   needsParent: boolean;
   /** Graded below the alert score. */
   lowScore: boolean;
@@ -142,12 +143,15 @@ export interface GradingModelList {
 
 // --- Rules ---------------------------------------------------------------------
 
-/** The parent is needed: a retake request (with or without a score), or a score below the alert score. */
+/**
+ * The parent is needed — and emailed at once: a score below the alert score.
+ * A retake request alone is not (founder, 2026-11-11): the child sees it in the
+ * app and the parent in the daily digest.
+ */
 export function gradeNeedsParent(
-  grade: { status: GradeStatus; score: number | null; retakeReason: string | null },
+  grade: { status: GradeStatus; score: number | null },
   alertBelow: number,
 ): boolean {
-  if (grade.status === "retake" || grade.retakeReason !== null) return true;
   return grade.status === "graded" && grade.score !== null && grade.score < alertBelow;
 }
 

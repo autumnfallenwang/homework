@@ -32,9 +32,10 @@ Every Submit is graded by a vision model through llmgw, in the API, after the fa
    request can come with any status** — a graded submission whose answers on one photo can't be
    read still gets its score, plus a request for that photo (Phase 0: grading-or-retake was too
    blunt; a cut-off top on one page hid a real misconception on another).
-2. **Email only when needed.** An alert email goes to the parent right after grading when there is
-   a retake request, or the score is below the alert threshold (a setting, default 80). Every
-   grade also appears in the existing daily digest email, in a new section. Same SMTP sender.
+2. **Email only for a low score.** An alert email goes to the parent right after grading when the
+   score is below the alert threshold (a setting, default 80). A retake request sends no email
+   (amended 2026-11-11, see Notes): the child sees it in the app, the parent in the daily digest.
+   Every grade appears in the existing daily digest email, in a new section. Same SMTP sender.
 3. **The grade is parent-only; the retake request is not.** The child never sees a score, a
    summary or a finding. A retake request (which photos, and why — about the photo only) shows on
    her item until she submits again, so she can fix it that evening; the parent's email says the
@@ -79,6 +80,11 @@ email (the founder wants the existing daily digest).
   a 9-photo packet) → the default. `qwen3-vl:8b` failed 6 of 23 (timeouts, unreadable answers) and
   took 2–5 min each. Prompt v2: a retake request is about the photo only — v1 once told her to
   "darken the points with a pen".
+- 2026-11-11 (founder): emails for low scores only. On last month's data about 1 in 3 submissions
+  carried a retake request (math packets photographed with the top of the page cut off), which
+  would have meant an email for most math homework; the retake request already reaches the child in
+  the app and the parent in the digest. A low score that comes with a retake request still mentions
+  it in its email.
 - Built with plain `fetch` + Zod (`lib/llm.ts`), not the OpenAI SDK homenews uses: two calls,
   tool calling and images, no new dependency.
 - Milestones: [13 — Homework grading](../milestones/13-homework-grading.md),

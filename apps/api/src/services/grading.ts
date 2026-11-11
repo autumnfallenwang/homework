@@ -1,5 +1,5 @@
 // Homework grading (ADR 0014, M13): settings, the sweep that grades each Submit,
-// the alert email, and what each side may see of a grade.
+// the alert email (low scores only), and what each side may see of a grade.
 //
 // The database is the queue: a Submit with no grade row is waiting. The sweep
 // (every minute, services/scheduler.ts) grades settled submissions one at a time;
@@ -189,10 +189,7 @@ function toGrade(row: GradeRow, alertBelow: number): HomeworkGrade {
     alertedAt: row.alertedAt?.toISOString() ?? null,
     needsParent:
       row.status !== "failed" &&
-      gradeNeedsParent(
-        { status: row.status as GradeStatus, score: row.score, retakeReason: row.retakeReason },
-        alertBelow,
-      ),
+      gradeNeedsParent({ status: row.status as GradeStatus, score: row.score }, alertBelow),
     lowScore: row.status === "graded" && row.score !== null && row.score < alertBelow,
     error: row.error,
   };
@@ -382,8 +379,9 @@ export async function gradeItem(
   }
   log.info({ ...fields, event: "grading.done" }, "submission graded");
 
-  const needsParent = gradeNeedsParent(outcome, settings.alertBelow);
-  if (needsParent && !quiet && outcome.status !== "not_gradable") {
+  // Email only for a low score (founder, 2026-11-11); a retake request reaches the
+  // child in the app and the parent in the daily digest.
+  if (gradeNeedsParent(outcome, settings.alertBelow) && !quiet) {
     return (await sendGradeAlert(db, row, input, settings, deps)) ?? row;
   }
   return row;
@@ -634,10 +632,7 @@ export async function gradesForDigest(db: Database): Promise<DigestGrades> {
       summary: g.summary,
       needsParent:
         g.status !== "failed" &&
-        gradeNeedsParent(
-          { status: g.status as GradeStatus, score: g.score, retakeReason: g.retakeReason },
-          settings.alertBelow,
-        ),
+        gradeNeedsParent({ status: g.status as GradeStatus, score: g.score }, settings.alertBelow),
       retake: g.retakeReason !== null,
       stuck: g.stuck,
       alerted: g.alertedAt !== null,

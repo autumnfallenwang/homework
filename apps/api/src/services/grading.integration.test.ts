@@ -224,15 +224,17 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     expect(graded.map((g) => g.itemId)).toEqual([settled, fresh]);
   });
 
-  it("emails the parent once when the score is low or photos must be retaken — not otherwise", async () => {
+  it("emails the parent once for a low score — never for a retake request alone", async () => {
     await enable(new Date(now.getTime() - 60 * MIN), 80);
-    const low = await addItem(ivyId, "Low", new Date(now.getTime() - 5 * MIN));
-    const high = await addItem(ivyId, "High", new Date(now.getTime() - 4 * MIN));
-    const retake = await addItem(ivyId, "Blurry", new Date(now.getTime() - 3 * MIN));
+    const low = await addItem(ivyId, "Low", new Date(now.getTime() - 6 * MIN));
+    const high = await addItem(ivyId, "High", new Date(now.getTime() - 5 * MIN));
+    const retake = await addItem(ivyId, "Blurry", new Date(now.getTime() - 4 * MIN));
+    const unreadable = await addItem(ivyId, "Unreadable", new Date(now.getTime() - 3 * MIN));
     const edge = await addItem(ivyId, "Edge", new Date(now.getTime() - 2 * MIN));
     const scores: Record<string, Partial<GradeOutcome>> = {
       [low]: {
         score: 58,
+        retakeReason: "Photo 2 cuts off the top. Take it again.",
         findings: [
           {
             photoId: null,
@@ -245,23 +247,35 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
       },
       [high]: { score: 92 },
       [retake]: { score: 95, retakeReason: "Photo 1 is blurry. Take it again." },
+      [unreadable]: { status: "retake", score: null, retakeReason: "Too dark to read." },
       [edge]: { score: 80 },
     };
     next = (input) => outcome(scores[input.itemId]);
 
-    expect((await runGradingSweep(db, deps())).graded).toBe(4);
-    expect(sent.map((m) => m.subject)).toEqual([
-      "Ivy · Other · Low — 58/100, needs you",
-      "Ivy · Other · Blurry — 95/100, retake some photos",
-    ]);
+    expect((await runGradingSweep(db, deps())).graded).toBe(5);
+    expect(sent.map((m) => m.subject)).toEqual(["Ivy · Other · Low — 58/100, needs you"]);
     expect(sent[0]?.text).toContain("Q3: Sign flip → Swap x and y");
+    expect(sent[0]?.text).toContain(
+      "Retake request (she sees this too): Photo 2 cuts off the top.",
+    );
     expect(sent[0]?.html).toContain("/review/homework/");
     expect((await gradeRows(low))[0]?.alertedAt).not.toBeNull();
-    expect((await gradeRows(high))[0]?.alertedAt).toBeNull();
-    expect((await gradeRows(edge))[0]?.alertedAt).toBeNull();
+    for (const id of [high, retake, unreadable, edge]) {
+      expect((await gradeRows(id))[0]?.alertedAt).toBeNull();
+    }
     // Never twice.
     await runGradingSweep(db, deps());
-    expect(sent).toHaveLength(2);
+    expect(sent).toHaveLength(1);
+    // The retakes still reach the parent in the digest, and the child in the app.
+    const digest = await gradesForDigest(db);
+    expect(digest.lines.filter((l) => l.retake).map((l) => l.title)).toEqual(
+      expect.arrayContaining(["Low", "Blurry", "Unreadable"]),
+    );
+    session = ivy;
+    const one = (await (await send("GET", `/api/child/homework/${retake}`)).json()) as {
+      photoCheck: ChildPhotoCheck | null;
+    };
+    expect(one.photoCheck?.retake?.reason).toBe("Photo 1 is blurry. Take it again.");
   });
 
   it("never alerts on not gradable or failed, and skips the email quietly without SMTP", async () => {

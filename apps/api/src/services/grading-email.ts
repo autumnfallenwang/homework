@@ -1,6 +1,7 @@
-// The grade alert email (ADR 0014): sent to the parent right after a grade that
-// needs them — a score below the alert score, or a retake request. Same SMTP
-// sender and look as the daily digest.
+// The grade alert email (ADR 0014): sent to the parent right after a grade below
+// the alert score. A retake request alone sends none — the child sees it in the
+// app, the parent in the daily digest; one that comes with a low score is
+// mentioned here. Same SMTP sender and look as the daily digest.
 
 import type { GradeFinding } from "@homework/shared";
 import { escapeHtml } from "../lib/html.js";
@@ -22,15 +23,9 @@ export interface GradeAlertInput {
   url: string;
 }
 
-/** "packet — 58/100, needs you" / "— retake the photos" / "— 72/100, retake photos". */
+/** "58/100, needs you" — the alert goes out for low scores only (founder, 2026-11-11). */
 export function gradeAlertHeadline(a: GradeAlertInput): string {
-  const lowScore = a.status === "graded" && a.score !== null && a.score < a.alertBelow;
-  if (a.status === "graded" && a.score !== null) {
-    if (a.retakeReason && !lowScore) return `${a.score}/100, retake some photos`;
-    if (a.retakeReason) return `${a.score}/100, needs you · retake some photos`;
-    return `${a.score}/100, needs you`;
-  }
-  return "retake the photos";
+  return a.score !== null ? `${a.score}/100, needs you` : "needs you";
 }
 
 export function renderGradeAlert(a: GradeAlertInput): EmailContent {

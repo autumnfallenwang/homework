@@ -25,17 +25,9 @@ const base: GradeAlertInput = {
 };
 
 describe("grade alert email", () => {
-  it("says why the parent is needed", () => {
+  it("says the score", () => {
     expect(gradeAlertHeadline(base)).toBe("58/100, needs you");
-    expect(gradeAlertHeadline({ ...base, score: 90, retakeReason: "blurry" })).toBe(
-      "90/100, retake some photos",
-    );
-    expect(gradeAlertHeadline({ ...base, retakeReason: "blurry" })).toBe(
-      "58/100, needs you · retake some photos",
-    );
-    expect(
-      gradeAlertHeadline({ ...base, status: "retake", score: null, retakeReason: "blurry" }),
-    ).toBe("retake the photos");
+    expect(gradeAlertHeadline({ ...base, retakeReason: "blurry" })).toBe("58/100, needs you");
   });
 
   it("renders text and escaped HTML with the findings and the link", () => {

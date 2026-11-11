@@ -117,8 +117,9 @@ graded again.
 ### Phase 3 — Emails
 
 - **Alert** (`renderGradeAlert`, same `loadSmtpConfig` + `sendEmail`): sent right after a grade with
-  a retake request, or `score < grading.alertBelow`; once per grade (`alerted_at`); never for the
-  parent's own Grade again or the backfill. Subjects
+  `score < grading.alertBelow` — low scores only (founder, 2026-11-11; a retake request alone goes
+  to the child in the app and to the parent in the digest); once per grade (`alerted_at`); never
+  for the parent's own Grade again or the backfill. Subjects
   `Ivy · Mathematics 8 Honors · packet — 58/100, needs you` / `… — retake the photo`; body: summary,
   findings, the stuck flag, a link to the item page (web origin = first `CORS_ORIGINS`). SMTP
   missing → `grading.alert.skip` log line; the grade still goes to the digest.
@@ -179,6 +180,8 @@ graded again.
   still doesn't); no action on days with nothing submitted; match grades to the teacher's grades
   if it can be done (→ M14); weekly summary later; the agent picks the timing (→ "When the model
   runs").
+- **Founder, 2026-11-11:** email for low scores only; retake requests stay in the app (the child)
+  and the daily digest (the parent).
 - Defaults (agent, to confirm in Phase 0): score 0–100, alert below 80, `claude-sonnet-5-5`,
   fallback `gpt-6-luna`, 1-minute sweep with a 1-minute settle.
 
@@ -205,6 +208,9 @@ graded again.
   - prompt v2: retake requests about the photo only (v1 once said "darken the points with a pen")
     and only for answers that can't be checked.
   - ADR 0014 accepted.
+- 2026-11-11: emails for low scores only (founder) — `gradeNeedsParent` is now "graded below the
+  alert score"; retake requests show to her in the app and to the parent in the digest
+  ("retake asked" / "Retake photos"). Not released yet: the push to `main` is the founder's.
 
 ## References
 

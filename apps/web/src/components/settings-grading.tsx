@@ -2,7 +2,8 @@
 
 // Settings → Grading (ADR 0014). Every Submit of a child-entered item is graded
 // by a vision model through llmgw; an email goes out when the score is below the
-// alert score or a photo must be retaken. One form, one Save.
+// alert score. Retake requests go to the child in the app and to the parent in the
+// daily digest. One form, one Save.
 
 import {
   GRADING_DEFAULTS,
@@ -132,7 +133,7 @@ export function SettingsGrading() {
     <div className="space-y-5">
       <SettingsSection
         title="Homework grading"
-        help="Each time a child submits homework, a model reads the photos and her note and grades it 0–100. You get an email when the score is below the alert score, or when photos must be retaken — the child sees only the retake request, never the grade. Every grade is also listed in the daily digest."
+        help="Each time a child submits homework, a model reads the photos and her note and grades it 0–100. You get an email when the score is below the alert score. When photos can't be read, she is asked in the app to retake them (she never sees the grade) and you see it in the daily digest, where every grade is listed."
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -210,7 +211,7 @@ export function SettingsGrading() {
 
       <SettingsSection
         title="Alerts"
-        help="An email goes out right after a grade below this score. Retake requests always send one. Default 80 — small slips only."
+        help="An email goes out right after a grade below this score. Retake requests don't send one — she sees them in the app, you in the daily digest. Default 80 — small slips only."
       >
         <div className="flex items-center gap-2">
           <span className="text-[0.8125rem]">Email me below</span>
