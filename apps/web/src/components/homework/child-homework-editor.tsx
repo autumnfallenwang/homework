@@ -1,14 +1,15 @@
 "use client";
 
-import type { HomeworkClass, HomeworkItem } from "@homework/shared";
+import type { ChildPhotoCheck, HomeworkClass, HomeworkItem } from "@homework/shared";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { getChildProfile, getMyHomeworkClasses, getMyHomeworkItem } from "@/lib/api";
 import { toLocalIso } from "@/lib/local-date";
 import { HomeworkEntryOff } from "./entry-off";
 import { describeHomeworkError, HomeworkForm } from "./homework-form";
-import { PhotoViewerProvider } from "./photo-viewer";
+import { PhotoCheckBanner } from "./photo-check-banner";
+import { PhotoHighlightContext, PhotoViewerProvider } from "./photo-viewer";
 import { SolutionForm } from "./solution-form";
 
 /**
@@ -87,44 +88,74 @@ function ItemPage({
   onCreated: (item: HomeworkItem) => void;
 }) {
   const [item, setItem] = useState(initial);
+  // Grading (ADR 0014): a retake request, or "checking" right after a Submit.
+  const [check, setCheck] = useState<ChildPhotoCheck | null>(initial?.photoCheck ?? null);
+  const highlight = useMemo(() => new Set(check?.retake?.photoIds ?? []), [check]);
+  const itemId = item?.id ?? null;
+  const checking = check?.checking === true;
+
+  // While her photos are being checked, look again every 10 s (for 5 minutes).
+  useEffect(() => {
+    if (!itemId || !checking) return;
+    let tries = 0;
+    const t = setInterval(() => {
+      tries += 1;
+      if (tries > 30) {
+        clearInterval(t);
+        return;
+      }
+      getMyHomeworkItem(itemId)
+        .then((fresh) => setCheck(fresh.photoCheck ?? null))
+        .catch(() => {});
+    }, 10_000);
+    return () => clearInterval(t);
+  }, [itemId, checking]);
+
+  const onSaved = (saved: HomeworkItem) => {
+    setItem(saved);
+    if (saved.photoCheck !== undefined) setCheck(saved.photoCheck);
+  };
 
   return (
-    <PhotoViewerProvider>
-      <div className="mx-auto w-full max-w-4xl px-4 py-5 md:px-6">
-        <section aria-labelledby="hw-section-homework">
-          <h2 id="hw-section-homework" className="sr-only">
-            Homework
-          </h2>
-          <HomeworkForm
-            item={item}
-            classes={classes}
-            today={toLocalIso(new Date())}
-            onSaved={(saved, created) => {
-              setItem(saved);
-              if (created) onCreated(saved);
-            }}
-          />
-        </section>
-
-        {item ? (
-          <section className="mt-10" aria-labelledby="hw-section-solution">
-            <h2
-              id="hw-section-solution"
-              className="mb-1 flex items-center gap-2 text-xl font-medium"
-              style={{ fontFamily: "var(--font-heading)" }}
-            >
-              Solution
-              {item.submittedAt ? (
-                <span className="flex items-center gap-1 font-sans text-[0.75rem] font-medium text-meeting">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Done
-                </span>
-              ) : null}
+    <PhotoHighlightContext.Provider value={highlight}>
+      <PhotoViewerProvider>
+        <div className="mx-auto w-full max-w-4xl px-4 py-5 md:px-6">
+          <section aria-labelledby="hw-section-homework">
+            <h2 id="hw-section-homework" className="sr-only">
+              Homework
             </h2>
-            <SolutionForm key={item.id} item={item} onSaved={setItem} />
+            <HomeworkForm
+              item={item}
+              classes={classes}
+              today={toLocalIso(new Date())}
+              onSaved={(saved, created) => {
+                onSaved(saved);
+                if (created) onCreated(saved);
+              }}
+            />
           </section>
-        ) : null}
-      </div>
-    </PhotoViewerProvider>
+
+          {item ? (
+            <section className="mt-10" aria-labelledby="hw-section-solution">
+              <h2
+                id="hw-section-solution"
+                className="mb-1 flex items-center gap-2 text-xl font-medium"
+                style={{ fontFamily: "var(--font-heading)" }}
+              >
+                Solution
+                {item.submittedAt ? (
+                  <span className="flex items-center gap-1 font-sans text-[0.75rem] font-medium text-meeting">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Done
+                  </span>
+                ) : null}
+              </h2>
+              {check ? <PhotoCheckBanner item={item} check={check} /> : null}
+              <SolutionForm key={item.id} item={item} onSaved={onSaved} />
+            </section>
+          ) : null}
+        </div>
+      </PhotoViewerProvider>
+    </PhotoHighlightContext.Provider>
   );
 }

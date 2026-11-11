@@ -20,6 +20,12 @@ import "yet-another-react-lightbox/plugins/captions.css";
 import "yet-another-react-lightbox/plugins/counter.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 
+/**
+ * Photos to call out on the tiles (ADR 0014): the ones the child was asked to
+ * retake. Provided by her item page; empty everywhere else.
+ */
+export const PhotoHighlightContext = createContext<ReadonlySet<string>>(new Set());
+
 /** One photo the viewer can show: a saved photo's URL, or a picked one's preview. */
 export interface ViewerPhoto {
   key: string;
@@ -136,6 +142,7 @@ export function PhotoGrid({
   after?: ReactNode;
 }) {
   const viewer = usePhotoViewer();
+  const highlight = useContext(PhotoHighlightContext);
   useEffect(() => {
     viewer.setSection(section, photos);
   });
@@ -144,7 +151,12 @@ export function PhotoGrid({
   return (
     <div className="grid grid-cols-3 gap-2">
       {photos.map((p, i) => (
-        <div key={p.key} className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
+        <div
+          key={p.key}
+          className={`relative aspect-[4/3] overflow-hidden rounded-md bg-muted ${
+            highlight.has(p.key) ? "ring-2 ring-amber-500 ring-offset-1" : ""
+          }`}
+        >
           <button
             type="button"
             onClick={() => viewer.open(section, p.key)}
@@ -154,6 +166,11 @@ export function PhotoGrid({
             {/* biome-ignore lint/performance/noImgElement: photos come from the API with the session cookie */}
             <img src={p.src} alt="" className="h-full w-full object-cover" />
           </button>
+          {highlight.has(p.key) ? (
+            <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-amber-500 px-1 text-[0.625rem] font-semibold text-white">
+              Retake
+            </span>
+          ) : null}
           {onRemove ? (
             <button
               type="button"

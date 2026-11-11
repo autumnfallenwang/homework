@@ -14,6 +14,8 @@ import { runFetch } from "../fetch/run-fetch.js";
 import { log, withLogContext } from "../lib/logger.js";
 import { buildDigestFromDb, renderDigestEmail } from "./digest.js";
 import { type EmailContent, loadSmtpConfig, type SmtpConfig, sendEmail } from "./email.js";
+import { loadGradingSettings, markGradesReported, runGradingSweep } from "./grading.js";
+import { markTeacherReported, runTeacherMatching } from "./teacher-match.js";
 
 // Module-level singleton — only one scheduler arms at a time.
 let tasks: ScheduledTask[] = [];
@@ -26,6 +28,8 @@ export interface CycleDeps {
   readonly runFetchImpl?: (childId: string) => Promise<unknown>;
   readonly sendEmailImpl?: (cfg: SmtpConfig, content: EmailContent) => Promise<void>;
   readonly now?: () => Date;
+  /** Teacher matching after a child's fetch (M14); tests inject one. */
+  readonly matchImpl?: (childId: string) => Promise<unknown>;
 }
 
 /** Fetch every child. Errors are logged per child and never abort the cycle. */
@@ -34,6 +38,7 @@ export async function runFetchCycle(db: Database, deps: CycleDeps = {}): Promise
   const startedAt = Date.now();
   const children = await getChildren(db);
   log.info({ event: "scheduler.fetch.start", child_count: children.length }, "fetch cycle started");
+  const grading = await loadGradingSettings(db);
   for (const child of children) {
     try {
       await doFetch(child.id);
@@ -42,6 +47,18 @@ export async function runFetchCycle(db: Database, deps: CycleDeps = {}): Promise
         { event: "scheduler.fetch.child_failed", child_id: child.id, err },
         "child fetch failed",
       );
+      continue;
+    }
+    // M14: link her items to the teacher's assignments the fetch just brought in.
+    if (grading.enabled && child.homeworkSource === "child") {
+      try {
+        await (deps.matchImpl ?? ((id: string) => runTeacherMatching(db, id)))(child.id);
+      } catch (err) {
+        log.error(
+          { event: "match.run_failed", child_id: child.id, err },
+          "teacher matching failed",
+        );
+      }
     }
   }
   log.info(
@@ -91,8 +108,32 @@ export async function runNotifyCycle(
   };
   const doSend = deps.sendEmailImpl ?? sendEmail;
   await doSend(cfg, content);
-  log.info({ event: "scheduler.notify.sent", child_count: digest.children.length }, "digest sent");
+  // The grades it listed are reported (ADR 0014): the next digest starts after them.
+  await markGradesReported(db, digest.gradeIds ?? [], now);
+  await markTeacherReported(db, digest.teacherReported ?? []);
+  log.info(
+    {
+      event: "scheduler.notify.sent",
+      child_count: digest.children.length,
+      grade_count: digest.gradeIds?.length ?? 0,
+    },
+    "digest sent",
+  );
   return { sent: true };
+}
+
+/** One grading sweep (ADR 0014). */
+async function sweepGrades(db: Database): Promise<void> {
+  await runGradingSweep(db);
+}
+
+/**
+ * Run a grading sweep now, as a tracked job (after a Submit, or the parent's
+ * Grade again). Under tests nothing runs — they call runGradingSweep themselves.
+ */
+export function kickGradingSweep(db: Database): void {
+  if (process.env.NODE_ENV === "test") return;
+  void runJob("grading", () => sweepGrades(db));
 }
 
 // --- Arming ----------------------------------------------------------------
@@ -149,6 +190,11 @@ export async function startScheduler(db: Database): Promise<void> {
   const fetchCadence = await loadCadence(db, "fetch");
   const notifyCadence = await loadCadence(db, "notify");
   tasks = [
+    // Homework grading (ADR 0014): every minute; the sweep itself checks
+    // grading.enabled, so turning it on or off needs no re-arm.
+    schedule("* * * * *", () => void runJob("grading", () => sweepGrades(db)), {
+      timezone: config.tz,
+    }),
     ...armCadence(fetchCadence, () => runFetchCycle(db), "fetch"),
     ...armCadence(
       notifyCadence,

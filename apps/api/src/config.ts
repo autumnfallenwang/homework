@@ -41,4 +41,11 @@ export const config = {
    * localhost and the browser drops it silently.
    */
   cookieDomain: process.env.COOKIE_DOMAIN?.trim() || undefined,
+  /**
+   * llmgw, the cluster's LLM gateway (ADR 0014). The in-cluster name also works
+   * on arch, where /etc/hosts points it at the Service IP.
+   */
+  llmGatewayUrl: process.env.LLM_GATEWAY_URL?.trim() || "http://llmgw.llmgw.svc.cluster.local",
+  /** The web's address, for links in emails: the first CORS origin. */
+  webUrl: (process.env.CORS_ORIGINS ?? "http://localhost:3000").split(",")[0]?.trim() ?? "",
 } as const;

@@ -16,9 +16,13 @@ import type {
   CreateHomeworkItemInput,
   FetchRunRecord,
   GradeRecord,
+  GradingModelList,
+  GradingSettings,
+  GradingSettingsInput,
   HomeworkClass,
   HomeworkClassListInput,
   HomeworkClassSuggestions,
+  HomeworkGradeList,
   HomeworkHistoryEntry,
   HomeworkItem,
   HomeworkItemList,
@@ -31,6 +35,7 @@ import type {
   IssuedInvite,
   SaveHomeworkSolutionInput,
   StatusHistoryEntry,
+  TeacherMatchView,
   UpdateHomeworkItemInput,
 } from "@homework/shared";
 
@@ -429,6 +434,50 @@ export function getHomeworkItemHistory(itemId: string): Promise<HomeworkHistoryE
 /** The parent's Delete (ADR 0012): any item, for good. */
 export function deleteHomeworkItem(itemId: string): Promise<void> {
   return del(`/api/homework-items/${itemId}`);
+}
+
+/** The model's grades of an item, newest first (ADR 0014). */
+export function getHomeworkItemGrades(itemId: string): Promise<HomeworkGradeList> {
+  return get(`/api/homework-items/${itemId}/grades`);
+}
+
+/** Grade again: queued; poll getHomeworkItemGrades until `pending` clears. */
+export function requestHomeworkGrade(itemId: string): Promise<{ pending: boolean }> {
+  return post(`/api/homework-items/${itemId}/grade`);
+}
+
+/** The teacher's assignments the item is linked to (M14), and the ones it could be. */
+export function getHomeworkItemTeacher(itemId: string): Promise<TeacherMatchView> {
+  return get(`/api/homework-items/${itemId}/teacher`);
+}
+
+export function setHomeworkItemTeacherState(
+  itemId: string,
+  teAssignmentId: number,
+  state: "confirmed" | "rejected",
+): Promise<TeacherMatchView> {
+  return patch(`/api/homework-items/${itemId}/teacher/${teAssignmentId}`, { state });
+}
+
+export function pickHomeworkItemTeacher(
+  itemId: string,
+  teAssignmentId: number,
+): Promise<TeacherMatchView> {
+  return post(`/api/homework-items/${itemId}/teacher`, { teAssignmentId });
+}
+
+// Settings → Grading (ADR 0014).
+
+export function getGradingSettings(): Promise<GradingSettings> {
+  return get("/api/grading/settings");
+}
+
+export function saveGradingSettings(input: GradingSettingsInput): Promise<GradingSettings> {
+  return put("/api/grading/settings", input);
+}
+
+export function getGradingModels(): Promise<GradingModelList> {
+  return get("/api/grading/models");
 }
 
 export function homeworkPhotoUrl(itemId: string, photoId: string): string {

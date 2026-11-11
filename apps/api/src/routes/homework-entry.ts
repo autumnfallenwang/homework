@@ -12,9 +12,12 @@ import {
   createHomeworkItemSchema,
   HOMEWORK_LIMITS,
   type HomeworkClassSuggestions,
+  type HomeworkItem,
   homeworkClassListSchema,
   homeworkPhotoKindSchema,
   saveHomeworkSolutionSchema,
+  teacherLinkPickSchema,
+  teacherLinkStateSchema,
   updateHomeworkItemSchema,
 } from "@homework/shared";
 import { type Context, Hono } from "hono";
@@ -25,6 +28,12 @@ import * as q from "../db/queries.js";
 import { log } from "../lib/logger.js";
 import type { AuthVariables } from "../middleware/auth.js";
 import { toLocalIso } from "../services/digest.js";
+import {
+  childPhotoChecks,
+  gradeBriefs,
+  gradesForItem,
+  requestRegrade,
+} from "../services/grading.js";
 import {
   addPhoto,
   classSuggestions,
@@ -44,6 +53,14 @@ import {
   submitItem,
   updateItem,
 } from "../services/homework-entry.js";
+import { kickGradingSweep } from "../services/scheduler.js";
+import {
+  pickTeacherLink,
+  setTeacherLinkState,
+  TeacherMatchError,
+  teacherBriefs,
+  teacherView,
+} from "../services/teacher-match.js";
 
 const ERROR_STATUS: Record<HomeworkEntryErrorCode, ContentfulStatusCode> = {
   entry_off: 403,
@@ -84,6 +101,23 @@ function photoResponse(c: Context, photo: { contentType: string; bytes: Buffer }
   });
 }
 
+/** The child's side of grading (ADR 0014): a retake request or "checking" — never the grade. */
+async function withPhotoChecks<T extends HomeworkItem>(items: T[]): Promise<T[]> {
+  const checks = await childPhotoChecks(db, items, today());
+  return items.map((i) => ({ ...i, photoCheck: checks.get(i.id) ?? null }));
+}
+
+/** The parent's side: the latest Submit's grade, and the teacher's score (M14), for chips. */
+async function withGrades<T extends HomeworkItem>(items: T[]): Promise<T[]> {
+  const briefs = await gradeBriefs(db, items);
+  const teacher = await teacherBriefs(db, items);
+  return items.map((i) => ({
+    ...i,
+    grade: briefs.get(i.id) ?? null,
+    teacherGrade: teacher.get(i.id) ?? null,
+  }));
+}
+
 const photoBodyLimit = bodyLimit({
   maxSize: HOMEWORK_LIMITS.photoBytesMax,
   onError: (c) => c.json({ error: "The photo is larger than 2 MB", code: "photo_too_large" }, 413),
@@ -101,7 +135,8 @@ function sessionChild(c: Context<{ Variables: AuthVariables }>): string | null {
 childHomeworkApp.get("/homework", async (c) => {
   const childId = sessionChild(c);
   if (!childId) return notFound(c);
-  return c.json(await listItems(db, childId, today()));
+  const list = await listItems(db, childId, today());
+  return c.json({ ...list, items: await withPhotoChecks(list.items) });
 });
 
 childHomeworkApp.post("/homework", async (c) => {
@@ -123,7 +158,7 @@ childHomeworkApp.get("/homework/:itemId", async (c) => {
   const itemId = c.req.param("itemId");
   if (!childId || !UUID.test(itemId)) return notFound(c);
   const item = await getItem(db, itemId, { childId });
-  return item ? c.json(item) : notFound(c);
+  return item ? c.json((await withPhotoChecks([item]))[0]) : notFound(c);
 });
 
 childHomeworkApp.patch("/homework/:itemId", async (c) => {
@@ -163,7 +198,8 @@ childHomeworkApp.post("/homework/:itemId/submit", async (c) => {
   const itemId = c.req.param("itemId");
   if (!childId || !UUID.test(itemId)) return notFound(c);
   try {
-    return c.json(await submitItem(db, childId, c.get("user").id, itemId));
+    const item = await submitItem(db, childId, c.get("user").id, itemId);
+    return c.json((await withPhotoChecks([item]))[0]);
   } catch (err) {
     return refuse(c, err);
   }
@@ -236,7 +272,8 @@ async function knownChild(id: string): Promise<boolean> {
 childHomeworkAdminApp.get("/:id/homework-items", async (c) => {
   const id = c.req.param("id");
   if (!(await knownChild(id))) return notFound(c);
-  return c.json(await listItems(db, id, today()));
+  const list = await listItems(db, id, today());
+  return c.json({ ...list, items: await withGrades(list.items) });
 });
 
 childHomeworkAdminApp.get("/:id/homework-classes/suggestions", async (c) => {
@@ -268,13 +305,35 @@ childHomeworkAdminApp.put("/:id/homework-classes", async (c) => {
 
 // --- One item: view, or delete (/api/homework-items/*) ------------------------
 
-export const homeworkItemsApp = new Hono();
+export const homeworkItemsApp = new Hono<{ Variables: AuthVariables }>();
 
 homeworkItemsApp.get("/:itemId", async (c) => {
   const itemId = c.req.param("itemId");
   if (!UUID.test(itemId)) return notFound(c);
   const item = await getItem(db, itemId);
-  return item ? c.json(item) : notFound(c);
+  return item ? c.json((await withGrades([item]))[0]) : notFound(c);
+});
+
+// Its grades, newest first (ADR 0014).
+homeworkItemsApp.get("/:itemId/grades", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId) || !(await getItem(db, itemId))) return notFound(c);
+  return c.json(await gradesForItem(db, itemId));
+});
+
+// Grade again: queued for the next sweep, which starts now (202; the page polls).
+homeworkItemsApp.post("/:itemId/grade", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId)) return notFound(c);
+  const item = await getItem(db, itemId);
+  if (!item) return notFound(c);
+  if (!item.submittedAt) {
+    return c.json({ error: "Not submitted yet", code: "not_submitted" }, 409);
+  }
+  requestRegrade(itemId, c.get("user").id);
+  kickGradingSweep(db);
+  log.info({ event: "grading.requested", item_id: itemId }, "grade again requested");
+  return c.json({ pending: true }, 202);
 });
 
 // The parent's Delete (ADR 0012): no first-day rule, nothing kept.
@@ -288,6 +347,53 @@ homeworkItemsApp.delete("/:itemId", async (c) => {
     "homework item deleted",
   );
   return c.body(null, 204);
+});
+
+// The teacher's assignments it is linked to (M14), and the ones it could be.
+homeworkItemsApp.get("/:itemId/teacher", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId)) return notFound(c);
+  const view = await teacherView(db, itemId);
+  return view ? c.json(view) : notFound(c);
+});
+
+// The parent picks one ("Pick another").
+homeworkItemsApp.post("/:itemId/teacher", async (c) => {
+  const itemId = c.req.param("itemId");
+  if (!UUID.test(itemId)) return notFound(c);
+  const parsed = teacherLinkPickSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
+  }
+  try {
+    await pickTeacherLink(db, itemId, parsed.data.teAssignmentId);
+  } catch (err) {
+    if (err instanceof TeacherMatchError) {
+      return err.code === "not_a_candidate"
+        ? c.json({ error: "Not one of this item's assignments", code: err.code }, 400)
+        : notFound(c);
+    }
+    throw err;
+  }
+  return c.json(await teacherView(db, itemId));
+});
+
+// The parent confirms a suggestion, or says "not this one".
+homeworkItemsApp.patch("/:itemId/teacher/:teId", async (c) => {
+  const itemId = c.req.param("itemId");
+  const teId = Number(c.req.param("teId"));
+  if (!UUID.test(itemId) || !Number.isInteger(teId)) return notFound(c);
+  const parsed = teacherLinkStateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
+  }
+  try {
+    await setTeacherLinkState(db, itemId, teId, parsed.data.state);
+  } catch (err) {
+    if (err instanceof TeacherMatchError) return notFound(c);
+    throw err;
+  }
+  return c.json(await teacherView(db, itemId));
 });
 
 homeworkItemsApp.get("/:itemId/history", async (c) => {

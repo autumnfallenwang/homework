@@ -12,6 +12,7 @@ export function generateStaticParams() {
     { tab: "attention" },
     { tab: "fetch" },
     { tab: "notifications" },
+    { tab: "grading" },
     { tab: "advanced" },
   ];
 }

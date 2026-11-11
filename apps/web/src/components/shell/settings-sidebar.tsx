@@ -15,6 +15,7 @@ import {
   Download,
   Eye,
   FlagTriangleRight,
+  GraduationCap,
   type LucideIcon,
   PanelLeft,
   Settings as SettingsIcon,
@@ -32,6 +33,7 @@ export type SettingsTab =
   | "attention"
   | "fetch"
   | "notifications"
+  | "grading"
   | "advanced";
 
 export interface SettingsTabItem {
@@ -50,6 +52,7 @@ export const PARENT_SETTINGS_TABS: readonly SettingsTabItem[] = [
   { key: "attention", label: "Attention", icon: FlagTriangleRight },
   { key: "fetch", label: "Fetch", icon: Download },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "grading", label: "Grading", icon: GraduationCap },
   { key: "advanced", label: "Advanced", icon: SettingsIcon },
 ];
 

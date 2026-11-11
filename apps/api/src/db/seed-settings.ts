@@ -25,6 +25,14 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   "smtp.from": "",
   "smtp.to": "",
   "smtp.password": "",
+  // Homework grading (ADR 0014) — off until the parent turns it on.
+  "grading.enabled": "0",
+  "grading.enabledAt": "",
+  "grading.model": "claude-sonnet-5-5",
+  "grading.fallbackModel": "gpt-6-luna",
+  "grading.alertBelow": "80",
+  "grading.instructions": "",
+  "grading.matchModel": "claude-haiku-5-5",
 };
 
 /** Idempotently insert default settings rows. Existing keys are left untouched. */

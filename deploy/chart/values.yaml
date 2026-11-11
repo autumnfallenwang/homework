@@ -46,6 +46,8 @@ api:
     # Scheduler fire times + the digest's "today" use the pod's local time;
     # this must be the family's timezone (M05 / ADR-recorded default).
     TZ: America/New_York
+    # Homework grading (ADR 0014): the cluster's LLM gateway, in-cluster DNS.
+    LLM_GATEWAY_URL: http://llmgw.llmgw.svc.cluster.local
   resources:
     requests:
       cpu: 100m

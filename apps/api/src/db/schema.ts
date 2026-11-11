@@ -400,6 +400,122 @@ export const homeworkItemEvents = pgTable(
   ],
 );
 
+// The model's grade of one Submit (ADR 0014, M13). Append-only: a new Submit or
+// the parent's Grade again adds a row; the newest row for the item's current
+// `submitted_at` is the grade. `failed` rows count the tries (3 at most).
+export const homeworkGrades = pgTable(
+  "homework_grades",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    itemId: uuid()
+      .notNull()
+      .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    // The Submit this grade is for (the item's submitted_at when it was graded).
+    submittedAt: timestamp({ withTimezone: true }).notNull(),
+    status: text().notNull(),
+    // 0–100, only when graded.
+    score: integer(),
+    summary: text(),
+    findings: jsonb()
+      .$type<
+        {
+          photoId: string | null;
+          photoLabel: string | null;
+          question: string | null;
+          problem: string;
+          fix: string | null;
+        }[]
+      >()
+      .notNull()
+      .default([]),
+    stuck: boolean().notNull().default(false),
+    // For the child, about the photos only; with any status.
+    retakeReason: text(),
+    retakePhotoIds: jsonb().$type<string[]>().notNull().default([]),
+    // The assignment title printed on the sheet (M14 matches on it).
+    sheetTitle: text(),
+    // The photos the model saw.
+    photoIds: jsonb().$type<string[]>().notNull().default([]),
+    model: text(),
+    promptVersion: integer().notNull(),
+    durationMs: integer(),
+    usage: jsonb().$type<{ promptTokens: number; completionTokens: number }>(),
+    error: text(),
+    // The parent who pressed Grade again (null = the sweep).
+    requestedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    // The alert email went out / the daily digest listed it.
+    alertedAt: timestamp({ withTimezone: true }),
+    reportedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("homework_grades_item_idx").on(table.itemId, table.createdAt),
+    check(
+      "homework_grades_status_valid",
+      sql`${table.status} IN ('graded', 'retake', 'not_gradable', 'failed')`,
+    ),
+    check(
+      "homework_grades_score_valid",
+      sql`(${table.status} = 'graded') = (${table.score} IS NOT NULL) AND (${table.score} IS NULL OR ${table.score} BETWEEN 0 AND 100)`,
+    ),
+  ],
+);
+
+// An item linked to a TeacherEase assignment (M14): there is no shared key, so a
+// small model proposes links after each fetch and the parent confirms the unsure
+// ones. The teacher's score is read from the latest fetch by te_assignment_id.
+export const homeworkItemAssignments = pgTable(
+  "homework_item_assignments",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    itemId: uuid()
+      .notNull()
+      .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    teAssignmentId: integer().notNull(),
+    // A snapshot of the teacher's names, so a link reads well without a fetch.
+    className: text().notNull(),
+    assignmentName: text().notNull(),
+    dueDate: text(),
+    confidence: text(),
+    reason: text(),
+    source: text().notNull(),
+    state: text().notNull(),
+    // The teacher's score the digest last mentioned (null = none yet).
+    teacherReportedScore: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("homework_item_assignments_item_te_unique").on(table.itemId, table.teAssignmentId),
+    check(
+      "homework_item_assignments_confidence_valid",
+      sql`${table.confidence} IS NULL OR ${table.confidence} IN ('high', 'medium', 'low')`,
+    ),
+    check("homework_item_assignments_source_valid", sql`${table.source} IN ('model', 'parent')`),
+    check(
+      "homework_item_assignments_state_valid",
+      sql`${table.state} IN ('suggested', 'confirmed', 'rejected')`,
+    ),
+  ],
+);
+
+// One matcher run for an item (M14): the candidate set it saw, so the next fetch
+// only asks again when the teacher's list changed.
+export const homeworkMatchAttempts = pgTable(
+  "homework_match_attempts",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    itemId: uuid()
+      .notNull()
+      .references(() => homeworkItems.id, { onDelete: "cascade" }),
+    candidatesHash: text().notNull(),
+    model: text(),
+    error: text(),
+    at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("homework_match_attempts_item_idx").on(table.itemId, table.at)],
+);
+
 // Relations — used by the Drizzle relational query builder in M04.
 
 export const childrenRelations = relations(children, ({ many }) => ({

@@ -5,6 +5,8 @@
 // the API and the web.
 
 import { z } from "zod";
+import type { ChildPhotoCheck, HomeworkGradeBrief } from "./grading.js";
+import type { TeacherGradeBrief } from "./teacher-match.js";
 
 export const homeworkSourceSchema = z.enum(["page", "child"]);
 export type HomeworkSource = z.infer<typeof homeworkSourceSchema>;
@@ -273,6 +275,12 @@ export interface HomeworkItem {
   firstDayEndsAt: string;
   /** A change was recorded after the first day. */
   edited: boolean;
+  /** Parent routes only (ADR 0014): the grade of the latest Submit, for a chip. */
+  grade?: HomeworkGradeBrief | null;
+  /** Parent routes only (M14): the teacher's score, when the item is linked to an assignment. */
+  teacherGrade?: TeacherGradeBrief | null;
+  /** Child routes only (ADR 0014): a retake request, or "checking your photos". */
+  photoCheck?: ChildPhotoCheck | null;
 }
 
 /** One recorded change, after an item's first day (ADR 0008). */

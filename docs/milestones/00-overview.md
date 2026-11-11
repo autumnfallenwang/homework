@@ -24,6 +24,8 @@ Milestones 01–07 are the port itself; 08+ are post-migration improvements. Eac
 | 10 | [Child homework entry](10-child-homework-entry.md) | Stage 2: per-child source switch, parent-owned class list, the child's list + Add/Edit pages with photos, parent Review + Today (ADR 0006) | 09 |
 | 11 | [Solutions and change history](11-solutions-and-history.md) | The solution on the item page (Save homework / Save solution), free edits until 7 AM next morning, then a change history the parent views (ADR 0008) | 10 |
 | 12 | [Credentials encrypted at rest](12-credentials-at-rest.md) | TeacherEase and SMTP passwords sealed with AES-256-GCM in the API, key derived from BETTER_AUTH_SECRET (ADR 0010) | 09 |
+| 13 | [Homework grading](13-homework-grading.md) | Stage 4, parent side: each Submit graded by a vision model through llmgw; alert email when low or a retake is needed; grades in the daily digest; a retake request shown to the child too; Settings → Grading (ADR 0014) | 11, 12 |
+| 14 | [Teacher grade matching](14-teacher-grade-matching.md) | Her items linked to TeacherEase assignments (class by name, assignment by a small model after each fetch, parent confirms the unsure ones); the teacher's grade beside the model's, in the item page and digest | 13 |
 
 ## Cross-cutting decisions (locked)
 

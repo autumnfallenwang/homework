@@ -6,6 +6,7 @@ import { SettingsAppearance } from "@/components/settings-appearance";
 import { SettingsAttention } from "@/components/settings-attention";
 import { SettingsChildren } from "@/components/settings-children";
 import { SettingsFetch } from "@/components/settings-fetch";
+import { SettingsGrading } from "@/components/settings-grading";
 import { SettingsNotifications } from "@/components/settings-notifications";
 import type { SettingsTab } from "@/components/shell/settings-sidebar";
 
@@ -18,6 +19,7 @@ export function SettingsView({ tab }: { tab: SettingsTab }) {
       {tab === "attention" && <SettingsAttention />}
       {tab === "fetch" && <SettingsFetch />}
       {tab === "notifications" && <SettingsNotifications />}
+      {tab === "grading" && <SettingsGrading />}
       {tab === "advanced" && <SettingsAdvanced />}
     </div>
   );

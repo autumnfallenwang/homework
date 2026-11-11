@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ApiClientError, deleteHomeworkItem, deleteMyHomework } from "@/lib/api";
 import { dueLabel } from "@/lib/homework-format";
+import { GradeChip, PhotoCheckChip, TeacherChip } from "./grade-badge";
 import { describeHomeworkError, firstDayOver } from "./homework-form";
 import { KindBadge } from "./kind-badge";
 
@@ -213,6 +214,13 @@ function HomeworkRow({
                   </span>
                 ) : null}
                 {mode === "parent" && item.edited ? <EditedBadge /> : null}
+                {mode === "parent" && item.grade ? <GradeChip grade={item.grade} /> : null}
+                {mode === "parent" && item.teacherGrade ? (
+                  <TeacherChip grade={item.teacherGrade} />
+                ) : null}
+                {mode === "child" && item.photoCheck ? (
+                  <PhotoCheckChip check={item.photoCheck} />
+                ) : null}
               </span>
             </span>
             <span

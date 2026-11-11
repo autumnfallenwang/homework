@@ -27,7 +27,10 @@ import {
   getHomeworkForDay,
   getLatestSuccessfulFetchRun,
 } from "../db/queries.js";
+import { escapeHtml } from "../lib/html.js";
+import { type DigestGradeLine, gradesForDigest, loadGradingSettings } from "./grading.js";
 import { itemsForDay } from "./homework-entry.js";
+import { type TeacherDigestLine, teacherLinesForDigest } from "./teacher-match.js";
 
 // --- Types (digest subset of the desktop notify/types.ts) -----------------
 
@@ -49,6 +52,10 @@ export interface ChildDigest {
   readonly homeworkDueNext: HomeworkRecord[];
   /** The child enters their own homework (ADR 0006) — rows are their items. */
   readonly homeworkEnteredByChild: boolean;
+  /** Grades since the last digest (ADR 0014); absent when grading is off and none are waiting. */
+  readonly grades?: readonly DigestGradeLine[];
+  /** Teacher scores new since the last digest for her linked items (M14). */
+  readonly teacherGrades?: readonly TeacherDigestLine[];
 }
 
 export interface FamilyHero {
@@ -68,6 +75,10 @@ export interface RefreshDigest {
   readonly dueNextOn: string;
   readonly family: FamilyHero;
   readonly children: ChildDigest[];
+  /** The grade rows listed — marked reported once the digest is sent. */
+  readonly gradeIds?: readonly string[];
+  /** Teacher scores listed — remembered once the digest is sent (M14). */
+  readonly teacherReported?: readonly { id: string; score: string }[];
 }
 
 export interface ChildHeroCounts {
@@ -238,7 +249,7 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
     }
   }
 
-  return buildRefreshDigest({
+  const digest = buildRefreshDigest({
     children,
     perChildDetails,
     perChildHomeworkForToday,
@@ -247,6 +258,28 @@ export async function buildDigestFromDb(db: Database, now: Date): Promise<Refres
     cfg,
     now,
   });
+
+  // Homework grades (ADR 0014): every grade since the last digest, per child.
+  const grading = await loadGradingSettings(db);
+  const { lines, gradeIds } = await gradesForDigest(db);
+  const teacher = await teacherLinesForDigest(db);
+  if (!grading.enabled && lines.length === 0 && teacher.lines.length === 0) return digest;
+  return {
+    ...digest,
+    gradeIds,
+    teacherReported: teacher.reported,
+    children: digest.children.map((c) =>
+      c.homeworkEnteredByChild ||
+      lines.some((l) => l.childId === c.childId) ||
+      teacher.lines.some((l) => l.childId === c.childId)
+        ? {
+            ...c,
+            grades: lines.filter((l) => l.childId === c.childId),
+            teacherGrades: teacher.lines.filter((l) => l.childId === c.childId),
+          }
+        : c,
+    ),
+  };
 }
 
 // --- Render (English) — ported from desktop email-templates.ts -------------
@@ -264,15 +297,7 @@ const ICON_LOW_SCORE = "📉";
 const ICON_DUE = "🕐";
 const ICON_HW_FOR = "📖";
 const ICON_HW_DUE = "🎯";
-
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+const ICON_GRADE = "📝";
 
 function formatHHmm(d: Date): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -403,6 +428,91 @@ function renderHomeworkSectionHtml(
       </ul>`;
 }
 
+/** "72/100", "Retake", "Not checked", "Couldn't grade". */
+export function gradeLineLabel(g: DigestGradeLine): string {
+  if (g.status === "graded" && g.score !== null) return `${g.score}/100`;
+  if (g.status === "retake") return "Retake photos";
+  if (g.status === "not_gradable") return "Not checked";
+  return "Couldn't grade";
+}
+
+function gradeFlags(g: DigestGradeLine): string[] {
+  const flags: string[] = [];
+  if (g.retake && g.status !== "retake") flags.push("retake asked");
+  if (g.stuck) flags.push("stuck");
+  if (g.alerted) flags.push("alert sent");
+  return flags;
+}
+
+/** "Teacher: 3=M (ours 88)" + a disagreement note. */
+export function teacherLineText(t: TeacherDigestLine): string {
+  const ours = t.modelScore !== null ? ` · ours ${t.modelScore}/100` : "";
+  const note =
+    t.disagree === "teacher_lower"
+      ? " · teacher lower than ours"
+      : t.disagree === "teacher_higher"
+        ? " · teacher higher than ours"
+        : "";
+  return `${t.className} · ${t.itemTitle} → ${t.assignmentName}${t.probable ? " (probably)" : ""}: ${t.score}${ours}${note}`;
+}
+
+function renderTeacherLinesHtml(lines: readonly TeacherDigestLine[]): string {
+  if (lines.length === 0) return "";
+  const rows = lines
+    .map(
+      (t) =>
+        `<li style="margin:0 0 6px;list-style:none;font-size:13px;color:#111827;line-height:1.5;">${t.disagree ? '<span style="color:#b45309;">⚑</span> ' : ""}${escapeHtml(teacherLineText(t))}</li>`,
+    )
+    .join("\n        ");
+  return `<p style="margin:8px 0 4px;font-size:12px;font-weight:600;color:#374151;">Teacher graded</p><ul style="margin:0 0 8px;padding:0;">
+        ${rows}
+      </ul>`;
+}
+
+function renderGradesSectionHtml(
+  grades: readonly DigestGradeLine[],
+  teacher: readonly TeacherDigestLine[],
+): string {
+  const heading = `<h3 style="margin:4px 0 8px;font-size:13px;color:#374151;text-transform:uppercase;letter-spacing:0.04em;"><span style="color:#7c3aed;">${ICON_GRADE}</span> Homework grades</h3>`;
+  if (grades.length === 0) {
+    return `${heading}<p style="margin:0 0 8px;color:#9ca3af;font-size:13px;">No new grades.</p>${renderTeacherLinesHtml(teacher)}`;
+  }
+  const rows = grades
+    .map((g) => {
+      const color = g.needsParent ? "#b91c1c" : g.status === "graded" ? "#047857" : "#6b7280";
+      const flags = gradeFlags(g);
+      const sep = '<span style="color:#9ca3af;"> · </span>';
+      return `<li style="margin:0 0 8px;list-style:none;font-size:13px;color:#111827;line-height:1.5;">
+        <strong>${escapeHtml(g.className)}</strong>${sep}${escapeHtml(g.title)}${sep}<strong style="color:${color};">${escapeHtml(gradeLineLabel(g))}</strong>${flags.length > 0 ? `${sep}<span style="color:#6b7280;">${escapeHtml(flags.join(", "))}</span>` : ""}
+        ${g.summary ? `<br><span style="color:#374151;font-size:12px;">${escapeHtml(g.summary)}</span>` : ""}
+      </li>`;
+    })
+    .join("\n        ");
+  return `${heading}<ul style="margin:0 0 8px;padding:0;">
+        ${rows}
+      </ul>${renderTeacherLinesHtml(teacher)}`;
+}
+
+function renderGradesText(
+  grades: readonly DigestGradeLine[],
+  teacher: readonly TeacherDigestLine[],
+): string[] {
+  const tail =
+    teacher.length > 0
+      ? ["  Teacher graded:", ...teacher.map((t) => `    - ${teacherLineText(t)}`)]
+      : [];
+  if (grades.length === 0) return ["  Homework grades: no new grades", ...tail];
+  const lines = ["  Homework grades:"];
+  for (const g of grades) {
+    const flags = gradeFlags(g);
+    lines.push(
+      `    - ${g.className} · ${g.title} · ${gradeLineLabel(g)}${g.needsParent ? " (needs you)" : ""}${flags.length > 0 ? ` · ${flags.join(", ")}` : ""}`,
+    );
+    if (g.summary) lines.push(`      ${g.summary}`);
+  }
+  return [...lines, ...tail];
+}
+
 function renderChildDetailHtml(c: ChildDigest, dueLabel: string): string {
   const header = `<h2 style="margin:0 0 10px;font-size:15px;color:#111827;">${escapeHtml(c.childName)}</h2>`;
   const attentionBlock = renderAttentionBlockHtml(c);
@@ -410,10 +520,12 @@ function renderChildDetailHtml(c: ChildDigest, dueLabel: string): string {
     ? `${renderHomeworkSectionHtml("Homework for today", c.homeworkForToday, "No homework posted for today.", ICON_HW_FOR)}
       ${renderHomeworkSectionHtml(`Homework due ${dueLabel}`, c.homeworkDueNext, `Nothing due ${dueLabel}.`, ICON_HW_DUE)}`
     : "";
+  const gradesBlock = c.grades ? renderGradesSectionHtml(c.grades, c.teacherGrades ?? []) : "";
   return `<section style="margin:0 0 20px;padding:12px 0 0;border-top:1px solid #e5e7eb;">
       ${header}
       ${attentionBlock}
       ${homeworkBlocks}
+      ${gradesBlock}
     </section>`;
 }
 
@@ -467,6 +579,10 @@ function renderChildText(c: ChildDigest, dueLabel: string): string[] {
         `nothing due ${dueLabel}`,
       ),
     );
+  }
+  if (c.grades) {
+    lines.push("");
+    lines.push(...renderGradesText(c.grades, c.teacherGrades ?? []));
   }
   lines.push("");
   return lines;

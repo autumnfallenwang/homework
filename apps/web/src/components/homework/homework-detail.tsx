@@ -13,9 +13,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ApiClientError, deleteHomeworkItem, homeworkPhotoUrl } from "@/lib/api";
 import { formatAddedAt, formatShortDay } from "@/lib/homework-format";
+import { GradePanel } from "./grade-panel";
 import { EditedBadge } from "./homework-list";
 import { KindBadge } from "./kind-badge";
 import { PhotoGrid, type PhotoSection, PhotoViewerProvider, usePhotoViewer } from "./photo-viewer";
+import { TeacherLine } from "./teacher-line";
 
 /**
  * One item of a child's list, as the parent sees it (ADR 0006, 0008): the
@@ -59,6 +61,8 @@ export function HomeworkDetail({
           )}
           {item.edited ? <EditedBadge /> : null}
         </div>
+
+        <GradePanel item={item} extra={<TeacherLine itemId={item.id} />} />
 
         <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_21.25rem] md:items-start">
           <dl className="space-y-4 text-[0.875rem]">

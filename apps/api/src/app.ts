@@ -19,6 +19,7 @@ import { childrenApp } from "./routes/children.js";
 import { digestApp } from "./routes/digest.js";
 import { childFetchApp, fetchRunsApp } from "./routes/fetch-runs.js";
 import { gradesApp } from "./routes/grades.js";
+import { gradingApp } from "./routes/grading.js";
 import { homeworkApp } from "./routes/homework.js";
 import {
   childHomeworkAdminApp,
@@ -98,6 +99,7 @@ export function createApp(options: AppOptions = {}) {
   app.route("/api/homework-items", homeworkItemsApp);
   app.route("/api/fetch-runs", fetchRunsApp);
   app.route("/api/settings", settingsApp);
+  app.route("/api/grading", gradingApp);
   app.route("/api/scraper", scraperApp);
   app.route("/api/app", appMetaApp);
   app.route("/api/digest", digestApp);
