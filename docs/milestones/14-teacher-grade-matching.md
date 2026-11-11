@@ -100,7 +100,11 @@ There is **no shared key** between her items and TeacherEase assignments — onl
 - [x] Dev end to end on the real-data copy: the backfill linked 5 / suggested 6; Review shows
   `T: M` / `T: P?` chips; the item's "Probably: Stamp Act Documents 2=P" → Confirm; a changed
   teacher score lands in the digest as "teacher lower than ours".
-- [ ] Released: the next teacher grade for a linked item shows on the item page and in the digest.
+- [x] Released with M13 (dd7458f): the backfill matched quietly against the latest fetch — 5
+  linked (all correct: Stay & Stray, Advice from Adult HW, Discussion Reflection, Edpuzzle +
+  Lingco), 8 suggested (2 look wrong: a math packet → Equations Unit Test Reassessment, "finish
+  editing" → Discussion Reflection — for the parent's "Not this").
+- [ ] The next new teacher score for a linked item shows on the item page and in the digest.
 ## Open questions
 
 1. Map M / P / B onto 0–100 for the disagreement flag as M ≥ 80, P 60–79, B < 60? [yes, for the

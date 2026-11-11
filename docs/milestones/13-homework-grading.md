@@ -170,7 +170,12 @@ graded again.
   with a smaller retake request → second email; parent Review chips, the Grade panel with
   findings linked to photos, Grade again (no email, attributed to the parent); digest section;
   the backfill graded 23 items with no email.
-- [ ] Released: backfill done, grading on, first real submission graded and emailed as expected.
+- [x] Released (dd7458f, 2026-11-11): CI green, Argo rolled api + web, migrate Job added
+  `homework_grades` + M14's tables; boot clean (`credentials.ready` 0 unreadable, 5 cron tasks).
+  Backfill in the pod: 23 graded, 0 failed (15 graded — 5 below 80, 5 with a retake request; 8 not
+  gradable), no alert, nothing left for the digest. Grading on at 05:19 UTC (settings row; the
+  parent's Settings → Grading shows it).
+- [ ] Her first real Submit graded within ~2 minutes (and an email if below 80).
 ## Decisions
 
 - **Founder, 2026-11-10 (round 1):** grades (not just sorting) from llmgw; email based on the grade,
@@ -210,7 +215,8 @@ graded again.
   - ADR 0014 accepted.
 - 2026-11-11: emails for low scores only (founder) — `gradeNeedsParent` is now "graded below the
   alert score"; retake requests show to her in the app and to the parent in the digest
-  ("retake asked" / "Retake photos"). Not released yet: the push to `main` is the founder's.
+  ("retake asked" / "Retake photos").
+- 2026-11-11: released (see exit criteria). Waiting on her next Submit for the last box.
 
 ## References
 
