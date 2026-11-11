@@ -223,6 +223,9 @@ graded again.
   (`scripts/regrade.ts`, quiet). Also: JSON-mangled LaTeX escapes repaired, photo tags in words,
   question labels kept short. Local check on the real Oct 26 packet: rendered page + converted
   email, 72/100 on both runs.
+- 2026-11-11: released (873edff); `scripts/regrade.ts` in the pod re-graded the 15 graded items with
+  prompt v3 — 0 failed, 0 emails, nothing for the digest; 7 carry math. Scores within a few points
+  of v2 (5 below 80, 4 with a retake request).
 
 ## References
 
