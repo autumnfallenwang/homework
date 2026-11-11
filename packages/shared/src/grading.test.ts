@@ -3,6 +3,7 @@ import {
   GRADING_LIMITS,
   gradeNeedsParent,
   gradePhotoLabel,
+  gradeQuestionLabel,
   gradingSettingsSchema,
   nextGradeAttemptAt,
 } from "./grading.js";
@@ -35,6 +36,12 @@ describe("nextGradeAttemptAt", () => {
 });
 
 describe("grading helpers", () => {
+  it("prefixes Q only to a printed question number", () => {
+    expect(gradeQuestionLabel("3")).toBe("Q3");
+    expect(gradeQuestionLabel("2b")).toBe("Q2b");
+    expect(gradeQuestionLabel("Q15")).toBe("Q15");
+    expect(gradeQuestionLabel("Square ABCD, part c")).toBe("Square ABCD, part c");
+  });
   it("labels photos the way the pages number them", () => {
     expect(gradePhotoLabel("sheet", 0)).toBe("Sheet photo 1");
     expect(gradePhotoLabel("solution", 6)).toBe("Solution photo 7");

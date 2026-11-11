@@ -39,4 +39,23 @@ describe("grade alert email", () => {
     expect(mail.html).toContain("Swap x &amp; y");
     expect(mail.html).toContain('href="http://homework.arch.internal/review/homework/abc"');
   });
+
+  it("turns $LaTeX$ into readable text — email clients can't render it", () => {
+    const mail = renderGradeAlert({
+      ...base,
+      summary: String.raw`**Inequalities**: $-2x<-98 \Rightarrow x>49$ slipped.`,
+      findings: [
+        {
+          photoId: null,
+          photoLabel: null,
+          question: "1c",
+          problem: String.raw`$\frac{15}{4}-\frac{5}{6}$ written as $\frac{25}{12}$`,
+          fix: String.raw`$\frac{35}{12}x \le \frac{23}{8}$`,
+        },
+      ],
+    });
+    expect(mail.text).toContain("Inequalities: -2x<-98 ⇒ x>49 slipped.");
+    expect(mail.text).toContain("Q1c: 15/4-5/6 written as 25/12 → 35/12x ≤ 23/8");
+    expect(mail.html).not.toContain("$");
+  });
 });

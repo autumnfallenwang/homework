@@ -3,7 +3,7 @@
 // app, the parent in the daily digest; one that comes with a low score is
 // mentioned here. Same SMTP sender and look as the daily digest.
 
-import type { GradeFinding } from "@homework/shared";
+import { type GradeFinding, gradeQuestionLabel, mathToText } from "@homework/shared";
 import { escapeHtml } from "../lib/html.js";
 import type { EmailContent } from "./email.js";
 
@@ -28,7 +28,22 @@ export function gradeAlertHeadline(a: GradeAlertInput): string {
   return a.score !== null ? `${a.score}/100, needs you` : "needs you";
 }
 
-export function renderGradeAlert(a: GradeAlertInput): EmailContent {
+/** Email clients can't render $LaTeX$ (ADR 0016): every text field goes out as readable Unicode. */
+export function renderGradeAlert(input: GradeAlertInput): EmailContent {
+  const a: GradeAlertInput = {
+    ...input,
+    summary: input.summary === null ? null : mathToText(input.summary),
+    findings: input.findings.map((f) => ({
+      ...f,
+      question: f.question === null ? null : mathToText(f.question),
+      problem: mathToText(f.problem),
+      fix: f.fix === null ? null : mathToText(f.fix),
+    })),
+  };
+  return renderAlert(a);
+}
+
+function renderAlert(a: GradeAlertInput): EmailContent {
   const headline = gradeAlertHeadline(a);
   const subject = `${a.childName} · ${a.className} · ${a.title} — ${headline}`;
 
@@ -42,7 +57,9 @@ export function renderGradeAlert(a: GradeAlertInput): EmailContent {
   if (a.findings.length > 0) {
     text.push("What to look at:");
     for (const f of a.findings) {
-      const where = [f.photoLabel, f.question ? `Q${f.question}` : null].filter(Boolean).join(", ");
+      const where = [f.photoLabel, f.question ? gradeQuestionLabel(f.question) : null]
+        .filter(Boolean)
+        .join(", ");
       text.push(`  - ${where ? `${where}: ` : ""}${f.problem}${f.fix ? ` → ${f.fix}` : ""}`);
     }
     text.push("");
@@ -52,7 +69,9 @@ export function renderGradeAlert(a: GradeAlertInput): EmailContent {
 
   const li = a.findings
     .map((f) => {
-      const where = [f.photoLabel, f.question ? `Q${f.question}` : null].filter(Boolean).join(", ");
+      const where = [f.photoLabel, f.question ? gradeQuestionLabel(f.question) : null]
+        .filter(Boolean)
+        .join(", ");
       return `<li style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#111827;">${where ? `<strong>${escapeHtml(where)}:</strong> ` : ""}${escapeHtml(f.problem)}${f.fix ? `<br><span style="color:#047857;">→ ${escapeHtml(f.fix)}</span>` : ""}</li>`;
     })
     .join("\n        ");

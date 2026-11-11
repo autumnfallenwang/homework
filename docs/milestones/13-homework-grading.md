@@ -217,6 +217,12 @@ graded again.
   alert score"; retake requests show to her in the app and to the parent in the digest
   ("retake asked" / "Retake photos").
 - 2026-11-11: released (see exit criteria). Waiting on her next Submit for the last box.
+- 2026-11-11: math rendering ([ADR 0016](../adr/0016-grade-text-markdown-katex.md), founder: "go
+  dev and push then re-grading") — prompt v3 writes Markdown + `$LaTeX$`, the item page renders it
+  with KaTeX, emails get Unicode (`mathToText`); older grades stay plain until re-graded
+  (`scripts/regrade.ts`, quiet). Also: JSON-mangled LaTeX escapes repaired, photo tags in words,
+  question labels kept short. Local check on the real Oct 26 packet: rendered page + converted
+  email, 72/100 on both runs.
 
 ## References
 

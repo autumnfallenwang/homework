@@ -7,6 +7,7 @@ export * from "./domain.js";
 export * from "./grading.js";
 export * from "./homework-date.js";
 export * from "./homework-entry.js";
+export * from "./math-text.js";
 export * from "./records.js";
 export * from "./schedule.js";
 export * from "./teacher-match.js";

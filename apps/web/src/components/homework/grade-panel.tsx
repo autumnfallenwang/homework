@@ -4,13 +4,20 @@
 // found (each finding opens its photo), the retake request she sees, and Grade
 // again. Older grades fold underneath. Polls while a grade is on its way.
 
-import type { HomeworkGrade, HomeworkGradeList, HomeworkItem } from "@homework/shared";
+import {
+  GRADING_RICH_TEXT_FROM,
+  gradeQuestionLabel,
+  type HomeworkGrade,
+  type HomeworkGradeList,
+  type HomeworkItem,
+} from "@homework/shared";
 import { Loader2, RotateCw } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getHomeworkItemGrades, homeworkPhotoUrl, requestHomeworkGrade } from "@/lib/api";
 import { formatAddedAt } from "@/lib/homework-format";
+import { MathText } from "./math-text";
 import { usePhotoViewer } from "./photo-viewer";
 
 const POLL_MS = 5000;
@@ -18,6 +25,11 @@ const POLL_MS = 5000;
 function scoreTone(g: HomeworkGrade): string {
   if (g.status !== "graded") return "text-muted-foreground";
   return g.lowScore ? "text-red-700 dark:text-red-400" : "text-meeting";
+}
+
+/** Prompt v3 on: Markdown + $LaTeX$ (ADR 0016); older grades are plain text. */
+function isRich(g: HomeworkGrade): boolean {
+  return g.promptVersion >= GRADING_RICH_TEXT_FROM;
 }
 
 function headline(g: HomeworkGrade): string {
@@ -142,7 +154,9 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
       ) : null}
 
       {current?.summary ? (
-        <p className="text-[0.875rem] [overflow-wrap:anywhere]">{current.summary}</p>
+        <div className="text-[0.875rem] [overflow-wrap:anywhere]">
+          <MathText text={current.summary} rich={isRich(current)} />
+        </div>
       ) : null}
 
       {current && current.findings.length > 0 ? (
@@ -167,11 +181,18 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
                     f.photoLabel
                   )}
                   {f.photoLabel && f.question ? " · " : ""}
-                  {f.question ? `Q${f.question}` : ""}:{" "}
+                  {f.question ? (
+                    <MathText text={gradeQuestionLabel(f.question)} rich={isRich(current)} inline />
+                  ) : null}
+                  :{" "}
                 </span>
               ) : null}
-              {f.problem}
-              {f.fix ? <span className="block text-meeting">→ {f.fix}</span> : null}
+              <MathText text={f.problem} rich={isRich(current)} inline />
+              {f.fix ? (
+                <span className="block text-meeting">
+                  → <MathText text={f.fix} rich={isRich(current)} inline />
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -214,7 +235,11 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
               <li key={g.id} className="text-muted-foreground">
                 <span className="font-medium text-foreground tabular-nums">{headline(g)}</span> ·{" "}
                 {formatAddedAt(g.createdAt)} · {g.model ?? "—"}
-                {g.summary ? <span className="block">{g.summary}</span> : null}
+                {g.summary ? (
+                  <span className="block">
+                    <MathText text={g.summary} rich={isRich(g)} inline />
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

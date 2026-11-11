@@ -20,6 +20,7 @@ import {
   type HomeworkGrade,
   type HomeworkGradeBrief,
   type HomeworkGradeList,
+  mathToText,
   nextGradeAttemptAt,
 } from "@homework/shared";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -185,6 +186,7 @@ function toGrade(row: GradeRow, alertBelow: number): HomeworkGrade {
     retakePhotoIds: row.retakePhotoIds,
     sheetTitle: row.sheetTitle,
     model: row.model,
+    promptVersion: row.promptVersion,
     createdAt: row.createdAt.toISOString(),
     alertedAt: row.alertedAt?.toISOString() ?? null,
     needsParent:
@@ -549,6 +551,43 @@ export async function backfillGrades(
   return { graded, failed };
 }
 
+/**
+ * Grade again, quietly, every item whose current grade (status `graded`) was made
+ * with an older prompt — e.g. to give them the v3 Markdown + $LaTeX$ text
+ * (ADR 0016). No alerts, nothing in the digest; the child's retake banner follows
+ * the new grade.
+ */
+export async function regradeOlderPrompts(
+  db: Database,
+  beforeVersion: number,
+  deps: GradingDeps = {},
+): Promise<{ graded: number; failed: number; skipped: number }> {
+  const settings = await loadGradingSettings(db);
+  const items = await db
+    .select({ id: homeworkItems.id })
+    .from(homeworkItems)
+    .where(sql`${homeworkItems.submittedAt} IS NOT NULL`)
+    .orderBy(homeworkItems.submittedAt);
+  const rows = await rowsForCurrentSubmissions(
+    db,
+    items.map((i) => i.id),
+  );
+  let graded = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const { id } of items) {
+    const current = submissionState(rows.get(id) ?? []).grade;
+    if (!current || current.status !== "graded" || current.promptVersion >= beforeVersion) {
+      skipped += 1;
+      continue;
+    }
+    const row = await gradeItem(db, id, settings, deps, { silent: true });
+    if (row?.status === "failed") failed += 1;
+    else if (row) graded += 1;
+  }
+  return { graded, failed, skipped };
+}
+
 // --- The daily digest ------------------------------------------------------------
 
 export interface DigestGradeLine {
@@ -629,7 +668,8 @@ export async function gradesForDigest(db: Database): Promise<DigestGrades> {
       title: pick.title,
       status: g.status as GradeStatus,
       score: g.score,
-      summary: g.summary,
+      // Emails can't render $LaTeX$ (ADR 0016): readable Unicode instead.
+      summary: g.summary === null ? null : mathToText(g.summary),
       needsParent:
         g.status !== "failed" &&
         gradeNeedsParent({ status: g.status as GradeStatus, score: g.score }, settings.alertBelow),

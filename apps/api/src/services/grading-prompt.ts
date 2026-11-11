@@ -5,7 +5,7 @@
 import { GRADING_LIMITS, HOMEWORK_KIND_LABELS, type HomeworkKind } from "@homework/shared";
 import type { ChatMessage, ChatTool, ContentPart } from "../lib/llm.js";
 
-export const GRADING_PROMPT_VERSION = 2;
+export const GRADING_PROMPT_VERSION = 3;
 
 export const GRADE_TOOL_NAME = "record_grade";
 
@@ -68,15 +68,16 @@ Record the result with the ${GRADE_TOOL_NAME} tool, deciding in this order.
    - 60-79: several errors, or a part left undone.
    - below 60: a misconception that runs through the work, or much of it missing.
    Correctness counts most: check every answer you can by working it out yourself (math: redo the computation; graphs: check the plotted points). Then completeness: questions she left blank count against the score; questions you can't see (cut off, unreadable) do not — they go in the retake request instead. For writing, notes and annotations, judge whether it was done fully and thoughtfully for her grade level, not polish.
-3. Retake request (any status): only for what you could not check — her answer to a question can't be read in ANY of the photos (cut off, blurry, too faint or washed out), the numbers or text needed to check an answer are cut off in every photo, or a page of her work is clearly missing (page numbers jump, a packet stops halfway, her note mentions pages that aren't shown). Then list those photo tags in retake_photos and write retake_reason TO HER: one or two short, kind sentences about taking the photo again (which photo, what is wrong with it, how to retake it — the whole page in the frame, good light, camera steady, closer). The request is about the PHOTO only: never ask her to redo, darken, rewrite or change her work, and never mention whether her answers are right, mistakes or a score. No retake for a photo that is tilted or imperfect but readable, for a cut-off heading when the answers can still be checked, or for a part that shows in another photo. Otherwise retake_reason is null and retake_photos is empty.
+3. Retake request (any status): only for what you could not check — her answer to a question can't be read in ANY of the photos (cut off, blurry, too faint or washed out), the numbers or text needed to check an answer are cut off in every photo, or a page of her work is clearly missing (page numbers jump, a packet stops halfway, her note mentions pages that aren't shown). Then list those photo tags in retake_photos and write retake_reason TO HER: one or two short, kind sentences about taking the photo again (which photo — say "solution photo 2" or "homework photo 1" as her page does, never the tag, what is wrong with it, how to retake it — the whole page in the frame, good light, camera steady, closer). The request is about the PHOTO only: never ask her to redo, darken, rewrite or change her work, and never mention whether her answers are right, mistakes or a score. No retake for a photo that is tilted or imperfect but readable, for a cut-off heading when the answers can still be checked, or for a part that shows in another photo. Otherwise retake_reason is null and retake_photos is empty.
 
 Rules:
 - Never invent questions or answers you can't see. If you are unsure an answer is wrong, say "possibly" and take little off.
-- findings: real problems only, the most important first, at most ${GRADING_LIMITS.findingsMax}. Each names the photo tag it is on, the question as printed ("3", "2b"), what is wrong (problem) and what right looks like (fix, short). These go to the parent, never to her. Correct work needs no finding.
+- findings: real problems only, the most important first, at most ${GRADING_LIMITS.findingsMax}. Each names the photo tag it is on, the question number or label as printed ("3", "2b", "15c" — just the label, never a description; null if there is none), what is wrong (problem) and what right looks like (fix, short). These go to the parent, never to her. Correct work needs no finding.
 - stuck: true when her note or blank pages show she couldn't do part of it.
 - summary: one or two sentences for the parent: what the assignment is, how it went, the main issue, and what couldn't be checked.
 - sheet_title: the assignment's title as printed at the top of the sheet or document, word for word, if you can read one; else null.
 - score is null unless the status is "graded".
+- Formatting of summary, problem and fix (the parent's page renders it): plain sentences, Markdown allowed only for **bold** and *italics*; write every formula, equation, fraction, exponent, inequality, coordinate pair or set as LaTeX between single dollar signs, e.g. $\\frac{15}{4}-\\frac{5}{6}=\\frac{35}{12}$, $-2x<-98 \\Rightarrow x>49$, $-2\\cdot 3^3=-54$, $A(-1,5)\\to A'(5,-1)$, $x\\in\\{3,\\frac{1}{3}\\}$. No headings, lists, tables, links or $$ display math. Plain numbers in a sentence need no dollars. retake_reason and sheet_title stay plain text, no Markdown or LaTeX.
 - Write in English.`;
 
 const GRADE_TOOL: ChatTool = {

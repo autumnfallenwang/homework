@@ -70,6 +70,43 @@ function text(s: string | null | undefined): string | null {
   return t ? t : null;
 }
 
+const JSON_ESCAPES: Record<string, string> = {
+  "\f": "\\f",
+  "\b": "\\b",
+  "\r": "\\r",
+  "\t": "\\t",
+  "\n": "\\n",
+};
+
+/**
+ * LaTeX in JSON is fragile: a model that writes `\frac` unescaped gets a form
+ * feed + "rac" back from JSON.parse (`\times` → tab, `\neq` → newline). Inside
+ * $…$ a control character followed by a letter can only be that — put the
+ * backslash back.
+ */
+export function repairLatexEscapes(s: string): string {
+  return s.replace(/\$[^$]*\$/g, (math) =>
+    math.replace(/[\f\b\r\t\n](?=[A-Za-z])/g, (c) => JSON_ESCAPES[c] ?? c),
+  );
+}
+
+/**
+ * The model sometimes names photos by their prompt tags ("retake solution-2").
+ * Readers see "solution photo 2" — and the child "homework photo 1" for a
+ * sheet photo, as her page calls them.
+ */
+export function humanizePhotoTags(s: string, sheetWord: "sheet" | "homework"): string {
+  return s.replace(/\b(sheet|solution)-(\d+)\b/gi, (_, kind: string, n: string) =>
+    kind.toLowerCase() === "sheet" ? `${sheetWord} photo ${n}` : `solution photo ${n}`,
+  );
+}
+
+/** A grade text field: trimmed, LaTeX escapes repaired, tags in words, null when empty. */
+function richText(s: string | null | undefined): string | null {
+  const t = text(s);
+  return t ? humanizePhotoTags(repairLatexEscapes(t), "sheet") : null;
+}
+
 /** "solution-2", "Solution photo 2", "solution 2" → "solution-2". */
 function normalizeTag(raw: string): string | null {
   const m = /(sheet|solution)[\s_-]*(?:photo[\s_-]*)?#?(\d+)/i.exec(raw);
@@ -124,13 +161,13 @@ export function readGradeAnswer(
         photoId: photo?.id ?? null,
         photoLabel: photo ? (labels.get(photo.id) ?? null) : null,
         question: f.question === null || f.question === undefined ? null : String(f.question),
-        problem: f.problem.trim(),
-        fix: text(f.fix),
+        problem: humanizePhotoTags(repairLatexEscapes(f.problem.trim()), "sheet"),
+        fix: richText(f.fix),
       };
     });
 
   const base = {
-    summary: text(raw.summary),
+    summary: richText(raw.summary),
     findings,
     stuck: raw.stuck ?? false,
     sheetTitle: text(raw.sheet_title),
@@ -144,7 +181,8 @@ export function readGradeAnswer(
         .filter((id): id is string => id !== undefined),
     ),
   ];
-  const reason = text(raw.retake_reason);
+  const reasonText = text(raw.retake_reason);
+  const reason = reasonText ? humanizePhotoTags(reasonText, "homework") : null;
   const retake =
     raw.status === "retake"
       ? { retakeReason: reason ?? FALLBACK_RETAKE_REASON, retakePhotoIds: retakeIds }

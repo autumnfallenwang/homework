@@ -22,6 +22,10 @@ sees, digest lines, backfill. `lib/llm.ts` = plain fetch to `LLM_GATEWAY_URL` (d
   `reported_at` at insert so the digest skips them too).
 - The child gets `photoCheck` only (`childPhotoChecks`): the retake request while `dueOn >= today`,
   or `checking`. Never `grade`, score, summary or findings — the integration test greps the raw JSON.
+- Grade text (prompt v3+, ADR 0016) is Markdown + `$LaTeX$`: `MathText` (web, KaTeX) renders it only
+  when `promptVersion >= GRADING_RICH_TEXT_FROM`; emails/digest go through `mathToText` (shared).
+  The reader repairs JSON-mangled LaTeX (`\f`rac → `\frac`) and turns tags ("solution-2") into words.
+  `scripts/regrade.ts` re-grades older-prompt grades quietly.
 - llmgw: Sonnet 5.5 always thinks, so llmgw can't force `tool_choice` and asks in words instead;
   the reader accepts the tool call or a JSON object in the text, retries once, then the fallback.
 

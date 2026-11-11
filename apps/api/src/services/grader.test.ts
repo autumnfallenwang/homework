@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ChatRequest, ChatResult } from "../lib/llm.js";
 import { LlmError } from "../lib/llm.js";
-import { gradeSubmission, readGradeAnswer } from "./grader.js";
+import {
+  gradeSubmission,
+  humanizePhotoTags,
+  readGradeAnswer,
+  repairLatexEscapes,
+} from "./grader.js";
 import { buildGradingMessages, type GradingInput, type GradingPhoto } from "./grading-prompt.js";
 
 const photo = (id: string, kind: "sheet" | "solution"): GradingPhoto => ({
@@ -204,5 +209,72 @@ describe("gradeSubmission", () => {
     );
     expect(out.status).toBe("failed");
     expect(out.error).toBe("primary: timeout: llmgw did not answer in time");
+  });
+});
+
+describe("LaTeX in the model's JSON", () => {
+  it("puts back backslashes JSON.parse turned into control characters, inside $…$ only", () => {
+    // Properly escaped JSON: nothing to repair.
+    const fine = JSON.parse(String.raw`{"t":"$\\frac{1}{2}$ and $\\times 3$"}`).t as string;
+    expect(repairLatexEscapes(fine)).toBe(String.raw`$\frac{1}{2}$ and $\times 3$`);
+    // What JSON.parse returns when the model didn't escape: \f, \t, \n, \r control characters.
+    const broken = JSON.parse(String.raw`{"t":"$\frac{1}{2}$ and $\times 3 \neq \right)$ x\ty"}`)
+      .t as string;
+    expect(repairLatexEscapes(broken)).toBe(
+      `${String.raw`$\frac{1}{2}$ and $\times 3 \neq \right)$`} x\ty`,
+    );
+  });
+
+  it("repairs the fields when reading an answer", () => {
+    const out = readGradeAnswer(
+      {
+        model: "m",
+        content: null,
+        usage: null,
+        toolCalls: [
+          {
+            name: "record_grade",
+            arguments: String.raw`{"status":"graded","score":70,"summary":"$\frac{a}{b}$","findings":[]}`,
+          },
+        ],
+      },
+      photos,
+    );
+    expect(out.summary).toBe(String.raw`$\frac{a}{b}$`);
+  });
+});
+
+describe("photo tags in words", () => {
+  it("never shows the prompt's tags", () => {
+    expect(humanizePhotoTags("Please retake solution-2 and sheet-1.", "homework")).toBe(
+      "Please retake solution photo 2 and homework photo 1.",
+    );
+    expect(humanizePhotoTags("See Solution-7.", "sheet")).toBe("See solution photo 7.");
+  });
+
+  it("applies to the child's retake reason", () => {
+    const out = readGradeAnswer(
+      {
+        model: "m",
+        content: null,
+        usage: null,
+        toolCalls: [
+          {
+            name: "record_grade",
+            arguments: JSON.stringify({
+              status: "graded",
+              score: 70,
+              summary: "solution-2 is cut off",
+              findings: [],
+              retake_reason: "Retake solution-2 and sheet-1.",
+              retake_photos: ["solution-2"],
+            }),
+          },
+        ],
+      },
+      photos,
+    );
+    expect(out.retakeReason).toBe("Retake solution photo 2 and homework photo 1.");
+    expect(out.summary).toBe("solution photo 2 is cut off");
   });
 });

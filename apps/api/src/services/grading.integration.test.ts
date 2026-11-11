@@ -25,6 +25,7 @@ import {
   backfillGrades,
   gradesForDigest,
   loadGradingSettings,
+  regradeOlderPrompts,
   runGradingSweep,
   waitingSubmissions,
 } from "./grading.js";
@@ -504,5 +505,41 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     expect((await gradesForDigest(db)).lines).toHaveLength(0);
     // Already graded: a second run does nothing.
     expect(await backfillGrades(db, deps())).toEqual({ graded: 0, failed: 0 });
+  });
+
+  it("re-grades older-prompt grades quietly, and only those", async () => {
+    await enable(new Date(now.getTime() + 60 * MIN));
+    const old = await addItem(ivyId, "Old prompt", new Date(now.getTime() - 300 * MIN));
+    const fresh = await addItem(ivyId, "New prompt", new Date(now.getTime() - 200 * MIN));
+    const notChecked = await addItem(ivyId, "On computer", new Date(now.getTime() - 100 * MIN));
+    next = (input) =>
+      input.itemId === notChecked
+        ? outcome({ status: "not_gradable", score: null })
+        : outcome({ score: 40 });
+    await backfillGrades(db, deps());
+    await db.update(homeworkGrades).set({ promptVersion: 2 }).where(eq(homeworkGrades.itemId, old));
+    await db
+      .update(homeworkGrades)
+      .set({ promptVersion: 2 })
+      .where(eq(homeworkGrades.itemId, notChecked));
+    graded = [];
+    next = () => outcome({ score: 45, summary: String.raw`$\frac{1}{2}$` });
+
+    const result = await regradeOlderPrompts(db, 3, deps());
+    expect(result).toEqual({ graded: 1, failed: 0, skipped: 2 });
+    expect(graded.map((g) => g.itemId)).toEqual([old]);
+    expect(sent).toHaveLength(0);
+    expect((await gradesForDigest(db)).lines).toHaveLength(0);
+
+    session = parent;
+    const list = (await (
+      await send("GET", `/api/homework-items/${old}/grades`)
+    ).json()) as HomeworkGradeList;
+    expect(list.grades.map((g) => [g.score, g.promptVersion])).toEqual([
+      [45, 3],
+      [40, 2],
+    ]);
+    expect(list.grades[0]?.summary).toBe(String.raw`$\frac{1}{2}$`);
+    expect((await gradeRows(fresh)).length).toBe(1);
   });
 });

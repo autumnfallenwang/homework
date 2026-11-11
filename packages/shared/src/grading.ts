@@ -9,6 +9,9 @@ import { z } from "zod";
 export const gradeStatusSchema = z.enum(["graded", "retake", "not_gradable", "failed"]);
 export type GradeStatus = z.infer<typeof gradeStatusSchema>;
 
+/** Grades made with this prompt version or later carry Markdown + $LaTeX$ (ADR 0016). */
+export const GRADING_RICH_TEXT_FROM = 3;
+
 export const GRADING_LIMITS = {
   /** A submission is graded once it has been left alone this long (she may re-Submit). */
   settleMs: 60_000,
@@ -57,6 +60,11 @@ export interface HomeworkGrade {
   /** The assignment title printed on the sheet, if the model could read one. */
   sheetTitle: string | null;
   model: string | null;
+  /**
+   * The grading prompt it was made with. From 3 on, summary / problem / fix are
+   * Markdown with $LaTeX$ math (ADR 0016); before that, plain text.
+   */
+  promptVersion: number;
   createdAt: string;
   /** Set when an alert email went out for it. */
   alertedAt: string | null;
@@ -164,6 +172,12 @@ export function nextGradeAttemptAt(failedAttempts: number, lastFailureAt: Date):
   if (failedAttempts >= GRADING_LIMITS.maxAttempts) return null;
   const wait = GRADING_LIMITS.retryAfterMs[failedAttempts - 1] ?? 0;
   return new Date(lastFailureAt.getTime() + wait);
+}
+
+/** "Q3", "Q2b" for a printed number; a longer description as it is. */
+export function gradeQuestionLabel(question: string): string {
+  const q = question.trim();
+  return /^[\w.()]{1,6}$/.test(q) ? `Q${q.replace(/^Q/i, "")}` : q;
 }
 
 /** "Sheet photo 2" / "Solution photo 1". */
