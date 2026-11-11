@@ -28,12 +28,7 @@ import * as q from "../db/queries.js";
 import { log } from "../lib/logger.js";
 import type { AuthVariables } from "../middleware/auth.js";
 import { toLocalIso } from "../services/digest.js";
-import {
-  childPhotoChecks,
-  gradeBriefs,
-  gradesForItem,
-  requestRegrade,
-} from "../services/grading.js";
+import { childFeedback, gradeBriefs, gradesForItem, requestRegrade } from "../services/grading.js";
 import {
   addPhoto,
   classSuggestions,
@@ -101,10 +96,10 @@ function photoResponse(c: Context, photo: { contentType: string; bytes: Buffer }
   });
 }
 
-/** The child's side of grading (ADR 0014): a retake request or "checking" — never the grade. */
-async function withPhotoChecks<T extends HomeworkItem>(items: T[]): Promise<T[]> {
-  const checks = await childPhotoChecks(db, items, today());
-  return items.map((i) => ({ ...i, photoCheck: checks.get(i.id) ?? null }));
+/** The child's side of grading (ADR 0014, 0017): hints, a retake request or "checking" — never the grade. */
+async function withFeedback<T extends HomeworkItem>(items: T[]): Promise<T[]> {
+  const feedback = await childFeedback(db, items, today());
+  return items.map((i) => ({ ...i, feedback: feedback.get(i.id) ?? null }));
 }
 
 /** The parent's side: the latest Submit's grade, and the teacher's score (M14), for chips. */
@@ -136,7 +131,7 @@ childHomeworkApp.get("/homework", async (c) => {
   const childId = sessionChild(c);
   if (!childId) return notFound(c);
   const list = await listItems(db, childId, today());
-  return c.json({ ...list, items: await withPhotoChecks(list.items) });
+  return c.json({ ...list, items: await withFeedback(list.items) });
 });
 
 childHomeworkApp.post("/homework", async (c) => {
@@ -158,7 +153,7 @@ childHomeworkApp.get("/homework/:itemId", async (c) => {
   const itemId = c.req.param("itemId");
   if (!childId || !UUID.test(itemId)) return notFound(c);
   const item = await getItem(db, itemId, { childId });
-  return item ? c.json((await withPhotoChecks([item]))[0]) : notFound(c);
+  return item ? c.json((await withFeedback([item]))[0]) : notFound(c);
 });
 
 childHomeworkApp.patch("/homework/:itemId", async (c) => {
@@ -199,7 +194,7 @@ childHomeworkApp.post("/homework/:itemId/submit", async (c) => {
   if (!childId || !UUID.test(itemId)) return notFound(c);
   try {
     const item = await submitItem(db, childId, c.get("user").id, itemId);
-    return c.json((await withPhotoChecks([item]))[0]);
+    return c.json((await withFeedback([item]))[0]);
   } catch (err) {
     return refuse(c, err);
   }

@@ -62,7 +62,7 @@ export function HomeworkDetail({
           {item.edited ? <EditedBadge /> : null}
         </div>
 
-        <GradePanel item={item} extra={<TeacherLine itemId={item.id} />} />
+        <GradePanel item={item} links={<TeacherLine itemId={item.id} />} />
 
         <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_21.25rem] md:items-start">
           <dl className="space-y-4 text-[0.875rem]">

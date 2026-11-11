@@ -416,18 +416,25 @@ export const homeworkGrades = pgTable(
     // 0–100, only when graded.
     score: integer(),
     summary: text(),
+    // Per question (prompt v4+ adds result + hint; older rows lack them).
     findings: jsonb()
       .$type<
         {
           photoId: string | null;
           photoLabel: string | null;
           question: string | null;
+          result?: "wrong" | "partly" | "blank" | "unreadable" | null;
           problem: string;
           fix: string | null;
+          hint?: string | null;
         }[]
       >()
       .notNull()
       .default([]),
+    // Questions that are right (labels) — prompt v4+.
+    correctQuestions: jsonb().$type<string[]>().notNull().default([]),
+    // One short, encouraging line for the child (ADR 0017) — no score.
+    childNote: text(),
     stuck: boolean().notNull().default(false),
     // For the child, about the photos only; with any status.
     retakeReason: text(),

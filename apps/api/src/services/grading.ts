@@ -8,7 +8,8 @@
 // a restart — the parent presses it again).
 
 import {
-  type ChildPhotoCheck,
+  type ChildFeedback,
+  childFeedbackFromGrade,
   GRADING_DEFAULTS,
   GRADING_LIMITS,
   GRADING_SETTING_KEYS,
@@ -180,7 +181,10 @@ function toGrade(row: GradeRow, alertBelow: number): HomeworkGrade {
     status: row.status as GradeStatus,
     score: row.score,
     summary: row.summary,
-    findings: row.findings,
+    // Rows from prompts before v4 have no result / hint.
+    findings: row.findings.map((f) => ({ ...f, result: f.result ?? null, hint: f.hint ?? null })),
+    correctQuestions: row.correctQuestions,
+    childNote: row.childNote,
     stuck: row.stuck,
     retakeReason: row.retakeReason,
     retakePhotoIds: row.retakePhotoIds,
@@ -201,8 +205,9 @@ function toGrade(row: GradeRow, alertBelow: number): HomeworkGrade {
 export async function gradesForItem(db: Database, itemId: string): Promise<HomeworkGradeList> {
   const settings = await loadGradingSettings(db);
   const [item] = await db
-    .select({ submittedAt: homeworkItems.submittedAt })
+    .select({ submittedAt: homeworkItems.submittedAt, childName: children.displayName })
     .from(homeworkItems)
+    .innerJoin(children, eq(children.id, homeworkItems.childId))
     .where(eq(homeworkItems.id, itemId));
   const rows = await db
     .select()
@@ -216,6 +221,7 @@ export async function gradesForItem(db: Database, itemId: string): Promise<Homew
       regradePending(itemId) ||
       isWaiting(item?.submittedAt ?? null, submissionState(current), settings),
     enabled: settings.enabled,
+    childName: item?.childName ?? "",
   };
 }
 
@@ -266,30 +272,41 @@ export async function gradeBriefs(
 }
 
 /**
- * The child's view (ADR 0014): a retake request while the item isn't past due,
- * or "checking" while her latest Submit waits — never a score or a finding.
+ * The child's view (ADR 0014, 0017), built by the same `childFeedbackFromGrade`
+ * as the parent's "What <child> sees": an encouraging line, a hint per question
+ * and a retake request (only while the item isn't past due), or "checking" while
+ * the latest Submit waits — never the score, summary, problems or fixes.
  */
-export async function childPhotoChecks(
+export async function childFeedback(
   db: Database,
   items: readonly { id: string; submittedAt: string | null; dueOn: string }[],
   today: string,
-): Promise<Map<string, ChildPhotoCheck | null>> {
+): Promise<Map<string, ChildFeedback | null>> {
   const settings = await loadGradingSettings(db);
   const rows = await rowsForCurrentSubmissions(
     db,
     items.map((i) => i.id),
   );
-  const out = new Map<string, ChildPhotoCheck | null>();
+  const out = new Map<string, ChildFeedback | null>();
   for (const item of items) {
     const submittedAt = item.submittedAt ? new Date(item.submittedAt) : null;
     const state = submissionState(rows.get(item.id) ?? []);
     const checking = isWaiting(submittedAt, state, settings);
-    const reason = state.grade?.retakeReason ?? null;
-    const retake =
-      reason && item.dueOn >= today
-        ? { reason, photoIds: state.grade?.retakePhotoIds ?? [] }
-        : null;
-    out.set(item.id, retake || checking ? { retake, checking } : null);
+    const grade = state.grade ? toGrade(state.grade, settings.alertBelow) : null;
+    const shown = grade ? childFeedbackFromGrade(grade, item.dueOn >= today) : null;
+    const hasSomething = shown && (shown.note || shown.items.length > 0 || shown.retake);
+    out.set(
+      item.id,
+      checking || hasSomething
+        ? {
+            checking,
+            note: shown?.note ?? null,
+            items: shown?.items ?? [],
+            retake: shown?.retake ?? null,
+            rich: shown?.rich ?? false,
+          }
+        : null,
+    );
   }
   return out;
 }
@@ -347,6 +364,8 @@ export async function gradeItem(
       score: outcome.score,
       summary: outcome.summary,
       findings: outcome.findings,
+      correctQuestions: outcome.correctQuestions,
+      childNote: outcome.childNote,
       stuck: outcome.stuck,
       retakeReason: outcome.retakeReason,
       retakePhotoIds: outcome.retakePhotoIds,
@@ -412,7 +431,7 @@ async function sendGradeAlert(
     status: row.status as "graded" | "retake" | "not_gradable",
     score: row.score,
     summary: row.summary,
-    findings: row.findings,
+    findings: row.findings.map((f) => ({ ...f, result: f.result ?? null, hint: f.hint ?? null })),
     stuck: row.stuck,
     retakeReason: row.retakeReason,
     alertBelow: settings.alertBelow,
@@ -552,10 +571,9 @@ export async function backfillGrades(
 }
 
 /**
- * Grade again, quietly, every item whose current grade (status `graded`) was made
- * with an older prompt — e.g. to give them the v3 Markdown + $LaTeX$ text
- * (ADR 0016). No alerts, nothing in the digest; the child's retake banner follows
- * the new grade.
+ * Grade again, quietly, every item whose current grade was made with an older
+ * prompt — e.g. to give them hints for the child (v4, ADR 0017). No alerts,
+ * nothing in the digest; the child's feedback follows the new grade.
  */
 export async function regradeOlderPrompts(
   db: Database,
@@ -577,7 +595,7 @@ export async function regradeOlderPrompts(
   let skipped = 0;
   for (const { id } of items) {
     const current = submissionState(rows.get(id) ?? []).grade;
-    if (!current || current.status !== "graded" || current.promptVersion >= beforeVersion) {
+    if (!current || current.promptVersion >= beforeVersion) {
       skipped += 1;
       continue;
     }

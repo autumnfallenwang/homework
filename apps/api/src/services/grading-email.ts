@@ -3,7 +3,12 @@
 // app, the parent in the daily digest; one that comes with a low score is
 // mentioned here. Same SMTP sender and look as the daily digest.
 
-import { type GradeFinding, gradeQuestionLabel, mathToText } from "@homework/shared";
+import {
+  FINDING_RESULT_LABELS,
+  type GradeFinding,
+  gradeQuestionLabel,
+  mathToText,
+} from "@homework/shared";
 import { escapeHtml } from "../lib/html.js";
 import type { EmailContent } from "./email.js";
 
@@ -21,6 +26,17 @@ export interface GradeAlertInput {
   alertBelow: number;
   /** The parent's item page. */
   url: string;
+}
+
+/** "Q1c · Solution photo 1 · Wrong" — one line per question. */
+function findingHeader(f: GradeFinding): string {
+  return [
+    f.question ? gradeQuestionLabel(f.question) : null,
+    f.photoLabel,
+    f.result ? FINDING_RESULT_LABELS[f.result] : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** "58/100, needs you" — the alert goes out for low scores only (founder, 2026-11-11). */
@@ -53,27 +69,25 @@ function renderAlert(a: GradeAlertInput): EmailContent {
     "",
   ];
   if (a.summary) text.push(a.summary, "");
-  if (a.stuck) text.push("She says she got stuck on part of it.", "");
+  if (a.stuck) text.push(`${a.childName} got stuck on part of it.`, "");
   if (a.findings.length > 0) {
     text.push("What to look at:");
     for (const f of a.findings) {
-      const where = [f.photoLabel, f.question ? gradeQuestionLabel(f.question) : null]
-        .filter(Boolean)
-        .join(", ");
-      text.push(`  - ${where ? `${where}: ` : ""}${f.problem}${f.fix ? ` → ${f.fix}` : ""}`);
+      text.push(`  ${findingHeader(f)}`, `      ${f.problem}`);
+      if (f.fix) text.push(`      → ${f.fix}`);
     }
     text.push("");
   }
-  if (a.retakeReason) text.push(`Retake request (she sees this too): ${a.retakeReason}`, "");
+  if (a.retakeReason) {
+    text.push(`Retake request (${a.childName} sees this too): ${a.retakeReason}`, "");
+  }
   text.push(`Open it: ${a.url}`, "", "Graded by a model — check before acting on it.");
 
   const li = a.findings
-    .map((f) => {
-      const where = [f.photoLabel, f.question ? gradeQuestionLabel(f.question) : null]
-        .filter(Boolean)
-        .join(", ");
-      return `<li style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#111827;">${where ? `<strong>${escapeHtml(where)}:</strong> ` : ""}${escapeHtml(f.problem)}${f.fix ? `<br><span style="color:#047857;">→ ${escapeHtml(f.fix)}</span>` : ""}</li>`;
-    })
+    .map(
+      (f) =>
+        `<li style="margin:0 0 10px;padding:0 0 8px;border-bottom:1px solid #f3f4f6;list-style:none;font-size:13px;line-height:1.5;color:#111827;"><strong>${escapeHtml(findingHeader(f))}</strong><br>${escapeHtml(f.problem)}${f.fix ? `<br><span style="color:#047857;">→ ${escapeHtml(f.fix)}</span>` : ""}</li>`,
+    )
     .join("\n        ");
   const scoreColor =
     a.status === "graded" && a.score !== null && a.score < a.alertBelow ? "#b91c1c" : "#b45309";
@@ -84,9 +98,9 @@ function renderAlert(a: GradeAlertInput): EmailContent {
     <p style="margin:0 0 4px;color:#6b7280;font-size:13px;">${escapeHtml(a.childName)} · ${escapeHtml(a.className)} · due ${escapeHtml(a.dueOn)}</p>
     <h1 style="margin:0 0 12px;font-size:18px;">${escapeHtml(a.title)} — <span style="color:${scoreColor};">${escapeHtml(headline)}</span></h1>
     ${a.summary ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.5;">${escapeHtml(a.summary)}</p>` : ""}
-    ${a.stuck ? `<p style="margin:0 0 12px;font-size:13px;color:#9a3412;">She says she got stuck on part of it.</p>` : ""}
-    ${a.findings.length > 0 ? `<h3 style="margin:12px 0 8px;font-size:13px;color:#374151;text-transform:uppercase;letter-spacing:0.04em;">What to look at</h3>\n      <ul style="margin:0 0 12px;padding-left:18px;">\n        ${li}\n      </ul>` : ""}
-    ${a.retakeReason ? `<div style="padding:10px 12px;border-radius:6px;background:#fffbeb;margin:0 0 12px;font-size:13px;"><strong>Retake request</strong> (she sees this too): ${escapeHtml(a.retakeReason)}</div>` : ""}
+    ${a.stuck ? `<p style="margin:0 0 12px;font-size:13px;color:#9a3412;">${escapeHtml(a.childName)} got stuck on part of it.</p>` : ""}
+    ${a.findings.length > 0 ? `<h3 style="margin:12px 0 8px;font-size:13px;color:#374151;text-transform:uppercase;letter-spacing:0.04em;">What to look at</h3>\n      <ul style="margin:0 0 12px;padding:0;">\n        ${li}\n      </ul>` : ""}
+    ${a.retakeReason ? `<div style="padding:10px 12px;border-radius:6px;background:#fffbeb;margin:0 0 12px;font-size:13px;"><strong>Retake request</strong> (${escapeHtml(a.childName)} sees this too): ${escapeHtml(a.retakeReason)}</div>` : ""}
     <p style="margin:16px 0 0;"><a href="${escapeHtml(a.url)}" style="color:#1d4ed8;">Open the homework</a></p>
     <p style="margin:16px 0 0;color:#9ca3af;font-size:11px;">Graded by a model — check before acting on it.</p>
   </div>

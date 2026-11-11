@@ -1,24 +1,42 @@
 "use client";
 
-// The model's grade on the parent's item page (ADR 0014): the score, what it
-// found (each finding opens its photo), the retake request she sees, and Grade
-// again. Older grades fold underneath. Polls while a grade is on its way.
+// The model's grade on the parent's item page (ADR 0014, 0016, 0017), in parts
+// set off from each other:
+//   the score + Grade again, and the retake request (if any);
+//   For you — the summary, then one row per question: photo, result, what is
+//     wrong, the fix (with the answer); the correct questions in one line;
+//   What <child> sees — exactly the child's feedback: a note and one hint per
+//     question (never the answer), the retake request;
+//   Links — the teacher's gradebook (M14), passed in as `links`;
+//   Earlier grades.
+// Polls while a grade is on its way.
 
 import {
+  childFeedbackFromGrade,
+  childPhotoLabel,
+  GRADING_HINTS_FROM,
   GRADING_RICH_TEXT_FROM,
-  gradeQuestionLabel,
+  gradePhotoLabel,
   type HomeworkGrade,
   type HomeworkGradeList,
   type HomeworkItem,
 } from "@homework/shared";
 import { Loader2, RotateCw } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getHomeworkItemGrades, homeworkPhotoUrl, requestHomeworkGrade } from "@/lib/api";
 import { formatAddedAt } from "@/lib/homework-format";
+import { toLocalIso } from "@/lib/local-date";
+import {
+  ChildFeedbackRows,
+  PanelSection,
+  PhotoLink,
+  QuestionRow,
+  questionTag,
+  ResultBadge,
+} from "./feedback-rows";
 import { MathText } from "./math-text";
-import { usePhotoViewer } from "./photo-viewer";
 
 const POLL_MS = 5000;
 
@@ -39,8 +57,7 @@ function headline(g: HomeworkGrade): string {
   return "Couldn't grade";
 }
 
-export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactNode }) {
-  const viewer = usePhotoViewer();
+export function GradePanel({ item, links }: { item: HomeworkItem; links?: ReactNode }) {
   const [list, setList] = useState<HomeworkGradeList | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +80,18 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
     const t = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(t);
   }, [list?.pending, load]);
+
+  // The child's labels for the photos, by id ("solution photo 2").
+  const childLabels = useMemo(() => {
+    const m = new Map<string, string>();
+    item.photos.forEach((p, i) => {
+      m.set(p.id, childPhotoLabel(gradePhotoLabel("sheet", i)) ?? "");
+    });
+    item.solution.photos.forEach((p, i) => {
+      m.set(p.id, childPhotoLabel(gradePhotoLabel("solution", i)) ?? "");
+    });
+    return m;
+  }, [item]);
 
   async function gradeAgain() {
     setRequesting(true);
@@ -87,6 +116,7 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
   const older = current
     ? list.grades.filter((g) => g.id !== current.id && g.status !== "failed")
     : [];
+  const name = list.childName || "the child";
 
   if (!current && !list.pending && !lastFailed && !list.enabled) {
     return (
@@ -100,14 +130,17 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
     );
   }
 
-  const openPhoto = (photoId: string, label: string) =>
-    viewer.openOne({ key: photoId, src: homeworkPhotoUrl(item.id, photoId) }, label);
+  const photoSrc = (id: string) => homeworkPhotoUrl(item.id, id);
+  const childView = current
+    ? childFeedbackFromGrade(current, item.dueOn >= toLocalIso(new Date()))
+    : null;
 
   return (
     <section
       aria-labelledby="detail-grade"
       className="mb-8 space-y-3 rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
     >
+      {/* The score and Grade again */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h3 id="detail-grade" className="text-[0.875rem] font-semibold">
           Grade
@@ -147,90 +180,99 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
         ) : null}
       </div>
 
-      {!current && !list.pending ? (
-        <p className="text-[0.8125rem] text-muted-foreground">
-          {item.submittedAt ? "Not graded yet." : "Graded once she submits it."}
-        </p>
-      ) : null}
-
-      {current?.summary ? (
-        <div className="text-[0.875rem] [overflow-wrap:anywhere]">
-          <MathText text={current.summary} rich={isRich(current)} />
-        </div>
-      ) : null}
-
-      {current && current.findings.length > 0 ? (
-        <ul className="space-y-1.5">
-          {current.findings.map((f, i) => (
-            <li
-              // biome-ignore lint/suspicious/noArrayIndexKey: findings have no id and never reorder
-              key={i}
-              className="text-[0.8125rem] leading-relaxed [overflow-wrap:anywhere]"
-            >
-              {f.photoLabel || f.question ? (
-                <span className="font-medium">
-                  {f.photoId && f.photoLabel ? (
-                    <button
-                      type="button"
-                      className="text-primary underline-offset-4 hover:underline"
-                      onClick={() => openPhoto(f.photoId as string, f.photoLabel as string)}
-                    >
-                      {f.photoLabel}
-                    </button>
-                  ) : (
-                    f.photoLabel
-                  )}
-                  {f.photoLabel && f.question ? " · " : ""}
-                  {f.question ? (
-                    <MathText text={gradeQuestionLabel(f.question)} rich={isRich(current)} inline />
-                  ) : null}
-                  :{" "}
-                </span>
-              ) : null}
-              <MathText text={f.problem} rich={isRich(current)} inline />
-              {f.fix ? (
-                <span className="block text-meeting">
-                  → <MathText text={f.fix} rich={isRich(current)} inline />
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
       {current?.retakeReason ? (
         <p className="rounded-md bg-amber-500/10 px-3 py-2 text-[0.8125rem] [overflow-wrap:anywhere]">
-          <span className="font-medium">Asked her to retake photos</span> (she sees this):{" "}
-          {current.retakeReason}
+          <span className="font-medium">Asked {name} to retake photos:</span> {current.retakeReason}
         </p>
       ) : null}
 
-      {extra}
+      {!current && !list.pending ? (
+        <p className="text-[0.8125rem] text-muted-foreground">
+          {item.submittedAt ? "Not graded yet." : "Graded once it is submitted."}
+        </p>
+      ) : null}
 
-      {current || lastFailed ? (
-        <p className="text-[0.75rem] text-muted-foreground">
-          {current ? (
-            <>
-              Graded by {current.model ?? "—"} · {formatAddedAt(current.createdAt)}
-              {current.alertedAt ? " · alert emailed" : ""}. A model's grade — check before acting
-              on it.
-            </>
+      {/* For you */}
+      {current ? (
+        <PanelSection title="For you" hint="the full comments, with the answers">
+          {current.summary ? (
+            <div className="text-[0.875rem] [overflow-wrap:anywhere]">
+              <MathText text={current.summary} rich={isRich(current)} />
+            </div>
           ) : null}
-          {lastFailed ? (
-            <span className="block text-destructive">
-              Last try failed {formatAddedAt(lastFailed.createdAt)}
-              {lastFailed.error ? `: ${lastFailed.error}` : ""}
-            </span>
+          {current.findings.length > 0 ? (
+            <ul>
+              {current.findings.map((f, i) => (
+                <QuestionRow
+                  // biome-ignore lint/suspicious/noArrayIndexKey: findings never reorder
+                  key={i}
+                  label={questionTag(f.question)}
+                  rich={isRich(current)}
+                  meta={
+                    <>
+                      <PhotoLink photoId={f.photoId} label={f.photoLabel} src={photoSrc} />
+                      {f.result ? <ResultBadge result={f.result} /> : null}
+                    </>
+                  }
+                >
+                  <div>
+                    <MathText text={f.problem} rich={isRich(current)} inline />
+                  </div>
+                  {f.fix ? (
+                    <div className="text-meeting">
+                      → <MathText text={f.fix} rich={isRich(current)} inline />
+                    </div>
+                  ) : null}
+                </QuestionRow>
+              ))}
+            </ul>
           ) : null}
+          {current.correctQuestions.length > 0 ? (
+            <p className="text-[0.8125rem] text-meeting">
+              <span className="font-medium">Correct:</span>{" "}
+              {current.correctQuestions.map(questionTag).join(", ")}
+            </p>
+          ) : null}
+          <p className="text-[0.75rem] text-muted-foreground">
+            Graded by {current.model ?? "—"} · {formatAddedAt(current.createdAt)}
+            {current.alertedAt ? " · alert emailed" : ""}. A model's grade — check before acting on
+            it.
+          </p>
+        </PanelSection>
+      ) : null}
+
+      {/* What the child sees */}
+      {current && childView ? (
+        <PanelSection title={`What ${name} sees`} hint="hints only — no score, no answers">
+          {current.promptVersion >= GRADING_HINTS_FROM ? (
+            <ChildFeedbackRows
+              feedback={childView}
+              photoSrc={photoSrc}
+              photoLabel={(id) => childLabels.get(id) ?? null}
+            />
+          ) : (
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {childView.retake
+                ? `Only the retake request above. This grade was made before hints existed — Grade again to add them.`
+                : "Nothing — this grade was made before hints existed. Grade again to add them."}
+            </p>
+          )}
+        </PanelSection>
+      ) : null}
+
+      {/* Links to the teacher's gradebook (M14) */}
+      {links}
+
+      {lastFailed ? (
+        <p className="text-[0.75rem] text-destructive">
+          Last try failed {formatAddedAt(lastFailed.createdAt)}
+          {lastFailed.error ? `: ${lastFailed.error}` : ""}
         </p>
       ) : null}
 
       {older.length > 0 ? (
-        <details className="text-[0.8125rem]">
-          <summary className="cursor-pointer text-muted-foreground">
-            Earlier grades ({older.length})
-          </summary>
-          <ul className="mt-2 space-y-1.5">
+        <PanelSection title={`Earlier grades (${older.length})`}>
+          <ul className="space-y-1.5 text-[0.8125rem]">
             {older.map((g) => (
               <li key={g.id} className="text-muted-foreground">
                 <span className="font-medium text-foreground tabular-nums">{headline(g)}</span> ·{" "}
@@ -243,7 +285,7 @@ export function GradePanel({ item, extra }: { item: HomeworkItem; extra?: ReactN
               </li>
             ))}
           </ul>
-        </details>
+        </PanelSection>
       ) : null}
 
       {error ? <p className="text-[0.8125rem] text-destructive">{error}</p> : null}

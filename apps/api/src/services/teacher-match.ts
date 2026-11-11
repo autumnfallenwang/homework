@@ -1,4 +1,4 @@
-// Teacher-grade matching (M14): link her homework items to the teacher's
+// Teacher-grade matching (M14): link a child's homework items to the teacher's
 // TeacherEase assignments, so the parent sees the teacher's score beside the
 // model's. No shared key exists — candidates come from code (same class by name,
 // teacher's due date near hers), the pick from a small text model, the doubt
@@ -42,7 +42,7 @@ import {
 import { log } from "../lib/logger.js";
 import { loadGradingSettings } from "./grading.js";
 
-export const MATCH_PROMPT_VERSION = 2;
+export const MATCH_PROMPT_VERSION = 3;
 
 /** Local-timezone ISO day (as the digest's toLocalIso; kept here to avoid an import cycle). */
 function localIso(d: Date): string {
@@ -89,7 +89,7 @@ export async function teacherRows(db: Database, childId: string): Promise<Teache
     .where(and(eq(assignments.fetchRunId, run.id), isNotNull(assignments.teAssignmentId)));
 }
 
-/** The teacher's assignments in her item's class (by name) due within 10 days of hers. */
+/** The teacher's assignments in the item's class (by name) due within 10 days of its due day. */
 export function candidatesFrom(
   rows: readonly TeacherRow[],
   item: { className: string | null; dueOn: string },
@@ -137,27 +137,27 @@ export interface MatchInput {
   assignedOn: string;
   dueOn: string;
   note: string | null;
-  /** From her latest grade: the title printed on the sheet, and what the photos showed. */
+  /** From the item's latest grade: the title printed on the sheet, and what the photos showed. */
   sheetTitle: string | null;
   gradeSummary: string | null;
 }
 
-const SYSTEM_PROMPT = `You link a middle-school student's own homework entry to the teacher's gradebook in the same class. She types short, informal names ("packet", "Google doc"); the teacher's names are formal ("#026 Discussion Reflection", "Stamp Act Documents"), and due dates can differ by a few days.
+const SYSTEM_PROMPT = `You link a middle-school student's own homework entry to the teacher's gradebook in the same class. The student types short, informal names ("packet", "Google doc"); the teacher's names are formal ("#026 Discussion Reflection", "Stamp Act Documents"), and due dates can differ by a few days.
 
-Decide which of the teacher's assignments listed (if any) are THE SAME piece of work as her entry, and record them with the ${MATCH_TOOL_NAME} tool.
+Decide which of the teacher's assignments listed (if any) are THE SAME piece of work as the student's entry, and record them with the ${MATCH_TOOL_NAME} tool.
 
-- Same work only. Practice for a quiz is not the quiz; a study guide or a review packet is not the test; class notes are not a lab — unless her entry is that quiz, test or lab. Leave such related-but-different assignments out entirely (not even "medium").
-- One entry can be several assignments (she sometimes lists two tasks in one entry, e.g. "edpuzzle and lingco"), and two of her entries can be one assignment.
-- confidence "high": the title printed on her sheet, or a distinctive word or topic from her entry or note, matches the assignment's name, the dates fit, AND nothing in her entry points elsewhere. "medium": plausible from the topic and the date but the names are generic — or a name matches but her note or sheet describes a different topic than the assignment's name suggests (e.g. she says a Blooket was about monuments while the assignment is "Blooket - futur" and another is "Paris monuments"). "low": a weak guess.
-- Dates are a hint, not a rule: she sometimes enters one due day for two tasks given days apart.
+- Same work only. Practice for a quiz is not the quiz; a study guide or a review packet is not the test; class notes are not a lab — unless the entry is that quiz, test or lab. Leave such related-but-different assignments out entirely (not even "medium").
+- One entry can be several assignments (two tasks are sometimes listed in one entry, e.g. "edpuzzle and lingco"), and two entries can be one assignment.
+- confidence "high": the title printed on the sheet, or a distinctive word or topic from the entry or note, matches the assignment's name, the dates fit, AND nothing in the entry points elsewhere. "medium": plausible from the topic and the date but the names are generic — or a name matches but the note or sheet describes a different topic than the assignment's name suggests (e.g. the note says a Blooket was about monuments while the assignment is "Blooket - futur" and another is "Paris monuments"). "low": a weak guess.
+- Dates are a hint, not a rule: one due day is sometimes entered for two tasks given days apart.
 - An empty list when nothing fits. Never pick an assignment that isn't listed.
-- reason: a few words on why (e.g. "her note mentions the Stamp Act").`;
+- reason: a few words on why (e.g. "the note mentions the Stamp Act").`;
 
 const MATCH_TOOL: ChatTool = {
   type: "function",
   function: {
     name: MATCH_TOOL_NAME,
-    description: "Record which teacher assignments her entry is.",
+    description: "Record which teacher assignments the entry is.",
     parameters: {
       type: "object",
       properties: {
@@ -186,14 +186,14 @@ export function buildMatchMessages(
   const entry = [
     `Class: ${input.className}`,
     `Type: ${input.kind}`,
-    `She called it: ${input.title}`,
-    input.details ? `Details she wrote: ${input.details}` : null,
+    `The student called it: ${input.title}`,
+    input.details ? `Details the student wrote: ${input.details}` : null,
     `Given on ${input.assignedOn}, due ${input.dueOn}`,
-    `Her note about the finished work: ${input.note ?? "(none)"}`,
+    `The student's note about the finished work: ${input.note ?? "(none)"}`,
     input.sheetTitle
-      ? `Title printed on her sheet (read from her photos): ${input.sheetTitle}`
+      ? `Title printed on the sheet (read from the photos): ${input.sheetTitle}`
       : null,
-    input.gradeSummary ? `What her photos showed: ${input.gradeSummary}` : null,
+    input.gradeSummary ? `What the photos showed: ${input.gradeSummary}` : null,
   ]
     .filter((l) => l !== null)
     .join("\n");
@@ -207,7 +207,7 @@ export function buildMatchMessages(
     { role: "system", content: SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Her entry:\n${entry}\n\nThe teacher's assignments in ${input.className} due near then:\n${list}`,
+      content: `The student's entry:\n${entry}\n\nThe teacher's assignments in ${input.className} due near then:\n${list}`,
     },
   ];
 }

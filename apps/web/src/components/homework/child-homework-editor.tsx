@@ -1,14 +1,14 @@
 "use client";
 
-import type { ChildPhotoCheck, HomeworkClass, HomeworkItem } from "@homework/shared";
+import type { ChildFeedback, HomeworkClass, HomeworkItem } from "@homework/shared";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { getChildProfile, getMyHomeworkClasses, getMyHomeworkItem } from "@/lib/api";
 import { toLocalIso } from "@/lib/local-date";
 import { HomeworkEntryOff } from "./entry-off";
+import { FeedbackCard } from "./feedback-card";
 import { describeHomeworkError, HomeworkForm } from "./homework-form";
-import { PhotoCheckBanner } from "./photo-check-banner";
 import { PhotoHighlightContext, PhotoViewerProvider } from "./photo-viewer";
 import { SolutionForm } from "./solution-form";
 
@@ -88,8 +88,8 @@ function ItemPage({
   onCreated: (item: HomeworkItem) => void;
 }) {
   const [item, setItem] = useState(initial);
-  // Grading (ADR 0014): a retake request, or "checking" right after a Submit.
-  const [check, setCheck] = useState<ChildPhotoCheck | null>(initial?.photoCheck ?? null);
+  // Grading (ADR 0014, 0017): hints and a retake request, or "checking" right after a Submit.
+  const [check, setCheck] = useState<ChildFeedback | null>(initial?.feedback ?? null);
   const highlight = useMemo(() => new Set(check?.retake?.photoIds ?? []), [check]);
   const itemId = item?.id ?? null;
   const checking = check?.checking === true;
@@ -105,7 +105,7 @@ function ItemPage({
         return;
       }
       getMyHomeworkItem(itemId)
-        .then((fresh) => setCheck(fresh.photoCheck ?? null))
+        .then((fresh) => setCheck(fresh.feedback ?? null))
         .catch(() => {});
     }, 10_000);
     return () => clearInterval(t);
@@ -113,7 +113,7 @@ function ItemPage({
 
   const onSaved = (saved: HomeworkItem) => {
     setItem(saved);
-    if (saved.photoCheck !== undefined) setCheck(saved.photoCheck);
+    if (saved.feedback !== undefined) setCheck(saved.feedback);
   };
 
   return (
@@ -150,7 +150,7 @@ function ItemPage({
                   </span>
                 ) : null}
               </h2>
-              {check ? <PhotoCheckBanner item={item} check={check} /> : null}
+              {check ? <FeedbackCard item={item} feedback={check} /> : null}
               <SolutionForm key={item.id} item={item} onSaved={onSaved} />
             </section>
           ) : null}

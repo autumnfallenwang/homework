@@ -14,8 +14,10 @@ const base: GradeAlertInput = {
       photoId: "p",
       photoLabel: "Solution photo 9",
       question: "15",
+      result: "wrong",
       problem: "Negated both",
       fix: "Swap x & y",
+      hint: "What does y = x swap?",
     },
   ],
   stuck: true,
@@ -33,8 +35,11 @@ describe("grade alert email", () => {
   it("renders text and escaped HTML with the findings and the link", () => {
     const mail = renderGradeAlert(base);
     expect(mail.subject).toBe("Ivy · Mathematics 8 Honors · packet <1> — 58/100, needs you");
-    expect(mail.text).toContain("Solution photo 9, Q15: Negated both → Swap x & y");
-    expect(mail.text).toContain("She says she got stuck");
+    expect(mail.text).toContain(
+      "Q15 · Solution photo 9 · Wrong\n      Negated both\n      → Swap x & y",
+    );
+    expect(mail.text).not.toContain("What does y = x swap?");
+    expect(mail.text).toContain("Ivy got stuck on part of it.");
     expect(mail.html).toContain("packet &lt;1&gt;");
     expect(mail.html).toContain("Swap x &amp; y");
     expect(mail.html).toContain('href="http://homework.arch.internal/review/homework/abc"');
@@ -49,13 +54,17 @@ describe("grade alert email", () => {
           photoId: null,
           photoLabel: null,
           question: "1c",
+          result: "partly",
           problem: String.raw`$\frac{15}{4}-\frac{5}{6}$ written as $\frac{25}{12}$`,
           fix: String.raw`$\frac{35}{12}x \le \frac{23}{8}$`,
+          hint: null,
         },
       ],
     });
     expect(mail.text).toContain("Inequalities: -2x<-98 ⇒ x>49 slipped.");
-    expect(mail.text).toContain("Q1c: 15/4-5/6 written as 25/12 → 35/12x ≤ 23/8");
+    expect(mail.text).toContain(
+      "Q1c · Partly right\n      15/4-5/6 written as 25/12\n      → 35/12x ≤ 23/8",
+    );
     expect(mail.html).not.toContain("$");
   });
 });

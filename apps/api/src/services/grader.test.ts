@@ -67,9 +67,11 @@ describe("buildGradingMessages", () => {
     if (!Array.isArray(user)) throw new Error("expected parts");
     const text = user[0]?.type === "text" ? user[0].text : "";
     expect(text).toContain("Class: Mathematics 8 Honors");
-    expect(text).toContain("Her note about the finished work: IDK how to do the last page");
+    expect(text).toContain(
+      "The student's note about the finished work: IDK how to do the last page",
+    );
     expect(text).toContain("The parent's instructions for grading: 8th grade");
-    expect(text).not.toContain("Ivy");
+    expect(text).toContain("Student: Ivy");
     expect(
       user.filter((p) => p.type === "text").map((p) => (p.type === "text" ? p.text : "")),
     ).toEqual([text, "sheet-1:", "solution-1:", "solution-2:"]);
@@ -89,17 +91,29 @@ describe("readGradeAnswer", () => {
         photoId: "w2",
         photoLabel: "Solution photo 2",
         question: "15",
+        result: null,
         problem: "Negated both coordinates",
         fix: "Swap x and y",
+        hint: null,
       },
       {
         photoId: "w1",
         photoLabel: "Solution photo 1",
         question: "1c",
+        result: null,
         problem: "Order of operations",
         fix: null,
+        hint: null,
       },
-      { photoId: null, photoLabel: null, question: null, problem: "Something", fix: null },
+      {
+        photoId: null,
+        photoLabel: null,
+        question: null,
+        result: null,
+        problem: "Something",
+        fix: null,
+        hint: null,
+      },
     ]);
   });
 
@@ -276,5 +290,52 @@ describe("photo tags in words", () => {
     );
     expect(out.retakeReason).toBe("Retake solution photo 2 and homework photo 1.");
     expect(out.summary).toBe("solution photo 2 is cut off");
+  });
+});
+
+describe("prompt v4: per question, hints for the child, no assumed pronouns", () => {
+  it("names the student and never says she / he", () => {
+    const { messages } = buildGradingMessages(input());
+    const system = messages[0]?.content as string;
+    const user = messages[1]?.content;
+    const text = Array.isArray(user) && user[0]?.type === "text" ? user[0].text : "";
+    expect(text).toContain("Student: Ivy");
+    for (const body of [system, text]) {
+      expect(body).not.toMatch(/\b(she|her|hers|herself|he|him|his|himself)\b/i);
+    }
+  });
+
+  it("reads results, hints, the child's note and the correct questions", () => {
+    const out = readGradeAnswer(
+      answer({
+        status: "graded",
+        score: 70,
+        summary: "s",
+        findings: [
+          {
+            photo: "sheet-1",
+            question: "1c",
+            result: "wrong",
+            problem: "p",
+            fix: "f",
+            hint: "Recheck sheet-1, the order of operations.",
+          },
+          { photo: null, question: "2", result: "nonsense", problem: "p2", fix: null, hint: "  " },
+        ],
+        correct_questions: ["1a", 3, " "],
+        child_note: "Nice work on 1a!",
+        stuck: false,
+        retake_reason: null,
+        retake_photos: [],
+        sheet_title: null,
+      }),
+      photos,
+    );
+    expect(out.findings.map((f) => [f.question, f.result, f.hint])).toEqual([
+      ["1c", "wrong", "Recheck homework photo 1, the order of operations."],
+      ["2", null, null],
+    ]);
+    expect(out.correctQuestions).toEqual(["1a", "3"]);
+    expect(out.childNote).toBe("Nice work on 1a!");
   });
 });

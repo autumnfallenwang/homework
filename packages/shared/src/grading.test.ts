@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  childFeedbackFromGrade,
+  childPhotoLabel,
   GRADING_LIMITS,
   gradeNeedsParent,
   gradePhotoLabel,
@@ -58,5 +60,62 @@ describe("grading helpers", () => {
     expect(gradingSettingsSchema.safeParse(ok).success).toBe(true);
     expect(gradingSettingsSchema.safeParse({ ...ok, model: " " }).success).toBe(false);
     expect(gradingSettingsSchema.safeParse({ ...ok, alertBelow: 100.5 }).success).toBe(false);
+  });
+});
+
+describe("what the child sees", () => {
+  const grade = {
+    childNote: "Nice graphs!",
+    promptVersion: 4,
+    retakeReason: "Retake solution photo 2.",
+    retakePhotoIds: ["p2"],
+    findings: [
+      {
+        photoId: "p9",
+        photoLabel: "Solution photo 9",
+        question: "15",
+        result: "wrong" as const,
+        problem: "the answer is (5,-1)",
+        fix: "(5,-1)",
+        hint: "What does y = x swap?",
+      },
+      {
+        photoId: "s1",
+        photoLabel: "Sheet photo 1",
+        question: "2",
+        result: "partly" as const,
+        problem: "p",
+        fix: null,
+        hint: null,
+      },
+    ],
+  };
+
+  it("keeps only the note, the hints and the retake request", () => {
+    const view = childFeedbackFromGrade(grade, true);
+    expect(view).toEqual({
+      note: "Nice graphs!",
+      items: [
+        {
+          question: "15",
+          photoId: "p9",
+          photoLabel: "solution photo 9",
+          hint: "What does y = x swap?",
+        },
+      ],
+      retake: { reason: "Retake solution photo 2.", photoIds: ["p2"] },
+      rich: true,
+    });
+    expect(JSON.stringify(view)).not.toContain("(5,-1)");
+  });
+
+  it("drops the retake request once it no longer matters", () => {
+    expect(childFeedbackFromGrade(grade, false).retake).toBeNull();
+  });
+
+  it("calls sheet photos homework photos, as the child's page does", () => {
+    expect(childPhotoLabel("Sheet photo 1")).toBe("homework photo 1");
+    expect(childPhotoLabel("Solution photo 3")).toBe("solution photo 3");
+    expect(childPhotoLabel(null)).toBeNull();
   });
 });

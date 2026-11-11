@@ -2,7 +2,7 @@
 // grader instead of llmgw: what the sweep picks, retries, alerts, Grade again,
 // what the parent and the child each see, the digest, settings and the backfill.
 
-import type { ChildPhotoCheck, HomeworkGradeBrief, HomeworkGradeList } from "@homework/shared";
+import type { ChildFeedback, HomeworkGradeBrief, HomeworkGradeList } from "@homework/shared";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
@@ -29,7 +29,7 @@ import {
   runGradingSweep,
   waitingSubmissions,
 } from "./grading.js";
-import type { GradingInput } from "./grading-prompt.js";
+import { GRADING_PROMPT_VERSION, type GradingInput } from "./grading-prompt.js";
 import { runNotifyCycle } from "./scheduler.js";
 
 const url = process.env.DATABASE_URL;
@@ -55,6 +55,8 @@ function outcome(over: Partial<GradeOutcome> = {}): GradeOutcome {
     score: 90,
     summary: "Worksheet on reflections.",
     findings: [],
+    correctQuestions: [],
+    childNote: null,
     stuck: false,
     retakeReason: null,
     retakePhotoIds: [],
@@ -243,6 +245,8 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
             question: "3",
             problem: "Sign flip",
             fix: "Swap x and y",
+            result: "wrong",
+            hint: null,
           },
         ],
       },
@@ -255,9 +259,11 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
 
     expect((await runGradingSweep(db, deps())).graded).toBe(5);
     expect(sent.map((m) => m.subject)).toEqual(["Ivy · Other · Low — 58/100, needs you"]);
-    expect(sent[0]?.text).toContain("Q3: Sign flip → Swap x and y");
     expect(sent[0]?.text).toContain(
-      "Retake request (she sees this too): Photo 2 cuts off the top.",
+      "Q3 · Solution photo 1 · Wrong\n      Sign flip\n      → Swap x and y",
+    );
+    expect(sent[0]?.text).toContain(
+      "Retake request (Ivy sees this too): Photo 2 cuts off the top.",
     );
     expect(sent[0]?.html).toContain("/review/homework/");
     expect((await gradeRows(low))[0]?.alertedAt).not.toBeNull();
@@ -274,9 +280,9 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     );
     session = ivy;
     const one = (await (await send("GET", `/api/child/homework/${retake}`)).json()) as {
-      photoCheck: ChildPhotoCheck | null;
+      feedback: ChildFeedback | null;
     };
-    expect(one.photoCheck?.retake?.reason).toBe("Photo 1 is blurry. Take it again.");
+    expect(one.feedback?.retake?.reason).toBe("Photo 1 is blurry. Take it again.");
   });
 
   it("never alerts on not gradable or failed, and skips the email quietly without SMTP", async () => {
@@ -326,9 +332,9 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
 
     session = ivy;
     let list = (await (await send("GET", "/api/child/homework")).json()) as {
-      items: { id: string; photoCheck: ChildPhotoCheck | null; grade?: unknown }[];
+      items: { id: string; feedback: ChildFeedback | null; grade?: unknown }[];
     };
-    expect(list.items[0]?.photoCheck?.retake?.reason).toBe("Photo 1 is cut off. Take it again.");
+    expect(list.items[0]?.feedback?.retake?.reason).toBe("Photo 1 is cut off. Take it again.");
 
     // She retakes and submits again: "checking", no banner until it's graded.
     const resubmitted = new Date(now.getTime() - 2 * MIN);
@@ -337,13 +343,19 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
       .set({ submittedAt: resubmitted })
       .where(eq(homeworkItems.id, item));
     list = (await (await send("GET", "/api/child/homework")).json()) as typeof list;
-    expect(list.items[0]?.photoCheck).toEqual({ retake: null, checking: true });
+    expect(list.items[0]?.feedback).toEqual({
+      checking: true,
+      note: null,
+      items: [],
+      retake: null,
+      rich: false,
+    });
 
     next = () => outcome({ score: 88 });
     await runGradingSweep(db, deps());
     expect(await gradeRows(item)).toHaveLength(2);
     list = (await (await send("GET", "/api/child/homework")).json()) as typeof list;
-    expect(list.items[0]?.photoCheck).toBeNull();
+    expect(list.items[0]?.feedback).toBeNull();
 
     session = parent;
     const parentList = (await (
@@ -358,7 +370,7 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     });
   });
 
-  it("shows the child a retake request only — never the score, summary or findings", async () => {
+  it("shows the child hints, a note and the retake request — never the score, summary, problems or fixes", async () => {
     await enable(new Date(now.getTime() - 60 * MIN));
     const item = await addItem(ivyId, "Packet", new Date(now.getTime() - 3 * MIN));
     const pastDue = await addItem(ivyId, "Old one", new Date(now.getTime() - 2 * MIN), {
@@ -369,8 +381,26 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
       outcome({
         score: 41,
         summary: "SECRET SUMMARY",
+        childNote: "Nice graphs! A few things to look at.",
         findings: [
-          { photoId: null, photoLabel: null, question: "1", problem: "SECRET FINDING", fix: null },
+          {
+            photoId: null,
+            photoLabel: "Solution photo 2",
+            question: "1",
+            result: "wrong",
+            problem: "SECRET PROBLEM",
+            fix: "SECRET FIX x = 49",
+            hint: "Recheck which number you divided by.",
+          },
+          {
+            photoId: null,
+            photoLabel: null,
+            question: "2",
+            result: "partly",
+            problem: "SECRET PROBLEM 2",
+            fix: null,
+            hint: null,
+          },
         ],
         retakeReason: "Photo 1 is blurry. Take it again.",
       });
@@ -379,19 +409,41 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     session = ivy;
     const raw = await (await send("GET", "/api/child/homework")).text();
     expect(raw).not.toContain("SECRET");
-    expect(raw).not.toContain('"score"');
-    expect(raw).not.toContain('"grade"');
+    for (const key of ['"score"', '"grade"', '"summary"', '"problem"', '"fix"', '"result"']) {
+      expect(raw).not.toContain(key);
+    }
     const one = (await (await send("GET", `/api/child/homework/${item}`)).json()) as {
-      photoCheck: ChildPhotoCheck;
+      feedback: ChildFeedback;
     };
-    expect(one.photoCheck.retake?.reason).toBe("Photo 1 is blurry. Take it again.");
-    // Past its due day: no banner.
+    expect(one.feedback).toEqual({
+      checking: false,
+      note: "Nice graphs! A few things to look at.",
+      items: [
+        {
+          question: "1",
+          photoId: null,
+          photoLabel: "solution photo 2",
+          hint: "Recheck which number you divided by.",
+        },
+      ],
+      retake: { reason: "Photo 1 is blurry. Take it again.", photoIds: [] },
+      rich: true,
+    });
+    // Past its due day: hints stay, the retake request goes.
     const old = (await (await send("GET", `/api/child/homework/${pastDue}`)).json()) as {
-      photoCheck: ChildPhotoCheck | null;
+      feedback: ChildFeedback | null;
     };
-    expect(old.photoCheck).toBeNull();
-    // Her grade routes don't exist; the parent's are parent-only.
+    expect(old.feedback?.retake).toBeNull();
+    expect(old.feedback?.items).toHaveLength(1);
+    // The parent's grade routes are parent-only.
     expect((await send("GET", `/api/homework-items/${item}/grades`)).status).toBe(403);
+    // The parent's preview of the same thing carries the child's name.
+    session = parent;
+    const grades = (await (
+      await send("GET", `/api/homework-items/${item}/grades`)
+    ).json()) as HomeworkGradeList;
+    expect(grades.childName).toBe("Ivy");
+    expect(grades.grades[0]?.childNote).toBe("Nice graphs! A few things to look at.");
   });
 
   it("Grade again: the parent's request is graded by the next sweep, without an alert", async () => {
@@ -507,7 +559,7 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     expect(await backfillGrades(db, deps())).toEqual({ graded: 0, failed: 0 });
   });
 
-  it("re-grades older-prompt grades quietly, and only those", async () => {
+  it("re-grades every older-prompt grade quietly, and only those", async () => {
     await enable(new Date(now.getTime() + 60 * MIN));
     const old = await addItem(ivyId, "Old prompt", new Date(now.getTime() - 300 * MIN));
     const fresh = await addItem(ivyId, "New prompt", new Date(now.getTime() - 200 * MIN));
@@ -525,9 +577,9 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
     graded = [];
     next = () => outcome({ score: 45, summary: String.raw`$\frac{1}{2}$` });
 
-    const result = await regradeOlderPrompts(db, 3, deps());
-    expect(result).toEqual({ graded: 1, failed: 0, skipped: 2 });
-    expect(graded.map((g) => g.itemId)).toEqual([old]);
+    const result = await regradeOlderPrompts(db, GRADING_PROMPT_VERSION, deps());
+    expect(result).toEqual({ graded: 2, failed: 0, skipped: 1 });
+    expect(graded.map((g) => g.itemId)).toEqual([old, notChecked]);
     expect(sent).toHaveLength(0);
     expect((await gradesForDigest(db)).lines).toHaveLength(0);
 
@@ -536,7 +588,7 @@ describe.skipIf(!url)("homework grading (live DB)", () => {
       await send("GET", `/api/homework-items/${old}/grades`)
     ).json()) as HomeworkGradeList;
     expect(list.grades.map((g) => [g.score, g.promptVersion])).toEqual([
-      [45, 3],
+      [45, GRADING_PROMPT_VERSION],
       [40, 2],
     ]);
     expect(list.grades[0]?.summary).toBe(String.raw`$\frac{1}{2}$`);

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ApiClientError, deleteHomeworkItem, deleteMyHomework } from "@/lib/api";
 import { dueLabel } from "@/lib/homework-format";
-import { GradeChip, PhotoCheckChip, TeacherChip } from "./grade-badge";
+import { FeedbackChip, GradeChip, hasOpenFeedback, TeacherChip } from "./grade-badge";
 import { describeHomeworkError, firstDayOver } from "./homework-form";
 import { KindBadge } from "./kind-badge";
 
@@ -40,6 +40,11 @@ export function HomeworkList({
 }) {
   const [showDone, setShowDone] = useState(false);
   const groups = groupHomeworkItems(items, today);
+  // The child's submitted items with feedback still to act on (ADR 0017) sit on
+  // top, not folded away in Done.
+  const toLookAt =
+    mode === "child" ? groups.done.filter((i) => hasOpenFeedback(i.feedback, i.dueOn, today)) : [];
+  const done = groups.done.filter((i) => !toLookAt.includes(i));
 
   const row = (item: HomeworkItem) => (
     <HomeworkRow
@@ -54,6 +59,16 @@ export function HomeworkList({
 
   return (
     <div className="space-y-4">
+      {toLookAt.length > 0 ? (
+        <section className="space-y-1.5" aria-label="Feedback to look at">
+          <h2 className="flex justify-between px-0.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+            <span>Feedback to look at</span>
+            <span className="tabular-nums">{toLookAt.length}</span>
+          </h2>
+          <ul className="space-y-1.5">{toLookAt.map(row)}</ul>
+        </section>
+      ) : null}
+
       {groups.open.length === 0 && groups.done.length === 0 ? (
         <p className="rounded-lg border border-dashed bg-card/60 px-4 py-6 text-center text-[0.8125rem] text-muted-foreground">
           No homework yet.
@@ -74,7 +89,7 @@ export function HomeworkList({
         </section>
       ))}
 
-      {groups.done.length > 0 ? (
+      {done.length > 0 ? (
         <section className="space-y-1.5" aria-label="Done">
           <button
             type="button"
@@ -87,9 +102,9 @@ export function HomeworkList({
             ) : (
               <ChevronRight className="h-3.5 w-3.5" />
             )}
-            Done · {groups.done.length}
+            Done · {done.length}
           </button>
-          {showDone ? <ul className="space-y-1.5">{groups.done.map(row)}</ul> : null}
+          {showDone ? <ul className="space-y-1.5">{done.map(row)}</ul> : null}
         </section>
       ) : null}
     </div>
@@ -218,8 +233,8 @@ function HomeworkRow({
                 {mode === "parent" && item.teacherGrade ? (
                   <TeacherChip grade={item.teacherGrade} />
                 ) : null}
-                {mode === "child" && item.photoCheck ? (
-                  <PhotoCheckChip check={item.photoCheck} />
+                {mode === "child" && item.feedback ? (
+                  <FeedbackChip feedback={item.feedback} open={item.dueOn >= today} />
                 ) : null}
               </span>
             </span>

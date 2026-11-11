@@ -20,8 +20,12 @@ sees, digest lines, backfill. `lib/llm.ts` = plain fetch to `LLM_GATEWAY_URL` (d
   `alertBelow` ONLY (founder, 2026-11-11 — a retake request alone goes to the child in the app and
   the parent in the digest); never for the parent's Grade again or the backfill (both set
   `reported_at` at insert so the digest skips them too).
-- The child gets `photoCheck` only (`childPhotoChecks`): the retake request while `dueOn >= today`,
-  or `checking`. Never `grade`, score, summary or findings — the integration test greps the raw JSON.
+- The child gets `feedback` only (`childFeedback` → shared `childFeedbackFromGrade`, the same
+  function the parent's "What <child> sees" uses): note, hints per question, the retake request
+  while `dueOn >= today`, or `checking`. Never score, summary, problem, fix or result — the
+  integration test greps the raw JSON for those keys (ADR 0017, prompt v4).
+- No assumed pronouns for children anywhere (prompts, emails, screens): use the child's name
+  (`children.display_name`, sent to the model as "Student: <name>") — more children may come.
 - Grade text (prompt v3+, ADR 0016) is Markdown + `$LaTeX$`: `MathText` (web, KaTeX) renders it only
   when `promptVersion >= GRADING_RICH_TEXT_FROM`; emails/digest go through `mathToText` (shared).
   The reader repairs JSON-mangled LaTeX (`\f`rac → `\frac`) and turns tags ("solution-2") into words.

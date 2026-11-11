@@ -3,7 +3,12 @@
 // model. The sweep (services/grading.ts) stores what this returns; the Phase 0
 // dry run (scripts/grade-dry-run.ts) prints it.
 
-import { GRADING_LIMITS, type GradeFinding, gradePhotoLabel } from "@homework/shared";
+import {
+  findingResultSchema,
+  GRADING_LIMITS,
+  type GradeFinding,
+  gradePhotoLabel,
+} from "@homework/shared";
 import { z } from "zod";
 import { type ChatRequest, type ChatResult, chatCompletion, LlmError } from "../lib/llm.js";
 import {
@@ -19,6 +24,8 @@ export interface GradeOutcome {
   score: number | null;
   summary: string | null;
   findings: GradeFinding[];
+  correctQuestions: string[];
+  childNote: string | null;
   stuck: boolean;
   retakeReason: string | null;
   retakePhotoIds: string[];
@@ -49,12 +56,19 @@ const rawGradeSchema = z.object({
       z.object({
         photo: z.string().nullable().optional(),
         question: z.union([z.string(), z.number()]).nullable().optional(),
+        result: z.string().nullable().optional(),
         problem: z.string().min(1),
         fix: z.string().nullable().optional(),
+        hint: z.string().nullable().optional(),
       }),
     )
     .nullable()
     .optional(),
+  correct_questions: z
+    .array(z.union([z.string(), z.number()]))
+    .nullable()
+    .optional(),
+  child_note: z.string().nullable().optional(),
   stuck: z.boolean().nullable().optional(),
   retake_reason: z.string().nullable().optional(),
   retake_photos: z.array(z.string()).nullable().optional(),
@@ -99,6 +113,12 @@ export function humanizePhotoTags(s: string, sheetWord: "sheet" | "homework"): s
   return s.replace(/\b(sheet|solution)-(\d+)\b/gi, (_, kind: string, n: string) =>
     kind.toLowerCase() === "sheet" ? `${sheetWord} photo ${n}` : `solution photo ${n}`,
   );
+}
+
+/** Child-facing text (hint, note): as richText, with sheet photos called "homework photo N". */
+function childText(s: string | null | undefined): string | null {
+  const t = text(s);
+  return t ? humanizePhotoTags(repairLatexEscapes(t), "homework") : null;
 }
 
 /** A grade text field: trimmed, LaTeX escapes repaired, tags in words, null when empty. */
@@ -157,18 +177,27 @@ export function readGradeAnswer(
     .slice(0, GRADING_LIMITS.findingsMax)
     .map((f) => {
       const photo = photoOf(f.photo);
+      const result = findingResultSchema.safeParse(f.result);
       return {
         photoId: photo?.id ?? null,
         photoLabel: photo ? (labels.get(photo.id) ?? null) : null,
         question: f.question === null || f.question === undefined ? null : String(f.question),
+        result: result.success ? result.data : null,
         problem: humanizePhotoTags(repairLatexEscapes(f.problem.trim()), "sheet"),
         fix: richText(f.fix),
+        // For the child: the photo is "homework photo N" on their page.
+        hint: childText(f.hint),
       };
     });
 
   const base = {
     summary: richText(raw.summary),
     findings,
+    correctQuestions: (raw.correct_questions ?? [])
+      .map((q) => String(q).trim())
+      .filter(Boolean)
+      .slice(0, 100),
+    childNote: childText(raw.child_note),
     stuck: raw.stuck ?? false,
     sheetTitle: text(raw.sheet_title),
   };
@@ -206,6 +235,8 @@ function noPhotosOutcome(input: GradingInput): GradeOutcome {
     score: null,
     summary: "No photos — nothing to check.",
     findings: [],
+    correctQuestions: [],
+    childNote: null,
     stuck: false,
     retakeReason: null,
     retakePhotoIds: [],
@@ -276,6 +307,8 @@ export async function gradeSubmission(
     score: null,
     summary: null,
     findings: [],
+    correctQuestions: [],
+    childNote: null,
     stuck: false,
     retakeReason: null,
     retakePhotoIds: [],

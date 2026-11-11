@@ -14,6 +14,7 @@ import {
   pickHomeworkItemTeacher,
   setHomeworkItemTeacherState,
 } from "@/lib/api";
+import { PanelSection } from "./feedback-rows";
 
 function scoreText(l: TeacherLink): string {
   if (!l.score || !l.band) return "not graded yet";
@@ -52,42 +53,60 @@ export function TeacherLine({ itemId }: { itemId: string }) {
   const others = view.candidates.filter((c) => !linkedIds.has(c.teAssignmentId));
 
   return (
-    <div className="space-y-1.5 border-t pt-3 text-[0.8125rem]">
-      {view.links.length === 0 ? (
-        <p className="text-muted-foreground">
-          Teacher: not linked to a TeacherEase assignment yet.
-        </p>
-      ) : (
-        view.links.map((l) => (
-          <div key={l.teAssignmentId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-medium">{l.state === "confirmed" ? "Teacher" : "Probably"}:</span>
-            <span className="[overflow-wrap:anywhere]">{l.assignmentName}</span>
-            <span
-              className={`rounded px-1.5 py-px text-[0.6875rem] font-semibold tabular-nums ${
-                l.band === "meets"
-                  ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                  : l.band === "progressing" || l.band === "beginning" || l.band === "missing"
-                    ? "bg-red-500/15 text-red-800 dark:text-red-300"
-                    : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {scoreText(l)}
-            </span>
-            {l.state === "suggested" ? (
-              <>
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void act(() =>
-                      setHomeworkItemTeacherState(itemId, l.teAssignmentId, "confirmed"),
-                    )
-                  }
-                >
-                  Confirm
-                </Button>
+    <PanelSection title="Links" hint="the teacher's gradebook in TeacherEase">
+      <div className="space-y-1.5 text-[0.8125rem]">
+        {view.links.length === 0 ? (
+          <p className="text-muted-foreground">
+            Teacher: not linked to a TeacherEase assignment yet.
+          </p>
+        ) : (
+          view.links.map((l) => (
+            <div key={l.teAssignmentId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-medium">
+                {l.state === "confirmed" ? "Teacher" : "Probably"}:
+              </span>
+              <span className="[overflow-wrap:anywhere]">{l.assignmentName}</span>
+              <span
+                className={`rounded px-1.5 py-px text-[0.6875rem] font-semibold tabular-nums ${
+                  l.band === "meets"
+                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                    : l.band === "progressing" || l.band === "beginning" || l.band === "missing"
+                      ? "bg-red-500/15 text-red-800 dark:text-red-300"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {scoreText(l)}
+              </span>
+              {l.state === "suggested" ? (
+                <>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void act(() =>
+                        setHomeworkItemTeacherState(itemId, l.teAssignmentId, "confirmed"),
+                      )
+                    }
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void act(() =>
+                        setHomeworkItemTeacherState(itemId, l.teAssignmentId, "rejected"),
+                      )
+                    }
+                  >
+                    Not this
+                  </Button>
+                </>
+              ) : (
                 <Button
                   type="button"
                   size="xs"
@@ -99,64 +118,52 @@ export function TeacherLine({ itemId }: { itemId: string }) {
                     )
                   }
                 >
-                  Not this
+                  Unlink
                 </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
+              )}
+              {l.reason ? (
+                <span className="basis-full text-[0.75rem] text-muted-foreground">{l.reason}</span>
+              ) : null}
+            </div>
+          ))
+        )}
+        {others.length > 0 ? (
+          picking ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Pick the teacher's assignment"
+                defaultValue=""
                 disabled={busy}
-                onClick={() =>
-                  void act(() => setHomeworkItemTeacherState(itemId, l.teAssignmentId, "rejected"))
-                }
+                onChange={(e) => {
+                  const id = Number(e.target.value);
+                  if (id) void act(() => pickHomeworkItemTeacher(itemId, id));
+                }}
+                className="h-8 max-w-full rounded-md border border-input bg-card px-2 text-[0.8125rem]"
               >
-                Unlink
+                <option value="">Pick an assignment…</option>
+                {others.map((c) => (
+                  <option key={c.teAssignmentId} value={c.teAssignmentId}>
+                    {c.assignmentName}
+                    {c.dueDate ? ` (due ${c.dueDate})` : ""}
+                  </option>
+                ))}
+              </select>
+              <Button type="button" size="xs" variant="ghost" onClick={() => setPicking(false)}>
+                Cancel
               </Button>
-            )}
-            {l.reason ? (
-              <span className="basis-full text-[0.75rem] text-muted-foreground">{l.reason}</span>
-            ) : null}
-          </div>
-        ))
-      )}
-      {others.length > 0 ? (
-        picking ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Pick the teacher's assignment"
-              defaultValue=""
-              disabled={busy}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                if (id) void act(() => pickHomeworkItemTeacher(itemId, id));
-              }}
-              className="h-8 max-w-full rounded-md border border-input bg-card px-2 text-[0.8125rem]"
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="text-[0.75rem] text-primary underline-offset-4 hover:underline"
+              onClick={() => setPicking(true)}
             >
-              <option value="">Pick an assignment…</option>
-              {others.map((c) => (
-                <option key={c.teAssignmentId} value={c.teAssignmentId}>
-                  {c.assignmentName}
-                  {c.dueDate ? ` (due ${c.dueDate})` : ""}
-                </option>
-              ))}
-            </select>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setPicking(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="text-[0.75rem] text-primary underline-offset-4 hover:underline"
-            onClick={() => setPicking(true)}
-          >
-            {view.links.length === 0 ? "Link it yourself" : "Pick another"}
-          </button>
-        )
-      ) : null}
-      {error ? <p className="text-destructive">{error}</p> : null}
-    </div>
+              {view.links.length === 0 ? "Link it yourself" : "Pick another"}
+            </button>
+          )
+        ) : null}
+        {error ? <p className="text-destructive">{error}</p> : null}
+      </div>
+    </PanelSection>
   );
 }

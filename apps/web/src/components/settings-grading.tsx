@@ -2,8 +2,9 @@
 
 // Settings → Grading (ADR 0014). Every Submit of a child-entered item is graded
 // by a vision model through llmgw; an email goes out when the score is below the
-// alert score. Retake requests go to the child in the app and to the parent in the
-// daily digest. One form, one Save.
+// alert score. The child sees hints per question and retake requests in the app
+// (never the score); the parent sees everything, and every grade in the daily
+// digest. One form, one Save.
 
 import {
   GRADING_DEFAULTS,
@@ -133,7 +134,7 @@ export function SettingsGrading() {
     <div className="space-y-5">
       <SettingsSection
         title="Homework grading"
-        help="Each time a child submits homework, a model reads the photos and her note and grades it 0–100. You get an email when the score is below the alert score. When photos can't be read, she is asked in the app to retake them (she never sees the grade) and you see it in the daily digest, where every grade is listed."
+        help="Each time a child submits homework, a model reads the photos and the child's note and grades it 0–100. You get an email when the score is below the alert score. The child sees a short hint per question and any retake request in the app — never the score or the answers. Every grade is listed in your daily digest."
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -202,8 +203,8 @@ export function SettingsGrading() {
               models={models}
             />
             <p className="text-[0.75rem] text-muted-foreground">
-              Links her homework to the teacher's assignments in TeacherEase (text only; a small
-              model is enough). Default {GRADING_DEFAULTS.matchModel}.
+              Links the child's homework to the teacher's assignments in TeacherEase (text only; a
+              small model is enough). Default {GRADING_DEFAULTS.matchModel}.
             </p>
           </div>
         </div>
@@ -211,7 +212,7 @@ export function SettingsGrading() {
 
       <SettingsSection
         title="Alerts"
-        help="An email goes out right after a grade below this score. Retake requests don't send one — she sees them in the app, you in the daily digest. Default 80 — small slips only."
+        help="An email goes out right after a grade below this score. Retake requests don't send one — the child sees them in the app, you in the daily digest. Default 80 — small slips only."
       >
         <div className="flex items-center gap-2">
           <span className="text-[0.8125rem]">Email me below</span>
@@ -232,14 +233,14 @@ export function SettingsGrading() {
 
       <SettingsSection
         title="Extra instructions"
-        help="Added to every grading request, e.g. her grade and what matters to you."
+        help="Added to every grading request, e.g. the school grade and what matters to you."
       >
         <textarea
           value={draft.instructions}
           onChange={(e) => set({ instructions: e.target.value })}
           maxLength={GRADING_LIMITS.instructionsMax}
           rows={3}
-          placeholder="8th grade. In math she must show her work."
+          placeholder="8th grade. In math, all work must be shown."
           aria-label="Extra instructions for the grader"
           className="w-full rounded-lg border border-input bg-card px-2 py-1.5 text-[0.8125rem] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         />

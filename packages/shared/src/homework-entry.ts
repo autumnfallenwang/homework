@@ -5,7 +5,7 @@
 // the API and the web.
 
 import { z } from "zod";
-import type { ChildPhotoCheck, HomeworkGradeBrief } from "./grading.js";
+import type { ChildFeedback, HomeworkGradeBrief } from "./grading.js";
 import type { TeacherGradeBrief } from "./teacher-match.js";
 
 export const homeworkSourceSchema = z.enum(["page", "child"]);
@@ -279,8 +279,8 @@ export interface HomeworkItem {
   grade?: HomeworkGradeBrief | null;
   /** Parent routes only (M14): the teacher's score, when the item is linked to an assignment. */
   teacherGrade?: TeacherGradeBrief | null;
-  /** Child routes only (ADR 0014): a retake request, or "checking your photos". */
-  photoCheck?: ChildPhotoCheck | null;
+  /** Child routes only (ADR 0014, 0017): hints, a retake request, or "checking". */
+  feedback?: ChildFeedback | null;
 }
 
 /** One recorded change, after an item's first day (ADR 0008). */

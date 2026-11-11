@@ -63,7 +63,7 @@ describe("the match model's answer", () => {
     );
     const text = typeof user?.content === "string" ? user.content : "";
     expect(text).toContain('- id 1: "#033 Stay & Stray Theme Reflection" (due 2026-11-02)');
-    expect(text).toContain("Title printed on her sheet (read from her photos): Stay & Stray");
+    expect(text).toContain("Title printed on the sheet (read from the photos): Stay & Stray");
   });
 
   it("keeps only listed assignments, once each at its best confidence", () => {
