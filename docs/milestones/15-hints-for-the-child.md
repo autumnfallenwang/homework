@@ -1,6 +1,6 @@
 ---
 name: 15-hints-for-the-child
-status: in-progress
+status: done
 created: 2026-11-11
 ---
 
@@ -37,7 +37,10 @@ one row per question ([ADR 0017](../adr/0017-hints-for-the-child.md)).
   ("Look at the point at x = −6. Is it above or below the x-axis?"), 31 questions listed correct;
   screenshots of the parent's parts, the child's list ("Feedback to look at": Retake photo · 6
   hints) and the child's card.
-- [ ] Released: every item re-graded with prompt v4; the child's pages show hints.
+- [x] Released (0bd27eb): migration added `child_note` + `correct_questions`; `scripts/regrade.ts`
+  in the pod re-graded all 23 items with prompt v4 — 0 failed, 0 emails, nothing for the digest;
+  15 graded (4 below 80) with 36 hints, 7 not gradable, 1 retake. Spot check of the real hints:
+  guiding questions, no answers.
 
 ## Decisions
 
@@ -47,4 +50,4 @@ one row per question ([ADR 0017](../adr/0017-hints-for-the-child.md)).
 
 ## Progress
 
-- 2026-11-11: built and checked locally (see exit criteria).
+- 2026-11-11: built and checked locally, released, everything re-graded (see exit criteria).
